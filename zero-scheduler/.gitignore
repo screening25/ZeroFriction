@@ -1,0 +1,48 @@
+# === 의존성 ===
+/node_modules
+/.pnp
+.pnp.*
+
+# === 빌드 산출물 ===
+/.next/
+/out/
+/build
+/coverage
+
+# === TypeScript 캐시 ===
+*.tsbuildinfo
+
+# === 환경 변수 (시크릿) ===
+.env
+.env.local
+.env.*.local
+# 템플릿은 커밋 허용:
+!.env.example
+!.env.sample
+
+# === 런타임 로그 (사용자 데이터/키 흔적 포함 가능) ===
+*.log
+app.log
+npm-debug.log*
+
+# === OS / 에디터 메타 ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# === 인증서 / 개인키 ===
+*.pem
+*.key
+
+# === 배포 도구 ===
+.vercel
+
+# === Prisma 생성 클라이언트 (있을 때만) ===
+/src/generated/prisma
+/prisma/generated
+
+# === Electron 빌드 ===
+/dist
+/release

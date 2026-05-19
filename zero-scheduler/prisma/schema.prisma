@@ -1,0 +1,30 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Schedule {
+  id             String   @id @default(uuid())
+  title          String
+  date           String   // YYYY-MM-DD
+  time           String?  // HH:MM
+  category       String   // WORK, PERSONAL, HEALTH, ETC
+  memo           String?  // 상세 메모
+  completed      Boolean  @default(false)
+  notifyOffset   Int      @default(10) // 알림 시간 (분 단위, -1은 알림 끄기)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PolicyTracker {
+  id            String   @id @default(uuid())
+  title         String
+  effectiveDate String   // YYYY-MM-DD
+  content       String   // 상세 규정 내용
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
