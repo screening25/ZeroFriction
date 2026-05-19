@@ -248,26 +248,15 @@ export default function SettingsSection() {
       <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>AI 연동 설정</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>AI API Key</span>
+          <span className="settings-label-compact">AI API Key</span>
           <input
             type="password"
-            className="input-sm"
-            placeholder="API Key 입력"
+            className="settings-select-compact"
+            placeholder="API Key"
             value={localSettings.apiKey}
             onChange={e => {
               const updated = { ...localSettings, apiKey: e.target.value };
               updateSingleSetting(updated);
-            }}
-            style={{
-              width: '150px',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '6px',
-              border: '1px solid var(--panel-border)',
-              background: 'var(--surface-color)',
-              color: 'var(--text-primary)',
-              fontSize: '0.72rem',
-              outline: 'none',
-              boxShadow: 'none'
             }}
           />
         </div>
@@ -328,8 +317,8 @@ export default function SettingsSection() {
               updateSingleSetting(updated);
             }}
           >
-            <option value="compact">조밀하게</option>
-            <option value="cozy">여유있게</option>
+            <option value="compact">Compact</option>
+            <option value="cozy">Cozy</option>
           </select>
         </div>
 

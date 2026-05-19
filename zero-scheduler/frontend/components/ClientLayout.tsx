@@ -238,9 +238,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {children}
       </main>
 
-      {/* Sleek Low-light Footer Restored */}
       <footer className="app-footer">
-        <span className="footer-text">© 2026 Fitogether Inc. All rights reserved.</span>
+        <span className="footer-text">© 2026 screening25. All rights reserved.</span>
         <span className="footer-sep">·</span>
         <span className="footer-text">Zero-Friction Overview</span>
       </footer>

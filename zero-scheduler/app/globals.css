@@ -826,6 +826,9 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
   color: var(--text-primary) !important;
   outline: none !important;
 }
+.settings-select-compact::placeholder {
+  font-size: 11px !important;
+}
 .settings-label-compact {
   font-size: 13px !important;
   font-weight: 500 !important;
@@ -1254,8 +1257,8 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
   .drawer-content {
     width: min(86vw, 320px);
   }
-  /* 입력 필드들 — 모바일에서 16px 미만이면 자동 zoom 발생 */
-  .input-sm, input[type="text"], input[type="number"], input[type="date"], input[type="time"], input[type="password"], textarea, select {
+  /* 입력 필드들 — 모바일에서 16px 미만이면 자동 zoom 발생 (설정 컴팩트 인풋은 제외) */
+  .input-sm, input[type="text"]:not(.settings-select-compact), input[type="number"]:not(.settings-select-compact), input[type="date"]:not(.settings-select-compact), input[type="time"]:not(.settings-select-compact), input[type="password"]:not(.settings-select-compact), textarea, select:not(.settings-select-compact) {
     font-size: 16px !important;
   }
   /* 캘린더 셀: 점이 너무 작아 보이므로 조금 확대 */

@@ -44,6 +44,11 @@ export default function Home() {
   const [selectedScheduleCategory, setSelectedScheduleCategory] = useState<string>('전체');
   const [selectedInventoryCategory, setSelectedInventoryCategory] = useState<string>('전체');
 
+  // Widgets collapse/expand states inside Overview
+  const [isTodaySchedulesExpanded, setIsTodaySchedulesExpanded] = useState<boolean>(true);
+  const [isRecentMemosExpanded, setIsRecentMemosExpanded] = useState<boolean>(true);
+  const [isInventoryFlowExpanded, setIsInventoryFlowExpanded] = useState<boolean>(true);
+
   const [schedulePage, setSchedulePage] = useState<number>(0);
   const [inventoryPage, setInventoryPage] = useState<number>(0);
 
@@ -409,254 +414,274 @@ export default function Home() {
                 <span className="kpi-sub">건</span>
               </div>
             </div>
-            <div className={`kpi-tile clickable ${lowStockItems.length > 0 ? 'alert' : ''}`} onClick={() => setActiveTab('inventory')}>
-              <span className="kpi-label">재고 부족</span>
+            <div className="kpi-tile clickable" onClick={() => setActiveTab('inventory')}>
+              <span className="kpi-label">재고 품목</span>
               <div className="flex items-baseline gap-1" style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                <span className="kpi-value">{lowStockItems.length}</span>
+                <span className="kpi-value">{inventory.length}</span>
                 <span className="kpi-sub">품목</span>
               </div>
             </div>
           </div>
 
-          {/* First-Visit Onboarding Card */}
-          {records.length === 0 && (
-            <div className="onboarding-card">
-              <div className="ob-title">스마트 데이터 입력 안내</div>
-              <div className="ob-desc">
-                상단 입력창에 "내일 14시 미팅" 등의 문장을 입력하시면 시스템이 자동으로 분류하여 등록합니다.
-                <br />
-                단축키 [Cmd] + [K]를 사용하여 명령 팔레트를 호출할 수 있습니다.
-              </div>
-            </div>
-          )}
-
-          {/* Today's Schedule Quick Widget */}
-          <div style={{ background: 'var(--panel-bg)', backdropFilter: 'var(--panel-blur)', WebkitBackdropFilter: 'var(--panel-blur)', border: '1px solid var(--panel-border)', borderRadius: '14px', padding: '0.8rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifySelf: 'flex-start', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
-              <CalIcon size={13} style={{ color: 'var(--accent)' }} />
-              <span>오늘 예정된 일정</span>
-              {todaySchedulesFull.length > 0 && <span className="badge" style={{ background: 'var(--accent-soft-bg)', color: 'var(--accent)', marginLeft: '0.2rem', fontSize: '0.6rem' }}>{todaySchedulesFull.length}건</span>}
-            </div>
+          {/* Unified Overview Status Widget */}
+          <div style={{ background: 'var(--panel-bg)', backdropFilter: 'var(--panel-blur)', WebkitBackdropFilter: 'var(--panel-blur)', border: '1px solid var(--panel-border)', borderRadius: '16px', padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             
-            <div className="card-list" style={{ gap: '1.25rem' }}>
-              {todaySchedules.length === 0 ? (
-                <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 일정이 존재하지 않습니다.</div>
-              ) : (
-                todaySchedules.map((s, idx) => (
-                  <div 
-                    key={s.id} 
-                    className={`card card-compact ${s.attrs.completed ? 'completed opacity-40 line-through' : ''}`} 
-                    style={{ 
-                      padding: '1.25rem', 
-                      borderRadius: '10px', 
-                      opacity: s.attrs.completed ? 0.4 : undefined,
-                      height: '78px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      overflow: 'hidden'
-                    }} 
-                    onClick={() => setEditingSchedule(s)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      {/* Col 1: Index + Complete Check Icon */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
-                        <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
-                          #{String(idx + 1).padStart(2, '0')}
-                        </span>
-                        <div
-                          onClick={(e) => toggleComplete(e, s)}
-                          style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        >
-                          {s.attrs.completed ? <CheckCircle2 size={13} /> : <Circle size={13} />}
-                        </div>
-                      </div>
-
-                      {/* Col 2: Title (flex: 1) */}
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.5rem' }}>
-                        <span
-                          style={{
-                            fontSize: '0.82rem',
-                            fontWeight: 600,
-                            color: s.attrs.completed ? 'var(--text-tertiary)' : 'var(--text-primary)',
-                            textDecoration: s.attrs.completed ? 'line-through' : 'none',
-                            textAlign: 'left',
-                            maxWidth: '120px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: 'inline-block'
-                          }}
-                          title={s.title}
-                        >
-                          {s.title}
-                        </span>
-                      </div>
-
-                      {/* Col 3: Time (fixed width/aligned) */}
-                      <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        {s.attrs.time && (
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>{s.attrs.time}</span>
-                        )}
-                      </div>
-
-                      {/* Col 4: Category badge (aligned right) */}
-                      <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        {s.category && (
-                          <span className="badge" style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600, maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.category}</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Linked Badges */}
-                    {s.attrs.linkedIds && s.attrs.linkedIds.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.4rem', marginLeft: '2.5rem' }}>
-                        {s.attrs.linkedIds.map((linkedId: string) => {
-                          const linkedRecord = records.find(r => r.id === linkedId);
-                          if (!linkedRecord) return null;
-                          return (
-                            <span 
-                              key={linkedId} 
-                              className="text-xs bg-white/5 text-gray-400 rounded-full px-2 py-1"
-                              style={{ fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#a1a1aa', borderRadius: '9999px', padding: '0.15rem 0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}
-                            >
-                              #{linkedRecord.title}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Quick Memos & Low Stock Double Column Layout */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            
-            {/* Recent Memos Widget */}
-            <div style={{ background: 'var(--panel-bg)', backdropFilter: 'var(--panel-blur)', WebkitBackdropFilter: 'var(--panel-blur)', border: '1px solid var(--panel-border)', borderRadius: '14px', padding: '0.8rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifySelf: 'flex-start', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
-                <ClipboardList size={13} style={{ color: 'var(--accent)' }} />
-                <span>최근 등록된 메모</span>
+            {/* 1. 오늘 예정된 일정 (Today's Schedule) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div 
+                onClick={() => setIsTodaySchedulesExpanded(!isTodaySchedulesExpanded)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CalIcon size={13} style={{ color: 'var(--accent)' }} />
+                  <span>오늘 예정된 일정</span>
+                  {todaySchedulesFull.length > 0 && <span className="badge" style={{ background: 'var(--accent-soft-bg)', color: 'var(--accent)', marginLeft: '0.2rem', fontSize: '0.6rem' }}>{todaySchedulesFull.length}건</span>}
+                </div>
+                <ChevronDown size={13} style={{ transform: isTodaySchedulesExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
               </div>
-              <div className="card-list" style={{ gap: '0.35rem' }}>
-                {recentMemos.length === 0 ? (
-                  <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 메모가 존재하지 않습니다.</div>
-                ) : (
-                  recentMemos.map(m => (
-                    <div key={m.id} className="card card-compact" style={{ padding: '0.5rem 0.7rem' }} onClick={() => { setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '' }); setIsMemoModalOpen(true); }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{m.title}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{format(parseISO(m.updatedAt || new Date().toISOString()), 'yy.MM.dd')} 업데이트</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Assets Inventory Alert Widget */}
-            <div style={{ background: 'var(--panel-bg)', backdropFilter: 'var(--panel-blur)', WebkitBackdropFilter: 'var(--panel-blur)', border: '1px solid var(--panel-border)', borderRadius: '14px', padding: '0.8rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifySelf: 'flex-start', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
-                <Layers size={13} style={{ color: 'var(--accent)' }} />
-                <span>재고 흐름 요약</span>
-              </div>
-              <div className="card-list" style={{ gap: '0.35rem' }}>
-                
-                {/* Low Stock Alerts */}
-                {lowStockItems.length > 0 && (
-                  <div style={{ background: 'var(--danger-soft-bg)', border: '1px solid var(--danger-soft-border)', borderRadius: '8px', padding: '0.4rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <AlertTriangle size={12} style={{ color: 'var(--danger)' }} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--danger)' }}>수량 부족 품목 {lowStockItems.length}개 검출! 빠른 확인 요망.</span>
-                  </div>
-                )}
-
-                {recentInventoryFlow.length === 0 ? (
-                  <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 재고가 존재하지 않습니다.</div>
-                ) : (
-                  recentInventoryFlow.map((item, idx) => {
-                    const qtyNum = Number(item.attrs.qty) || 0;
-                    const isNegative = qtyNum < 0;
-                    return (
+              
+              {isTodaySchedulesExpanded && (
+                <div className="card-list" style={{ gap: '1.25rem' }}>
+                  {todaySchedules.length === 0 ? (
+                    <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 일정이 존재하지 않습니다.</div>
+                  ) : (
+                    todaySchedules.map((s, idx) => (
                       <div 
-                        key={item.id} 
-                        className="inv-card" 
+                        key={s.id} 
+                        className={`card card-compact ${s.attrs.completed ? 'completed opacity-40 line-through' : ''}`} 
                         style={{ 
-                          padding: '0.5rem 0.65rem', 
-                          borderRadius: '10px',
-                          height: '42px',
+                          padding: '1.25rem', 
+                          borderRadius: '10px', 
+                          opacity: s.attrs.completed ? 0.4 : undefined,
+                          height: '78px',
                           display: 'flex',
-                          alignItems: 'center',
+                          flexDirection: 'column',
                           justifyContent: 'space-between',
                           overflow: 'hidden'
                         }} 
-                        onClick={() => setEditingInventory(item)}
+                        onClick={() => setEditingSchedule(s)}
                       >
-                        {/* Col 1: Index */}
-                        <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#9ca3af', width: '1.4rem', flexShrink: 0, textAlign: 'left' }}>
-                          #{String(idx + 1).padStart(2, '0')}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          {/* Col 1: Index + Complete Check Icon */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
+                            <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
+                              #{String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <div
+                              onClick={(e) => toggleComplete(e, s)}
+                              style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            >
+                              {s.attrs.completed ? <CheckCircle2 size={13} /> : <Circle size={13} />}
+                            </div>
+                          </div>
 
-                        {/* Col 2: Code badge (fixed width) */}
-                        <div style={{ width: '50px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                          {item.attrs.code ? (
-                            <span 
-                              className="badge" 
-                              style={{ 
-                                fontSize: '0.55rem', 
-                                padding: '0.08rem 0.2rem',
-                                maxWidth: '42px',
+                          {/* Col 2: Title (flex: 1) */}
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.5rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                color: s.attrs.completed ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                                textDecoration: s.attrs.completed ? 'line-through' : 'none',
+                                textAlign: 'left',
+                                maxWidth: '120px',
+                                whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                display: 'inline-block',
-                                textAlign: 'center'
+                                display: 'inline-block'
                               }}
-                              title={item.attrs.code}
+                              title={s.title}
                             >
-                              {item.attrs.code}
+                              {s.title}
                             </span>
-                          ) : (
-                            <span style={{ width: '42px' }} />
-                          )}
-                        </div>
+                          </div>
 
-                        {/* Col 3: Title (flex: 1) */}
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.3rem' }}>
-                          <span
-                            style={{
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              color: 'var(--text-primary)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: 'inline-block',
-                              maxWidth: '100px'
-                            }}
-                            title={item.title}
-                          >
-                            {item.title}
-                          </span>
-                        </div>
+                          {/* Col 3: Time (fixed width/aligned) */}
+                          <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            {s.attrs.time && (
+                              <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>{s.attrs.time}</span>
+                            )}
+                          </div>
 
-                        {/* Col 4: Flow badge (fixed width/aligned) */}
-                        <div style={{ width: '42px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                          <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', fontSize: '0.55rem', padding: '0.08rem 0.25rem', borderRadius: '4px', fontWeight: 600 }}>
-                            {item.attrs.flow === 'OUT' ? '출고' : '입고'}
-                          </span>
+                          {/* Col 4: Category badge (aligned right) */}
+                          <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            {s.category && (
+                              <span className="badge" style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600, maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.category}</span>
+                            )}
+                          </div>
                         </div>
+                        {/* Linked Badges */}
+                        {s.attrs.linkedIds && s.attrs.linkedIds.length > 0 && (
+                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.4rem', marginLeft: '2.5rem' }}>
+                            {s.attrs.linkedIds.map((linkedId: string) => {
+                              const linkedRecord = records.find(r => r.id === linkedId);
+                              if (!linkedRecord) return null;
+                              return (
+                                <span 
+                                  key={linkedId} 
+                                  className="text-xs bg-white/5 text-gray-400 rounded-full px-2 py-1"
+                                  style={{ fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#a1a1aa', borderRadius: '9999px', padding: '0.15rem 0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}
+                                >
+                                  #{linkedRecord.title}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
 
-                        {/* Col 5: Quantity Badge (aligned right) */}
-                        <div style={{ width: '38px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isNegative ? 'var(--danger)' : 'var(--text-primary)' }}>{qtyNum}개</span>
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'var(--panel-border)', opacity: 0.6 }} />
+
+            {/* 2. 최근 등록된 메모 (Recent Memos) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div 
+                onClick={() => setIsRecentMemosExpanded(!isRecentMemosExpanded)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ClipboardList size={13} style={{ color: 'var(--accent)' }} />
+                  <span>최근 등록된 메모</span>
+                </div>
+                <ChevronDown size={13} style={{ transform: isRecentMemosExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
+              </div>
+              
+              {isRecentMemosExpanded && (
+                <div className="card-list" style={{ gap: '0.35rem' }}>
+                  {recentMemos.length === 0 ? (
+                    <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 메모가 존재하지 않습니다.</div>
+                  ) : (
+                    recentMemos.map(m => (
+                      <div key={m.id} className="card card-compact" style={{ padding: '0.5rem 0.7rem' }} onClick={() => { setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '' }); setIsMemoModalOpen(true); }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{m.title}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{format(parseISO(m.updatedAt || new Date().toISOString()), 'yy.MM.dd')} 업데이트</span>
                         </div>
                       </div>
-                    );
-                  })
-                )}
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'var(--panel-border)', opacity: 0.6 }} />
+
+            {/* 3. 재고 흐름 요약 (Inventory Flow Summary) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div 
+                onClick={() => setIsInventoryFlowExpanded(!isInventoryFlowExpanded)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Layers size={13} style={{ color: 'var(--accent)' }} />
+                  <span>재고 흐름 요약</span>
+                </div>
+                <ChevronDown size={13} style={{ transform: isInventoryFlowExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
               </div>
+
+              {isInventoryFlowExpanded && (
+                <div className="card-list" style={{ gap: '0.35rem' }}>
+                  
+                  {/* Low Stock Alerts */}
+                  {lowStockItems.length > 0 && (
+                    <div style={{ background: 'var(--danger-soft-bg)', border: '1px solid var(--danger-soft-border)', borderRadius: '8px', padding: '0.4rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <AlertTriangle size={12} style={{ color: 'var(--danger)' }} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--danger)' }}>수량 부족 품목 {lowStockItems.length}개 검출! 빠른 확인 요망.</span>
+                    </div>
+                  )}
+
+                  {recentInventoryFlow.length === 0 ? (
+                    <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 재고가 존재하지 않습니다.</div>
+                  ) : (
+                    recentInventoryFlow.map((item, idx) => {
+                      const qtyNum = Number(item.attrs.qty) || 0;
+                      const isNegative = qtyNum < 0;
+                      return (
+                        <div 
+                          key={item.id} 
+                          className="inv-card" 
+                          style={{ 
+                            padding: '0.5rem 0.65rem', 
+                            borderRadius: '10px',
+                            height: '42px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            overflow: 'hidden'
+                          }} 
+                          onClick={() => setEditingInventory(item)}
+                        >
+                          {/* Col 1: Index */}
+                          <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#9ca3af', width: '1.4rem', flexShrink: 0, textAlign: 'left' }}>
+                            #{String(idx + 1).padStart(2, '0')}
+                          </span>
+
+                          {/* Col 2: Code badge (fixed width) */}
+                          <div style={{ width: '50px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                            {item.attrs.code ? (
+                              <span 
+                                className="badge" 
+                                style={{ 
+                                  fontSize: '0.55rem', 
+                                  padding: '0.08rem 0.2rem',
+                                  maxWidth: '42px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'inline-block',
+                                  textAlign: 'center'
+                                }}
+                                title={item.attrs.code}
+                              >
+                                {item.attrs.code}
+                              </span>
+                            ) : (
+                              <span style={{ width: '42px' }} />
+                            )}
+                          </div>
+
+                          {/* Col 3: Title (flex: 1) */}
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.3rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: 'inline-block',
+                                maxWidth: '100px'
+                              }}
+                              title={item.title}
+                            >
+                              {item.title}
+                            </span>
+                          </div>
+
+                          {/* Col 4: Flow badge (fixed width/aligned) */}
+                          <div style={{ width: '42px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', fontSize: '0.55rem', padding: '0.08rem 0.25rem', borderRadius: '4px', fontWeight: 600 }}>
+                              {item.attrs.flow === 'OUT' ? '출고' : '입고'}
+                            </span>
+                          </div>
+
+                          {/* Col 5: Quantity Badge (aligned right) */}
+                          <div style={{ width: '38px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isNegative ? 'var(--danger)' : 'var(--text-primary)' }}>{qtyNum}개</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
           </div>
