@@ -667,6 +667,22 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 }
 .ios-text-btn.bold { font-weight: 600; }
 
+/* ===== MEMO FORM STYLES ===== */
+.memo-form-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  background: var(--bg-color);
+  border-radius: 20px;
+  padding: 0.9rem;
+}
+.memo-title-input {
+  font-size: 1.1rem;
+}
+.memo-content-textarea {
+  font-size: 0.95rem;
+}
+
 /* ===== FORM ELEMENTS ===== */
 .form-group { display: flex; flex-direction: column; gap: 0.2rem; }
 .form-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); padding-left: 0.2rem; }
@@ -1249,6 +1265,48 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
     margin: 0 0.5rem;
     border-radius: 18px;
     max-height: 88dvh;
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.5rem !important;
+  }
+  /* 모달 내부의 입력 필드 및 텍스트 폰트 크기 축소 */
+  .modal-content .ios-modal-title {
+    font-size: 1.05rem !important;
+  }
+  .modal-content .ios-text-btn {
+    font-size: 0.88rem !important;
+  }
+  .modal-content .form-label {
+    font-size: 0.68rem !important;
+  }
+  .modal-content .input-sm,
+  .modal-content input[type="text"],
+  .modal-content input[type="number"],
+  .modal-content input[type="date"],
+  .modal-content input[type="time"],
+  .modal-content select,
+  .modal-content textarea {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.55rem !important;
+  }
+  .modal-content .memo-form-container {
+    border-radius: 14px !important;
+    padding: 0.65rem !important;
+    gap: 0.4rem !important;
+  }
+  .modal-content .memo-title-input {
+    font-size: 0.95rem !important;
+    padding: 0.5rem 0.7rem !important;
+  }
+  .modal-content .memo-content-textarea {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 0.7rem !important;
+  }
+  .modal-content .ios-delete-btn {
+    font-size: 0.8rem !important;
+    padding: 0.45rem !important;
+  }
+  .modal-content .custom-checkbox {
+    font-size: 0.8rem !important;
   }
   .cmdk-shell {
     width: 94vw;
@@ -1291,6 +1349,52 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
   .nav-link span { font-size: 0.75rem; }
   .kpi-tile { padding: 0.45rem; }
   .kpi-tile .kpi-value { font-size: 1.25rem; }
+  
+  /* 모달 내부 초컴팩트 뷰 설정 */
+  .modal-content {
+    padding: 0.6rem 0.7rem !important;
+    gap: 0.4rem !important;
+    border-radius: 14px !important;
+  }
+  .modal-content .ios-modal-title {
+    font-size: 0.95rem !important;
+  }
+  .modal-content .ios-text-btn {
+    font-size: 0.82rem !important;
+  }
+  .modal-content .form-label {
+    font-size: 0.65rem !important;
+  }
+  .modal-content .input-sm,
+  .modal-content input[type="text"],
+  .modal-content input[type="number"],
+  .modal-content input[type="date"],
+  .modal-content input[type="time"],
+  .modal-content select,
+  .modal-content textarea {
+    font-size: 0.8rem !important;
+    padding: 0.35rem 0.5rem !important;
+  }
+  .modal-content .memo-form-container {
+    border-radius: 10px !important;
+    padding: 0.5rem !important;
+    gap: 0.3rem !important;
+  }
+  .modal-content .memo-title-input {
+    font-size: 0.85rem !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .modal-content .memo-content-textarea {
+    font-size: 0.8rem !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .modal-content .ios-delete-btn {
+    font-size: 0.75rem !important;
+    padding: 0.4rem !important;
+  }
+  .modal-content .custom-checkbox {
+    font-size: 0.75rem !important;
+  }
 }
 
 /* 가로 회전 (landscape) 시 헤더가 화면을 너무 잡아먹지 않도록 */

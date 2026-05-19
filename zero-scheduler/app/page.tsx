@@ -1888,13 +1888,14 @@ export default function Home() {
                 <button className="ios-text-btn bold" onClick={submitMemo}>저장</button>
               </div>
               
-              <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column', background: 'var(--bg-color)', borderRadius: '24px', padding: '1rem' }}>
+              <div className="memo-form-container">
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label" style={{ paddingLeft: '0.2rem' }}>제목<span className="text-red-500 ml-1">*</span></span>
                   <input 
                     type="text" 
                     placeholder=""
-                    style={{ fontSize: '1.1rem', fontWeight: 700, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', width: '100%' }}
+                    className="memo-title-input"
+                    style={{ fontWeight: 700, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', width: '100%' }}
                     value={memoForm.title} 
                     onChange={e => setMemoForm({...memoForm, title: e.target.value})} 
                   />
@@ -1904,7 +1905,8 @@ export default function Home() {
                   <textarea 
                     placeholder=""
                     rows={8}
-                    style={{ fontSize: '0.95rem', lineHeight: 1.6, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', resize: 'none', width: '100%' }}
+                    className="memo-content-textarea"
+                    style={{ lineHeight: 1.6, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', resize: 'none', width: '100%' }}
                     value={memoForm.content} 
                     onChange={e => setMemoForm({...memoForm, content: e.target.value})} 
                   />
