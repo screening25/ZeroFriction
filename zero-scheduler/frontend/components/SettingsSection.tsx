@@ -5,6 +5,7 @@ import { ChevronDown, Download, Upload, AlertTriangle, Settings } from 'lucide-r
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNotifications } from '@/frontend/hooks/useNotifications';
 
 export default function SettingsSection() {
   const {
@@ -30,6 +31,7 @@ export default function SettingsSection() {
   const settingsToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const prevDeviceSizeRef = useRef(appSettings.deviceSize);
+  const { permission, requestPermission } = useNotifications();
 
   // Keep localSettings in sync with appSettings
   useEffect(() => {
@@ -469,6 +471,24 @@ export default function SettingsSection() {
         >
           <AlertTriangle size={12} /> 시스템 전체 초기화 (영구 삭제)
         </button>
+      </div>
+
+      {/* 알림 설정 (Notification Settings) */}
+      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>알림 설정</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="settings-label-compact">시스템 알림 권한</span>
+          <button
+            className="settings-btn-compact"
+            onClick={async () => {
+              const res = await requestPermission();
+              showToast(res === 'granted' ? '🔔 알림 권한 허용됨' : '🔕 알림 권한 거부됨');
+            }}
+            style={{ width: '6.0rem' }}
+          >
+            {permission === 'granted' ? '허용됨' : permission === 'denied' ? '거부됨' : '권한 요청'}
+          </button>
+        </div>
       </div>
 
 

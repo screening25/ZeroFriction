@@ -1,34 +1,24 @@
 {
   "name": "Zero-Friction",
-  "short_name": "Zero-Friction",
-  "description": "자연어 한 줄로 일정·재고·변동사항을 동시에 다루는 데일리 오퍼레이션 위젯",
+  "short_name": "ZF Widget",
+  "description": "Zero-Friction Scheduler & Inventory Manager",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "lang": "ko",
-  "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "/icon.png",
-      "sizes": "512x512",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
-      "sizes": "192x192",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
-  ],
-  "prefer_related_applications": false
+  ]
 }

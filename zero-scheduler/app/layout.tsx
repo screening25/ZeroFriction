@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   applicationName: 'Zero-Friction',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Zero-Friction'
   },
   icons: {

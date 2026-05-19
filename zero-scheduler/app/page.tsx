@@ -437,7 +437,7 @@ export default function Home() {
                   <span>오늘 예정된 일정</span>
                   {todaySchedulesFull.length > 0 && <span className="badge" style={{ background: 'var(--accent-soft-bg)', color: 'var(--accent)', marginLeft: '0.2rem', fontSize: '0.6rem' }}>{todaySchedulesFull.length}건</span>}
                 </div>
-                <ChevronDown size={13} style={{ transform: isTodaySchedulesExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
+                <ChevronDown size={13} style={{ transform: isTodaySchedulesExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
               </div>
               
               {isTodaySchedulesExpanded && (
@@ -548,7 +548,7 @@ export default function Home() {
                   <ClipboardList size={13} style={{ color: 'var(--accent)' }} />
                   <span>최근 등록된 메모</span>
                 </div>
-                <ChevronDown size={13} style={{ transform: isRecentMemosExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
+                <ChevronDown size={13} style={{ transform: isRecentMemosExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
               </div>
               
               {isRecentMemosExpanded && (
@@ -582,7 +582,7 @@ export default function Home() {
                   <Layers size={13} style={{ color: 'var(--accent)' }} />
                   <span>재고 흐름 요약</span>
                 </div>
-                <ChevronDown size={13} style={{ transform: isInventoryFlowExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
+                <ChevronDown size={13} style={{ transform: isInventoryFlowExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
               </div>
 
               {isInventoryFlowExpanded && (
