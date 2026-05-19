@@ -93,7 +93,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Apple SD Gothic Neo", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
   -ms-overflow-style: none;
@@ -106,9 +106,14 @@ body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
-  letter-spacing: 0.015em; /* Subtle global base tracking to reduce visual density */
-  line-height: 1.6; /* Compliment letter-spacing with elegant line height */
+  letter-spacing: 0.015em;
+  line-height: 1.6;
+  /* iOS/Android 노치·펀치홀 안전 영역 보호 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* 모바일 풀-블리드 효과: 패딩 색을 body 배경과 일치 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ===== LAYOUT: Header / Body / Footer ===== */
@@ -116,6 +121,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* 모바일 동적 뷰포트 (주소창 자동 보정) */
   position: relative;
   overflow: hidden;
 }
@@ -320,11 +326,11 @@ body {
   position: relative;
 }
 .cal-cell:hover:not(.disabled) { background: var(--hover-bg); }
-.cal-cell.active { background: var(--text-primary); color: var(--bg-color); font-weight: 700; }
+.cal-cell.active { background: var(--text-primary); color: var(--bg-color) !important; font-weight: 700; }
 .cal-cell.today { color: var(--accent); font-weight: 800; }
 .cal-cell.sunday { color: var(--danger); }
 .cal-cell.saturday { color: var(--accent); }
-.cal-cell.today.active { background: var(--accent); color: white; }
+.cal-cell.today.active { background: var(--accent); color: white !important; }
 .cal-cell.disabled { opacity: 0.2; cursor: default; }
 .cal-dot {
   position: absolute; bottom: 2px;
@@ -808,6 +814,52 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 }
 .data-btn.danger-btn:hover { background: rgba(255, 59, 48, 0.08); }
 
+/* Settings Modal Compact Layout Specifications */
+.settings-select-compact {
+  width: 6.0rem !important;
+  height: 1.75rem !important;
+  font-size: 11px !important;
+  padding: 0 0.35rem !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--panel-border) !important;
+  background: var(--surface-color) !important;
+  color: var(--text-primary) !important;
+  outline: none !important;
+}
+.settings-label-compact {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+}
+.settings-btn-compact {
+  font-size: 11px !important;
+  height: 1.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  border: 1px solid var(--panel-border) !important;
+  background: var(--surface-color) !important;
+  color: var(--text-primary) !important;
+}
+.settings-btn-compact:hover {
+  background: var(--hover-bg) !important;
+}
+.settings-btn-compact.accent-btn {
+  color: var(--accent) !important;
+}
+.settings-btn-compact.danger-btn {
+  border: 1px solid rgba(255, 59, 48, 0.2) !important;
+  background: rgba(255, 59, 48, 0.04) !important;
+  color: var(--danger) !important;
+}
+.settings-btn-compact.danger-btn:hover {
+  background: rgba(255, 59, 48, 0.08) !important;
+}
+
 /* Danger zone */
 .danger-zone {
   border: 1px solid rgba(255, 59, 48, 0.2);
@@ -1127,6 +1179,133 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 .help-section summary { outline: none; }
 .help-section summary:hover .help-chevron { color: var(--text-secondary); }
 .help-section[open] .help-chevron { transform: rotate(180deg); }
+
+/* ===========================================================
+   MOBILE / TOUCH 디바이스 대응 (Galaxy S25 Edge, iPhone 등)
+   - Electron 위젯 모드와 동일한 코드베이스에서 자동 적응
+   =========================================================== */
+
+/* 터치 디바이스: hover 상태가 존재하지 않으므로 hover-only UI를 항상 노출 */
+@media (hover: none) {
+  .card-hover-actions {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: static !important;
+    transform: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-top: 0.4rem;
+    padding: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+  .ghost-btn {
+    min-height: 32px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+  }
+  /* macOS 트래픽 라이트 가짜 여백 제거 (Electron 전용) */
+  .sticky-header {
+    padding-top: 0.6rem !important;
+  }
+}
+
+/* ≤ 480px (대부분의 폰): 터치 타깃 확대, 헤더 컴팩트화 */
+@media (max-width: 480px) {
+  .sticky-header {
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+  }
+  .main-scroll, .body-wrapper {
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+  }
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    padding: 0.5rem;
+  }
+  .nav-link {
+    padding: 0.65rem 0;
+    font-size: 0.85rem;
+  }
+  .command-input {
+    font-size: 16px; /* iOS/Android 자동 줌 방지 — 16px 이상 강제 */
+  }
+  .kpi-strip {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem;
+  }
+  .kpi-tile .kpi-value {
+    font-size: 1.5rem;
+  }
+  .modal-content {
+    max-width: 100%;
+    margin: 0 0.5rem;
+    border-radius: 18px;
+    max-height: 88dvh;
+  }
+  .cmdk-shell {
+    width: 94vw;
+    max-height: 70dvh;
+  }
+  .drawer-content {
+    width: min(86vw, 320px);
+  }
+  /* 입력 필드들 — 모바일에서 16px 미만이면 자동 zoom 발생 */
+  .input-sm, input[type="text"], input[type="number"], input[type="date"], input[type="time"], input[type="password"], textarea, select {
+    font-size: 16px !important;
+  }
+  /* 캘린더 셀: 점이 너무 작아 보이므로 조금 확대 */
+  .cal-cell {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+  /* 토스트가 안전 영역 침범 방지 */
+  .toast {
+    bottom: calc(2rem + env(safe-area-inset-bottom));
+  }
+  /* 플로팅 테마 버튼도 안전 영역 + 더 큰 터치 영역 */
+  .theme-floating-btn {
+    bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    right: calc(20px + env(safe-area-inset-right)) !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+  /* footer 가독성 */
+  .app-footer {
+    padding-bottom: calc(0.8rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ≤ 360px (Galaxy S25 Edge 등 좁은 폰 가로): 폰트·간격 한 단계 더 압축 */
+@media (max-width: 360px) {
+  .app-title { font-size: 1.05rem !important; }
+  .section-title { font-size: 1.1rem; }
+  .nav-link span { font-size: 0.75rem; }
+  .kpi-tile { padding: 0.45rem; }
+  .kpi-tile .kpi-value { font-size: 1.25rem; }
+}
+
+/* 가로 회전 (landscape) 시 헤더가 화면을 너무 잡아먹지 않도록 */
+@media (max-width: 900px) and (orientation: landscape) {
+  .sticky-header {
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    gap: 0.4rem !important;
+  }
+  .nlp-suggestions { display: none; }
+}
+
+/* iOS/Android standalone(홈 화면 설치 모드)에서 상태바 영역 추가 보호 */
+@media (display-mode: standalone) {
+  body {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+}
 
 /* ===== HIDE NEXT.JS DEFAULT DEV INDICATORS / LOGOS (N 로고 제거) ===== */
 next-route-announcer,

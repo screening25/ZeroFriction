@@ -396,7 +396,7 @@ export default function Home() {
               </span>
             </div>
             <div className="kpi-tile clickable" onClick={() => setActiveTab('calendar')}>
-              <span className="kpi-label">미완료</span>
+              <span className="kpi-label">예정</span>
               <div className="flex items-baseline gap-1" style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
                 <span className="kpi-value">{schedules.filter(s => !s.attrs.completed).length}</span>
                 <span className="kpi-sub">전체</span>
@@ -421,12 +421,11 @@ export default function Home() {
           {/* First-Visit Onboarding Card */}
           {records.length === 0 && (
             <div className="onboarding-card">
-              <div className="ob-title">자연어로 시작해 보세요</div>
+              <div className="ob-title">스마트 데이터 입력 안내</div>
               <div className="ob-desc">
-                상단 입력창에 "내일 오후 3시 디자인 리뷰" 같은 문장을 그대로 적으면 AI가 자동으로 분류해 등록합니다.
-                <span className="cmdk-kbd" style={{ marginLeft: '0.4rem' }}>⌘</span>
-                <span className="cmdk-kbd">K</span>
-                <span style={{ marginLeft: '0.2rem' }}>로 명령 팔레트도 열 수 있어요.</span>
+                상단 입력창에 "내일 14시 미팅" 등의 문장을 입력하시면 시스템이 자동으로 분류하여 등록합니다.
+                <br />
+                단축키 [Cmd] + [K]를 사용하여 명령 팔레트를 호출할 수 있습니다.
               </div>
             </div>
           )}
@@ -1597,8 +1596,8 @@ export default function Home() {
               </div>
               
               <div className="form-group">
-                <span className="form-label">제목</span>
-                <input type="text" className="input-sm" placeholder="일정 제목을 적어주세요" value={editingSchedule.title} onChange={e => setEditingSchedule({...editingSchedule, title: e.target.value})} />
+                <span className="form-label">제목<span className="text-red-500 ml-1">*</span></span>
+                <input type="text" className="input-sm" placeholder="" value={editingSchedule.title} onChange={e => setEditingSchedule({...editingSchedule, title: e.target.value})} />
               </div>
 
               {/* Strict Isolated Schedule Category pills inside schedule edit modal! */}
@@ -1609,33 +1608,8 @@ export default function Home() {
                   className="input-sm" 
                   value={editingSchedule.category || ''} 
                   onChange={e => setEditingSchedule({...editingSchedule, category: e.target.value})} 
-                  placeholder="카테고리를 입력하거나 아래 칩을 선택하십시오"
+                  placeholder="카테고리를 선택하거나 신규로 입력하십시오."
                 />
-                
-                {/* ➕ 새 카테고리 직접 추가/만들기 인터페이스 */}
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
-                  <input
-                    type="text"
-                    placeholder="새 일정 카테고리 생성"
-                    className="input-sm"
-                    value={customScheduleCategory}
-                    onChange={e => setCustomScheduleCategory(e.target.value)}
-                    style={{ flex: 1, fontSize: '0.75rem', padding: '0.2rem 0.4rem' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customScheduleCategory.trim()) {
-                        setEditingSchedule({ ...editingSchedule, category: customScheduleCategory.trim() });
-                        showToast(`카테고리 '${customScheduleCategory.trim()}' 적용 완료 (저장 시 자동 보존됩니다)`);
-                        setCustomScheduleCategory('');
-                      }
-                    }}
-                    style={{ padding: '0.2rem 0.5rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    추가
-                  </button>
-                </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem' }}>
                   {(appSettings.scheduleCategories || ['업무', '회의', '개인', '일반']).map(cat => {
@@ -1667,7 +1641,7 @@ export default function Home() {
               
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">날짜</span>
+                  <span className="form-label">날짜<span className="text-red-500 ml-1">*</span></span>
                   <input type="date" className="input-sm" value={editingSchedule.attrs.date || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date: e.target.value }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -1704,7 +1678,7 @@ export default function Home() {
                     value={editingSchedule.attrs.recurrence ?? 'none'} 
                     onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, recurrence: e.target.value as any }})}
                   >
-                    <option value="none">없음 (단발성)</option>
+                    <option value="none">없음</option>
                     <option value="daily">매일</option>
                     <option value="weekly">매주</option>
                     <option value="monthly">매월</option>
@@ -1747,11 +1721,11 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <span className="form-label">품목명</span>
+                <span className="form-label">품목명<span className="text-red-500 ml-1">*</span></span>
                 <input 
                   type="text" 
                   className="input-sm" 
-                  placeholder="품목명을 입력하세요"
+                  placeholder=""
                   value={editingInventory.title} 
                   onChange={e => setEditingInventory({...editingInventory, title: e.target.value})} 
                 />
@@ -1774,7 +1748,7 @@ export default function Home() {
 
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">수량</span>
+                  <span className="form-label">수량<span className="text-red-500 ml-1">*</span></span>
                   <input type="number" className="input-sm" value={editingInventory.attrs.qty ?? 0} onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, qty: Number(e.target.value) }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -1792,13 +1766,13 @@ export default function Home() {
 
               {/* Storage Location Dropdown (Master Data Only) */}
               <div className="form-group">
-                <span className="form-label">보관 위치</span>
+                <span className="form-label">보관 창고<span className="text-red-500 ml-1">*</span></span>
                 <select 
                   className="input-sm" 
                   value={editingInventory.attrs.loc || ''} 
                   onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, loc: e.target.value }})}
                 >
-                  <option value="">보관 위치 선택</option>
+                  <option value="">보관 창고</option>
                   {(appSettings.locations || ['비즈니스 창고', '메인 매장', '이동용 밴', 'A창고', 'B창고']).map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
@@ -1807,13 +1781,13 @@ export default function Home() {
 
               {/* Manager Dropdown (Master Data Only) */}
               <div className="form-group">
-                <span className="form-label">담당 관리자</span>
+                <span className="form-label">담당 관리자<span className="text-red-500 ml-1">*</span></span>
                 <select 
                   className="input-sm" 
                   value={editingInventory.attrs.mgr || ''} 
                   onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, mgr: e.target.value }})}
                 >
-                  <option value="">담당 관리자 선택</option>
+                  <option value="">담당 관리자</option>
                   {(appSettings.managers || ['윤상영', '김철수', '이영희', '박민수']).map(mgr => (
                     <option key={mgr} value={mgr}>{mgr}</option>
                   ))}
@@ -1826,7 +1800,7 @@ export default function Home() {
                 <input 
                   type="text" 
                   className="input-sm" 
-                  placeholder="예: S/N-12345678 (선택사항)"
+                  placeholder="시리얼 번호"
                   value={editingInventory.attrs.serial || ''} 
                   onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, serial: e.target.value }})} 
                 />
@@ -1834,11 +1808,11 @@ export default function Home() {
 
               {/* Memo Textarea */}
               <div className="form-group">
-                <span className="form-label">특이사항 메모</span>
+                <span className="form-label">특이사항</span>
                 <textarea
                   rows={3}
                   className="input-sm"
-                  placeholder="특이사항 메모"
+                  placeholder=""
                   style={{ resize: 'vertical', lineHeight: 1.5, fontSize: '0.85rem' }}
                   value={editingInventory.attrs.memo || ''}
                   onChange={e => setEditingInventory({ ...editingInventory, attrs: { ...editingInventory.attrs, memo: e.target.value } })}
@@ -1885,26 +1859,31 @@ export default function Home() {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.15 }} className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="ios-modal-header">
                 <button className="ios-text-btn" onClick={() => setIsMemoModalOpen(false)}>취소</button>
-                <div className="ios-modal-title">메모 관리</div>
+                <div className="ios-modal-title">메모</div>
                 <button className="ios-text-btn bold" onClick={submitMemo}>저장</button>
               </div>
               
-              <div style={{ display: 'flex', gap: '0', flexDirection: 'column', background: 'var(--bg-color)', borderRadius: '24px', padding: '0.5rem 1rem' }}>
-                <input 
-                  type="text" 
-                  placeholder="제목"
-                  style={{ fontSize: '1.25rem', fontWeight: 700, background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', padding: '1rem 0.5rem' }}
-                  value={memoForm.title} 
-                  onChange={e => setMemoForm({...memoForm, title: e.target.value})} 
-                />
-                <hr style={{ border: 'none', borderTop: '1px solid var(--panel-border)', margin: '0 0.5rem' }} />
-                <textarea 
-                  placeholder="상세 내용을 입력하세요..."
-                  rows={8}
-                  style={{ fontSize: '1.05rem', lineHeight: 1.6, background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', padding: '1rem 0.5rem', resize: 'none' }}
-                  value={memoForm.content} 
-                  onChange={e => setMemoForm({...memoForm, content: e.target.value})} 
-                />
+              <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column', background: 'var(--bg-color)', borderRadius: '24px', padding: '1rem' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>제목<span className="text-red-500 ml-1">*</span></span>
+                  <input 
+                    type="text" 
+                    placeholder=""
+                    style={{ fontSize: '1.1rem', fontWeight: 700, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', width: '100%' }}
+                    value={memoForm.title} 
+                    onChange={e => setMemoForm({...memoForm, title: e.target.value})} 
+                  />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>상세 내용<span className="text-red-500 ml-1">*</span></span>
+                  <textarea 
+                    placeholder=""
+                    rows={8}
+                    style={{ fontSize: '0.95rem', lineHeight: 1.6, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', resize: 'none', width: '100%' }}
+                    value={memoForm.content} 
+                    onChange={e => setMemoForm({...memoForm, content: e.target.value})} 
+                  />
+                </div>
               </div>
               
               {memoForm.id && <button className="ios-delete-btn" onClick={() => deleteMemo(memoForm.id!)}>메모 삭제</button>}

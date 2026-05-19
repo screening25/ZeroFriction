@@ -59,6 +59,11 @@ const getRelativeTime = (timestamp: number) => {
 };
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
     theme, toggleTheme,
     toast,
@@ -127,6 +132,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return () => window.removeEventListener('keydown', handler);
   }, [activeTab, isActivityDrawerOpen, setActiveTab, setIsActivityDrawerOpen]);
 
+  if (!mounted) {
+    return <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F2F2F7' }} />;
+  }
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
@@ -172,27 +181,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {loading && <span className="command-loading" style={{ right: '1rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>분석 중...</span>}
         </div>
 
-        {/* NLP Example Chips — 데이터가 적거나 입력이 비어 있을 때 가이드 */}
-        {records.length < 3 && !nlpInput && (
-          <div className="nlp-suggestions">
-            {[
-              '내일 오후 3시 디자인 리뷰',
-              '오늘 오전 9시 팀 스탠드업 10분 전 알림',
-              '사과 12개 입고',
-              '프린터 토너 2개 출고',
-              'Q4 OKR 검토 메모'
-            ].map(ex => (
-              <button
-                key={ex}
-                type="button"
-                className="nlp-chip"
-                onClick={() => setNlpInput(ex)}
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Top Navigation Row (Segmented Control SPA style!) */}
         <nav

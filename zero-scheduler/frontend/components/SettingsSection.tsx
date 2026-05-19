@@ -74,7 +74,7 @@ export default function SettingsSection() {
   // Export all databases into unified premium Zero Backup JSON!
   const handleExportData = () => {
     try {
-      const recordsData = localStorage.getItem('zero_records') || '[]';
+      const recordsData = localStorage.getItem('universal_records') || '[]';
       const activitiesData = localStorage.getItem('zero_activities') || '[]';
       const settingsData = localStorage.getItem('zero_settings') || '{}';
 
@@ -116,7 +116,7 @@ export default function SettingsSection() {
         }
 
         if (confirm('백업 파일을 복원하시겠습니까? 현재 데이터는 모두 덮어써집니다.')) {
-          localStorage.setItem('zero_records', JSON.stringify(backup.records));
+          localStorage.setItem('universal_records', JSON.stringify(backup.records));
           if (backup.activities) localStorage.setItem('zero_activities', JSON.stringify(backup.activities));
           if (backup.settings) localStorage.setItem('zero_settings', JSON.stringify(backup.settings));
 
@@ -318,52 +318,33 @@ export default function SettingsSection() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>레이아웃 밀도</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">레이아웃 밀도</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.density}
             onChange={e => {
               const updated = { ...localSettings, density: e.target.value as any };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value="compact">조밀하게 (Compact)</option>
-            <option value="cozy">보통 (Cozy)</option>
+            <option value="compact">조밀하게</option>
+            <option value="cozy">여유있게</option>
           </select>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>시간 표기 방식</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">시간 표기 방식</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.timeFormat}
             onChange={e => {
               const updated = { ...localSettings, timeFormat: e.target.value as any };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value="12h">오전/오후 (12H)</option>
-            <option value="24h">24시간제 (24H)</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Electron 기기 모드</span>
-          <select
-            className="input-sm"
-            value={localSettings.deviceSize || 'default'}
-            onChange={e => {
-              const updated = { ...localSettings, deviceSize: e.target.value as any };
-              updateSingleSetting(updated);
-            }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
-          >
-            <option value="default">데스크톱 기본형</option>
-            <option value="tablet">태블릿 가로형</option>
-            <option value="mobile">모바일 세로형 (Cupertino)</option>
+            <option value="12h">12시간</option>
+            <option value="24h">24시간</option>
           </select>
         </div>
       </div>
@@ -372,71 +353,67 @@ export default function SettingsSection() {
       <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>콘텐츠 표시 설정</div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>달력 시작 요일</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">달력 시작 요일</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.weekStartsOn}
             onChange={e => {
               const updated = { ...localSettings, weekStartsOn: Number(e.target.value) as any };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value={0}>일요일 시작</option>
-            <option value={1}>월요일 시작</option>
+            <option value={0}>일요일</option>
+            <option value={1}>월요일</option>
           </select>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>달력 셀당 일정 한계수</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">일정 노출 개수</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.maxEventsShown}
             onChange={e => {
               const updated = { ...localSettings, maxEventsShown: Number(e.target.value) };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value={2}>2개 표시</option>
-            <option value={3}>3개 표시</option>
-            <option value={4}>4개 표시</option>
-            <option value={5}>5개 표시</option>
+            <option value={2}>2개</option>
+            <option value={3}>3개</option>
+            <option value={4}>4개</option>
+            <option value={5}>5개</option>
           </select>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>대시보드 최대 재고경고</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">재고 노출 개수</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.maxInventoryShown}
             onChange={e => {
               const updated = { ...localSettings, maxInventoryShown: Number(e.target.value) };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value={3}>최대 3개</option>
-            <option value={5}>최대 5개</option>
-            <option value={10}>최대 10개</option>
+            <option value={3}>3개</option>
+            <option value={5}>5개</option>
+            <option value={10}>10개</option>
           </select>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>대시보드 최대 메모개수</span>
+        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+          <span className="settings-label-compact">메모 노출 개수</span>
           <select
-            className="input-sm"
+            className="settings-select-compact"
             value={localSettings.maxMemosShown}
             onChange={e => {
               const updated = { ...localSettings, maxMemosShown: Number(e.target.value) };
               updateSingleSetting(updated);
             }}
-            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', outline: 'none' }}
           >
-            <option value={4}>최대 4개</option>
-            <option value={6}>최대 6개</option>
-            <option value={8}>최대 8개</option>
+            <option value={4}>4개</option>
+            <option value={6}>6개</option>
+            <option value={8}>8개</option>
           </select>
         </div>
       </div>
@@ -448,17 +425,17 @@ export default function SettingsSection() {
         {/* Row 1 (Safe & Export): 데이터 내보내기 & 데이터 불러오기 */}
         <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
           <button
-            className="input-sm"
+            className="settings-btn-compact"
             onClick={handleExportData}
-            style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.68rem', borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', fontWeight: 700 }}
+            style={{ flex: 1, gap: '0.25rem' }}
           >
             <Download size={12} /> 데이터 내보내기 (.json)
           </button>
 
           <button
-            className="input-sm"
+            className="settings-btn-compact"
             onClick={() => fileRef.current?.click()}
-            style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.68rem', borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', fontWeight: 700 }}
+            style={{ flex: 1, gap: '0.25rem' }}
           >
             <Upload size={12} /> 데이터 불러오기
           </button>
@@ -474,22 +451,22 @@ export default function SettingsSection() {
         {/* Row 2 (Trash & Logs): 휴지통 & 활동 로그 초기화 */}
         <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
           <button
-            className="input-sm"
+            className="settings-btn-compact accent-btn"
             onClick={() => setIsTrashModalOpen(true)}
-            style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.68rem', borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}
+            style={{ flex: 1 }}
           >
             🗑️ 휴지통 ({archive.length})
           </button>
 
           <button
-            className="input-sm"
+            className="settings-btn-compact"
             onClick={() => {
               if (confirm('모든 활동 로그를 삭제하시겠습니까?')) {
                 clearActivities();
                 showToast('🧹 활동 로그 초기화 완료');
               }
             }}
-            style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.68rem', borderRadius: '8px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 700 }}
+            style={{ flex: 1 }}
           >
             활동 로그 초기화
           </button>
@@ -497,45 +474,14 @@ export default function SettingsSection() {
 
         {/* Row 3 (Destructive): 모든 데이터 초기화 */}
         <button
-          className="input-sm"
+          className="settings-btn-compact danger-btn"
           onClick={handleResetAll}
-          style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.68rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.04)', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontWeight: 800 }}
+          style={{ width: '100%', gap: '0.3rem' }}
         >
           <AlertTriangle size={12} /> 시스템 전체 초기화 (영구 삭제)
         </button>
       </div>
 
-      {/* Save Settings Floating CTA */}
-      <div style={{ position: 'sticky', bottom: '0.1rem', zIndex: 10, background: 'var(--bg-color)', padding: '0.3rem 0', display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={handleSaveSettings}
-          disabled={saveStatus !== 'idle'}
-          style={{
-            padding: '0.5rem 1.4rem',
-            borderRadius: '20px',
-            background: 'var(--accent)',
-            color: '#ffffff',
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            border: 'none',
-            cursor: saveStatus === 'idle' ? 'pointer' : 'default',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-            opacity: saveStatus === 'idle' ? 1 : 0.8,
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
-        >
-          {saveStatus === 'saving' ? (
-            <>💾 저장 중...</>
-          ) : saveStatus === 'saved' ? (
-            <>✅ 저장 완료!</>
-          ) : (
-            <>저장 및 돌아가기</>
-          )}
-        </button>
-      </div>
 
       {/* Soft Delete Trash Modal (Instant overlay within Settings!) */}
       <AnimatePresence>

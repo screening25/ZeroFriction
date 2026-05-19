@@ -79,7 +79,7 @@ interface AppContextProps {
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [records, setRecords] = useState<UniversalRecord[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -112,8 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Init
   useEffect(() => {
     const savedTheme = localStorage.getItem('zero_theme') as 'light' | 'dark' | null;
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initTheme = savedTheme || (isDark ? 'dark' : 'light');
+    const initTheme = savedTheme || 'light';
     setTheme(initTheme);
     document.documentElement.setAttribute('data-theme', initTheme);
     
