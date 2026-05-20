@@ -6,6 +6,178 @@ import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNotifications } from '@/frontend/hooks/useNotifications';
+import { createPortal } from 'react-dom';
+
+interface CustomSelectCompactProps {
+  value: string | number;
+  options: { value: string | number; label: string }[];
+  onChange: (val: any) => void;
+}
+
+function CustomSelectCompact({ value, options, onChange }: CustomSelectCompactProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        !target.closest('.custom-select-portal-dropdown')
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleScrollResize = () => {
+      setIsOpen(false);
+    };
+    window.addEventListener('scroll', handleScrollResize, true);
+    window.addEventListener('resize', handleScrollResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollResize, true);
+      window.removeEventListener('resize', handleScrollResize);
+    };
+  }, [isOpen]);
+
+  const selectedOpt = options.find(opt => String(opt.value) === String(value));
+  const displayText = selectedOpt ? selectedOpt.label : '선택...';
+
+  const handleButtonClick = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const dropdownWidthPx = 7.5 * rootFontSize;
+      
+      setCoords({
+        top: rect.bottom + window.scrollY,
+        left: Math.max(8, rect.right + window.scrollX - dropdownWidthPx)
+      });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '6.0rem' }}>
+      <button
+        ref={buttonRef}
+        type="button"
+        style={{
+          width: '6.0rem',
+          height: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--input-bg)',
+          border: isOpen ? '1px solid var(--accent)' : '1px solid var(--panel-border)',
+          borderRadius: '10px',
+          padding: '0 0.5rem',
+          fontSize: '12px',
+          fontWeight: 600,
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
+          outline: 'none',
+          boxShadow: isOpen ? '0 0 0 2px var(--accent-glow)' : 'none',
+          transition: 'all 0.15s ease',
+          textAlign: 'left'
+        }}
+        onClick={handleButtonClick}
+      >
+        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'left', flex: 1 }}>
+          {displayText}
+        </span>
+        <ChevronDown 
+          size={12} 
+          style={{ 
+            opacity: 0.6, 
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
+            transition: 'transform 0.15s ease',
+            marginLeft: '0.2rem',
+            flexShrink: 0
+          }} 
+        />
+      </button>
+
+      {isOpen && mounted && createPortal(
+        <div
+          className="custom-select-portal-dropdown"
+          style={{
+            position: 'absolute',
+            top: `${coords.top + 4}px`,
+            left: `${coords.left}px`,
+            width: '7.5rem',
+            background: 'var(--dropdown-bg, var(--surface-elevated))',
+            border: '1px solid var(--panel-border)',
+            borderRadius: '10px',
+            boxShadow: '0 6px 16px var(--shadow-color, rgba(0,0,0,0.15))',
+            zIndex: 9999,
+            maxHeight: '180px',
+            overflowY: 'auto',
+            padding: '0.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.1rem',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
+          }}
+        >
+          {options.map(opt => {
+            const isSelected = String(opt.value) === String(value);
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '12px',
+                  fontWeight: isSelected ? 700 : 500,
+                  textAlign: 'left',
+                  background: isSelected ? 'var(--accent-soft-bg)' : 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  transition: 'all 0.1s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) e.currentTarget.style.background = 'var(--hover-bg, rgba(255,255,255,0.05))';
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 export default function SettingsSection() {
   const {
@@ -247,249 +419,375 @@ export default function SettingsSection() {
       </details>
 
       {/* AI API Key */}
-      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>AI 연동 설정</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="settings-label-compact">AI API Key</span>
-          <input
-            type="password"
-            className="settings-select-compact"
-            placeholder="API Key"
-            value={localSettings.apiKey}
-            onChange={e => {
-              const updated = { ...localSettings, apiKey: e.target.value };
-              updateSingleSetting(updated);
-            }}
-          />
-        </div>
-        <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.2rem 0' }} />
-        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.3px' }}>AI 연동 오류 코드 안내</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.62rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            <div>• <strong style={{ color: 'var(--text-primary)' }}>E-100</strong>: 유효하지 않은 API Key (입력값 오타 또는 만료)</div>
-            <div>• <strong style={{ color: 'var(--text-primary)' }}>E-200</strong>: API 호출 한도 초과 (무료 할당량 초과)</div>
-            <div>• <strong style={{ color: 'var(--text-primary)' }}>E-300</strong>: 네트워크 통신 장애 또는 연결 오류</div>
-            <div>• <strong style={{ color: 'var(--text-primary)' }}>E-900</strong>: 기타 시스템 연동 오류 (서버 일시 에러)</div>
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }} open>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>AI 연동 설정</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="settings-label-compact">AI API Key</span>
+            <input
+              type="password"
+              className="settings-select-compact"
+              placeholder="API Key"
+              value={localSettings.apiKey}
+              onChange={e => {
+                const updated = { ...localSettings, apiKey: e.target.value };
+                updateSingleSetting(updated);
+              }}
+            />
+          </div>
+          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.2rem 0' }} />
+          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.3px' }}>AI 연동 오류 코드 안내</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.62rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <div>• <strong style={{ color: 'var(--text-primary)' }}>E-100</strong>: 유효하지 않은 API Key (입력값 오타 또는 만료)</div>
+              <div>• <strong style={{ color: 'var(--text-primary)' }}>E-200</strong>: API 호출 한도 초과 (무료 할당량 초과)</div>
+              <div>• <strong style={{ color: 'var(--text-primary)' }}>E-300</strong>: 네트워크 통신 장애 또는 연결 오류</div>
+              <div>• <strong style={{ color: 'var(--text-primary)' }}>E-900</strong>: 기타 시스템 연동 오류 (서버 일시 에러)</div>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       {/* Display Settings */}
-      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>디스플레이 설정</div>
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }} open>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>디스플레이 설정</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>포인트 색상</span>
+            <div className="color-chips" style={{ display: 'flex', gap: '0.5rem', padding: '0.1rem 0' }}>
+              {currentAccents.map(c => {
+                const isActive = localSettings.accentColor === c.value;
+                return (
+                  <div
+                    key={c.name}
+                    className={`color-chip ${isActive ? 'active' : ''}`}
+                    style={{
+                      background: c.value,
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      outline: 'none',
+                      border: isActive ? `2px solid var(--bg-color)` : '2px solid transparent',
+                      boxShadow: isActive ? `0 0 0 1.5px ${c.value}` : 'none'
+                    }}
+                    onClick={() => {
+                      const updated = { ...localSettings, accentColor: c.value };
+                      updateSingleSetting(updated);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>포인트 색상</span>
-          <div className="color-chips" style={{ display: 'flex', gap: '0.5rem', padding: '0.1rem 0' }}>
-            {currentAccents.map(c => {
-              const isActive = localSettings.accentColor === c.value;
-              return (
-                <div
-                  key={c.name}
-                  className={`color-chip ${isActive ? 'active' : ''}`}
-                  style={{
-                    background: c.value,
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    outline: 'none',
-                    // Apple-style Double Ring highlight
-                    border: isActive ? `2px solid var(--bg-color)` : '2px solid transparent',
-                    boxShadow: isActive ? `0 0 0 1.5px ${c.value}` : 'none'
-                  }}
-                  onClick={() => {
-                    const updated = { ...localSettings, accentColor: c.value };
-                    updateSingleSetting(updated);
-                  }}
-                />
-              );
-            })}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">레이아웃 밀도</span>
+            <CustomSelectCompact
+              value={localSettings.density}
+              options={[
+                { value: 'compact', label: 'Compact' },
+                { value: 'cozy', label: 'Cozy' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, density: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">글자 크기</span>
+            <CustomSelectCompact
+              value={localSettings.fontSize || 'medium'}
+              options={[
+                { value: 'small', label: '작게' },
+                { value: 'medium', label: '중간' },
+                { value: 'large', label: '크게' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, fontSize: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">시간 표기 방식</span>
+            <CustomSelectCompact
+              value={localSettings.timeFormat}
+              options={[
+                { value: '12h', label: '12시간' },
+                { value: '24h', label: '24시간' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, timeFormat: val })}
+            />
           </div>
         </div>
-
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">레이아웃 밀도</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.density}
-            onChange={e => {
-              const updated = { ...localSettings, density: e.target.value as any };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value="compact">Compact</option>
-            <option value="cozy">Cozy</option>
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">시간 표기 방식</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.timeFormat}
-            onChange={e => {
-              const updated = { ...localSettings, timeFormat: e.target.value as any };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value="12h">12시간</option>
-            <option value="24h">24시간</option>
-          </select>
-        </div>
-      </div>
+      </details>
 
       {/* Content Settings */}
-      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>콘텐츠 표시 설정</div>
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }} open>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>콘텐츠 표시 설정</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.75rem' }}>
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">달력 시작 요일</span>
+            <CustomSelectCompact
+              value={localSettings.weekStartsOn}
+              options={[
+                { value: 0, label: '일요일' },
+                { value: 1, label: '월요일' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, weekStartsOn: val })}
+            />
+          </div>
 
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">달력 시작 요일</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.weekStartsOn}
-            onChange={e => {
-              const updated = { ...localSettings, weekStartsOn: Number(e.target.value) as any };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value={0}>일요일</option>
-            <option value={1}>월요일</option>
-          </select>
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">일정 노출 개수</span>
+            <CustomSelectCompact
+              value={localSettings.maxEventsShown}
+              options={[
+                { value: 2, label: '2개' },
+                { value: 3, label: '3개' },
+                { value: 4, label: '4개' },
+                { value: 5, label: '5개' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, maxEventsShown: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">재고 노출 개수</span>
+            <CustomSelectCompact
+              value={localSettings.maxInventoryShown}
+              options={[
+                { value: 3, label: '3개' },
+                { value: 5, label: '5개' },
+                { value: 10, label: '10개' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, maxInventoryShown: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">메모 노출 개수</span>
+            <CustomSelectCompact
+              value={localSettings.maxMemosShown}
+              options={[
+                { value: 4, label: '4개' },
+                { value: 6, label: '6개' },
+                { value: 8, label: '8개' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, maxMemosShown: val })}
+            />
+          </div>
         </div>
-
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">일정 노출 개수</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.maxEventsShown}
-            onChange={e => {
-              const updated = { ...localSettings, maxEventsShown: Number(e.target.value) };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value={2}>2개</option>
-            <option value={3}>3개</option>
-            <option value={4}>4개</option>
-            <option value={5}>5개</option>
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">재고 노출 개수</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.maxInventoryShown}
-            onChange={e => {
-              const updated = { ...localSettings, maxInventoryShown: Number(e.target.value) };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value={3}>3개</option>
-            <option value={5}>5개</option>
-            <option value={10}>10개</option>
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
-          <span className="settings-label-compact">메모 노출 개수</span>
-          <select
-            className="settings-select-compact"
-            value={localSettings.maxMemosShown}
-            onChange={e => {
-              const updated = { ...localSettings, maxMemosShown: Number(e.target.value) };
-              updateSingleSetting(updated);
-            }}
-          >
-            <option value={4}>4개</option>
-            <option value={6}>6개</option>
-            <option value={8}>8개</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 데이터 관리 (Consolidated Data Management) */}
-      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>데이터 관리</div>
-
-        {/* Row 1 (Safe & Export): 데이터 내보내기 & 데이터 불러오기 */}
-        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-          <button
-            className="settings-btn-compact"
-            onClick={handleExportData}
-            style={{ flex: 1, gap: '0.25rem' }}
-          >
-            <Download size={12} /> 데이터 내보내기 (.json)
-          </button>
-
-          <button
-            className="settings-btn-compact"
-            onClick={() => fileRef.current?.click()}
-            style={{ flex: 1, gap: '0.25rem' }}
-          >
-            <Upload size={12} /> 데이터 불러오기
-          </button>
-          <input
-            type="file"
-            ref={fileRef}
-            style={{ display: 'none' }}
-            accept=".json"
-            onChange={handleImportData}
-          />
-        </div>
-
-        {/* Row 2 (Trash & Logs): 휴지통 & 활동 로그 초기화 */}
-        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-          <button
-            className="settings-btn-compact accent-btn"
-            onClick={() => setIsTrashModalOpen(true)}
-            style={{ flex: 1 }}
-          >
-            🗑️ 휴지통 ({archive.length})
-          </button>
-
-          <button
-            className="settings-btn-compact"
-            onClick={() => {
-              if (confirm('모든 활동 로그를 삭제하시겠습니까?')) {
-                clearActivities();
-                showToast('🧹 활동 로그 초기화 완료');
-              }
-            }}
-            style={{ flex: 1 }}
-          >
-            활동 로그 초기화
-          </button>
-        </div>
-
-        {/* Row 3 (Destructive): 모든 데이터 초기화 */}
-        <button
-          className="settings-btn-compact danger-btn"
-          onClick={handleResetAll}
-          style={{ width: '100%', gap: '0.3rem' }}
-        >
-          <AlertTriangle size={12} /> 시스템 전체 초기화 (영구 삭제)
-        </button>
-      </div>
+      </details>
 
       {/* 알림 설정 (Notification Settings) */}
-      <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.65rem 0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textAlign: 'left' }}>알림 설정</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="settings-label-compact">시스템 알림 권한</span>
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }} open>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>알림 설정</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.75rem' }}>
+          {/* 시스템 알림 권한 */}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">시스템 알림 권한</span>
+            <button
+              type="button"
+              className="settings-btn-compact"
+              onClick={async () => {
+                const currentVal = localSettings.enableNotifications !== false;
+                if (!currentVal) {
+                  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                  }
+                }
+                updateSingleSetting({ ...localSettings, enableNotifications: !currentVal });
+              }}
+              style={{ width: '6.0rem' }}
+            >
+              {(localSettings.enableNotifications !== false) ? '허용됨' : '거부됨'}
+            </button>
+          </div>
+
+          {/* 기본 알림 시간 */}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">기본 알림 시간</span>
+            <CustomSelectCompact
+              value={localSettings.defaultNotifyOffset ?? 10}
+              options={[
+                { value: -1, label: '알림 없음' },
+                { value: 0, label: '정각' },
+                { value: 10, label: '10분 전' },
+                { value: 30, label: '30분 전' },
+                { value: 60, label: '1시간 전' },
+                { value: 1440, label: '1일 전' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, defaultNotifyOffset: val })}
+            />
+          </div>
+
+          {/* 알림 전송 방식 */}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">알림 전송 방식</span>
+            <CustomSelectCompact
+              value={localSettings.notificationType ?? 'system'}
+              options={[
+                { value: 'system', label: '데스크톱 알림창' },
+                { value: 'browser', label: 'OS 배너 알림' }
+              ]}
+              onChange={val => updateSingleSetting({ ...localSettings, notificationType: val })}
+            />
+          </div>
+
+          {/* 알림 테스트 */}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">알림 기능 테스트</span>
+            <button
+              type="button"
+              className="settings-btn-compact"
+              onClick={async () => {
+                if (localSettings.enableNotifications === false) {
+                  showToast('알림 서비스가 비활성화 상태입니다.');
+                  return;
+                }
+
+                try {
+                  const title = 'Zero-Friction 알림 테스트';
+                  const body = localSettings.notificationType === 'browser'
+                    ? 'OS 표준 슬라이드 배너 알림이 정상 작동 중입니다!'
+                    : '시스템 다이얼로그 경고창이 정상 작동 중입니다!';
+
+                  if (localSettings.notificationType === 'browser') {
+                    if (typeof window !== 'undefined') {
+                      if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
+                        (window as any).ipcRenderer.send('send-notification', { title, body });
+                        showToast('테스트 배너 알림을 발송했습니다.');
+                        return;
+                      } else if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification(title, { body });
+                        showToast('테스트 배너 알림을 발송했습니다.');
+                        return;
+                      } else if ('Notification' in window && Notification.permission === 'denied') {
+                        showToast('시스템 알림 권한이 거부되어 알림을 발송할 수 없습니다.');
+                        return;
+                      }
+                    }
+                  }
+
+                  // Web/Local API fallback
+                  const res = await fetch('/api/notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title,
+                      body,
+                      type: localSettings.notificationType || 'system'
+                    })
+                  });
+                  if (res.ok) {
+                    showToast(localSettings.notificationType === 'browser'
+                      ? '테스트 배너 알림이 발송되었습니다.'
+                      : '테스트 알림창이 발송되었습니다.'
+                    );
+                  } else {
+                    showToast('알림 발송에 실패했습니다.');
+                  }
+                } catch (e) {
+                  showToast('테스트 알림 오류 발생');
+                }
+              }}
+              style={{ width: '6.0rem' }}
+            >
+              테스트 실행
+            </button>
+          </div>
+        </div>
+      </details>
+
+      {/* 데이터 관리 (Consolidated Data Management) */}
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }} open>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>데이터 관리</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.75rem' }}>
+          {/* Row 1 (Safe & Export): 데이터 내보내기 & 데이터 불러오기 */}
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+            <button
+              className="settings-btn-compact"
+              onClick={handleExportData}
+              style={{ flex: 1, gap: '0.25rem' }}
+            >
+              <Download size={12} /> 데이터 내보내기 (.json)
+            </button>
+
+            <button
+              className="settings-btn-compact"
+              onClick={() => fileRef.current?.click()}
+              style={{ flex: 1, gap: '0.25rem' }}
+            >
+              <Upload size={12} /> 데이터 불러오기
+            </button>
+            <input
+              type="file"
+              ref={fileRef}
+              style={{ display: 'none' }}
+              accept=".json"
+              onChange={handleImportData}
+            />
+          </div>
+
+          {/* Row 2 (Trash & Logs): 휴지통 & 활동 로그 초기화 */}
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+            <button
+              className="settings-btn-compact accent-btn"
+              onClick={() => setIsTrashModalOpen(true)}
+              style={{ flex: 1 }}
+            >
+              🗑️ 휴지통 ({archive.length})
+            </button>
+
+            <button
+              className="settings-btn-compact"
+              onClick={() => {
+                if (confirm('모든 활동 로그를 삭제하시겠습니까?')) {
+                  clearActivities();
+                  showToast('🧹 활동 로그 초기화 완료');
+                }
+              }}
+              style={{ flex: 1 }}
+            >
+              활동 로그 초기화
+            </button>
+          </div>
+
+          {/* Row 3 (Destructive): 모든 데이터 초기화 */}
           <button
-            className="settings-btn-compact"
-            onClick={async () => {
-              const res = await requestPermission();
-              showToast(res === 'granted' ? '🔔 알림 권한 허용됨' : '🔕 알림 권한 거부됨');
-            }}
-            style={{ width: '6.0rem' }}
+            className="settings-btn-compact danger-btn"
+            onClick={handleResetAll}
+            style={{ width: '100%', gap: '0.3rem' }}
           >
-            {permission === 'granted' ? '허용됨' : permission === 'denied' ? '거부됨' : '권한 요청'}
+            <AlertTriangle size={12} /> 시스템 전체 초기화 (영구 삭제)
           </button>
         </div>
-      </div>
+      </details>
 
 
       {/* Soft Delete Trash Modal (Instant overlay within Settings!) */}

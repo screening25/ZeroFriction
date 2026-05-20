@@ -1,14 +1,69 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders } from 'lucide-react';
+import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
+import CustomTimePicker from '@/frontend/components/CustomTimePicker';
+import CustomSelect from '@/frontend/components/CustomSelect';
 
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
+
+const getCategoryColor = (cat: string) => {
+  switch (cat) {
+    case '업무': return '#007AFF';
+    case '회의': return '#FF9500';
+    case '개인': return '#34C759';
+    default: return '#AF52DE';
+  }
+};
+
+const getCategorySoftBg = (cat: string) => {
+  switch (cat) {
+    case '업무': return 'rgba(0, 122, 255, 0.12)';
+    case '회의': return 'rgba(255, 149, 0, 0.12)';
+    case '개인': return 'rgba(52, 199, 89, 0.12)';
+    default: return 'rgba(175, 82, 222, 0.12)';
+  }
+};
+
+const getCategoryBorder = (cat: string) => {
+  switch (cat) {
+    case '업무': return 'rgba(0, 122, 255, 0.25)';
+    case '회의': return 'rgba(255, 149, 0, 0.25)';
+    case '개인': return 'rgba(52, 199, 89, 0.25)';
+    default: return 'rgba(175, 82, 222, 0.25)';
+  }
+};
+
+const getMemoCardStyle = (color: string, isDark: boolean) => {
+  if (isDark) {
+    switch (color) {
+      case 'red': return { backgroundColor: 'rgba(255, 69, 58, 0.12)', border: '1px solid rgba(255, 69, 58, 0.3)' };
+      case 'orange': return { backgroundColor: 'rgba(255, 159, 10, 0.12)', border: '1px solid rgba(255, 159, 10, 0.3)' };
+      case 'yellow': return { backgroundColor: 'rgba(255, 214, 10, 0.12)', border: '1px solid rgba(255, 214, 10, 0.3)' };
+      case 'green': return { backgroundColor: 'rgba(48, 209, 88, 0.12)', border: '1px solid rgba(48, 209, 88, 0.3)' };
+      case 'blue': return { backgroundColor: 'rgba(10, 132, 255, 0.12)', border: '1px solid rgba(10, 132, 255, 0.3)' };
+      case 'purple': return { backgroundColor: 'rgba(191, 90, 242, 0.12)', border: '1px solid rgba(191, 90, 242, 0.3)' };
+      default: return { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--panel-border)' };
+    }
+  } else {
+    switch (color) {
+      case 'red': return { backgroundColor: 'rgba(255, 59, 48, 0.08)', border: '1px solid rgba(255, 59, 48, 0.2)' };
+      case 'orange': return { backgroundColor: 'rgba(255, 149, 0, 0.08)', border: '1px solid rgba(255, 149, 0, 0.2)' };
+      case 'yellow': return { backgroundColor: 'rgba(255, 204, 0, 0.08)', border: '1px solid rgba(255, 204, 0, 0.2)' };
+      case 'green': return { backgroundColor: 'rgba(52, 199, 89, 0.08)', border: '1px solid rgba(52, 199, 89, 0.2)' };
+      case 'blue': return { backgroundColor: 'rgba(0, 122, 255, 0.08)', border: '1px solid rgba(0, 122, 255, 0.2)' };
+      case 'purple': return { backgroundColor: 'rgba(175, 82, 222, 0.08)', border: '1px solid rgba(175, 82, 222, 0.2)' };
+      default: return { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--panel-border)' };
+    }
+  }
+};
+
 
 export default function Home() {
   const {
@@ -147,7 +202,16 @@ export default function Home() {
   const schedules = typeof window !== 'undefined'
     ? expandRecurringEvents(schedulesRaw, expandFrom, expandTo)
     : schedulesRaw;
-  const memos = records.filter(r => r.type === 'memo');
+  const memos = records
+    .filter(r => r.type === 'memo')
+    .sort((a, b) => {
+      const aPinned = a.attrs.pinned ? 1 : 0;
+      const bPinned = b.attrs.pinned ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
   const inventory = records.filter(r => r.type === 'asset');
 
   // Calendar rendering logic (Used inside Calendar Page)
@@ -329,7 +393,7 @@ export default function Home() {
                       if (item.type === 'event') setEditingSchedule(item);
                       else if (item.type === 'asset') setEditingInventory(item);
                       else {
-                        setMemoForm({ id: item.id, title: item.title, content: item.attrs.content || '' });
+                        setMemoForm({ id: item.id, title: item.title, content: item.attrs.content || '', pinned: item.attrs.pinned || false, color: item.attrs.color || '' });
                         setIsMemoModalOpen(true);
                       }
                     }}
@@ -419,6 +483,133 @@ export default function Home() {
               <div className="flex items-baseline gap-1" style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
                 <span className="kpi-value">{inventory.length}</span>
                 <span className="kpi-sub">품목</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Visual Analytics Widget */}
+          <div style={{
+            background: 'var(--panel-bg)',
+            backdropFilter: 'var(--panel-blur)',
+            WebkitBackdropFilter: 'var(--panel-blur)',
+            border: '1px solid var(--panel-border)',
+            borderRadius: '16px',
+            padding: '1.2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <Sliders size={15} style={{ color: 'var(--accent)' }} />
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>비주얼 분석 리포트</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem' }}>
+              {/* Completion Rate Indicator */}
+              <div style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--panel-border)',
+                borderRadius: '12px',
+                padding: '0.75rem 0.9rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem'
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>일정 달성률</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.15rem' }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                    {Math.round((schedules.filter(s => s.attrs.completed).length / (schedules.length || 1)) * 100)}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>%</span>
+                </div>
+                {/* Progress Bar */}
+                <div style={{ height: '5px', background: 'var(--panel-border)', borderRadius: '3px', overflow: 'hidden', width: '100%' }}>
+                  <div style={{
+                    height: '100%',
+                    background: 'var(--accent)',
+                    width: `${Math.round((schedules.filter(s => s.attrs.completed).length / (schedules.length || 1)) * 100)}%`,
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
+
+              {/* Safety Stock Indicator */}
+              <div style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--panel-border)',
+                borderRadius: '12px',
+                padding: '0.75rem 0.9rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.3rem'
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>안전 재고 경고</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length > 0 ? (
+                    <>
+                      <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--danger)' }}>
+                        {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length}개 품목 부족
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={15} style={{ color: 'var(--success)' }} />
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--success)' }}>안전 상태</span>
+                    </>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).map(i => i.title).join(', ') || '모든 자물쇠 정상'}
+                </div>
+              </div>
+            </div>
+
+            {/* Category stacked bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                <span>일정 카테고리 구성 비율</span>
+                <span>총 {schedules.length}건</span>
+              </div>
+              <div style={{ height: '14px', borderRadius: '7px', display: 'flex', overflow: 'hidden', background: 'var(--panel-border)', width: '100%' }}>
+                {['업무', '회의', '개인', '기타'].map(cat => {
+                  const cnt = schedules.filter(s => (s.category || '기타') === cat).length;
+                  const pct = Math.round((cnt / (schedules.length || 1)) * 100);
+                  if (pct === 0) return null;
+                  return (
+                    <div
+                      key={cat}
+                      style={{
+                        height: '100%',
+                        background: getCategoryColor(cat),
+                        width: `${pct}%`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        fontSize: '0.55rem',
+                        fontWeight: 800,
+                        transition: 'width 0.4s ease'
+                      }}
+                      title={`${cat}: ${cnt}건 (${pct}%)`}
+                    >
+                      {pct > 10 && cat}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
+                {['업무', '회의', '개인', '기타'].map(cat => {
+                  const cnt = schedules.filter(s => (s.category || '기타') === cat).length;
+                  return (
+                    <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: getCategoryColor(cat) }} />
+                      <span>{cat}</span>
+                      <span style={{ color: 'var(--text-tertiary)' }}>{cnt}건</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -557,9 +748,23 @@ export default function Home() {
                     <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 메모가 존재하지 않습니다.</div>
                   ) : (
                     recentMemos.map(m => (
-                      <div key={m.id} className="card card-compact" style={{ padding: '0.5rem 0.7rem' }} onClick={() => { setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '' }); setIsMemoModalOpen(true); }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{m.title}</span>
+                      <div 
+                        key={m.id} 
+                        className="card card-compact" 
+                        style={{ 
+                          padding: '0.5rem 0.7rem',
+                          ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
+                        }} 
+                        onClick={() => { 
+                          setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); 
+                          setIsMemoModalOpen(true); 
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem', width: '100%' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', width: '100%' }}>
+                            {m.attrs.pinned && <Pin size={11} className="text-accent" style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} />}
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>{m.title}</span>
+                          </div>
                           <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{format(parseISO(m.updatedAt || new Date().toISOString()), 'yy.MM.dd')} 업데이트</span>
                         </div>
                       </div>
@@ -734,10 +939,14 @@ export default function Home() {
                     title={scheduleCount > 0 ? `${scheduleCount}건의 일정` : ''}
                   >
                     <span>{format(day, 'd')}</span>
-                    {dotCount > 0 && (
+                    {daySchedules.length > 0 && (
                       <div className="cal-dots">
-                        {Array.from({ length: dotCount }).map((_, i) => (
-                          <span key={i} className="cal-dot" />
+                        {daySchedules.slice(0, 3).map((s) => (
+                          <span 
+                            key={s.id} 
+                            className="cal-dot" 
+                            style={{ background: getCategoryColor(s.category) }}
+                          />
                         ))}
                       </div>
                     )}
@@ -1509,7 +1718,7 @@ export default function Home() {
               <button 
                 className="btn-ghost" 
                 onClick={() => {
-                  setMemoForm({ title: '', content: '' });
+                  setMemoForm({ title: '', content: '', pinned: false, color: '' });
                   setIsMemoModalOpen(true);
                 }}
                 title="메모 추가"
@@ -1529,9 +1738,17 @@ export default function Home() {
               <div
                 key={m.id}
                 className="card card-compact"
-                style={{ padding: '1.25rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.5rem', cursor: 'pointer' }}
+                style={{ 
+                  padding: '1.25rem', 
+                  borderRadius: '10px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.5rem', 
+                  cursor: 'pointer',
+                  ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
+                }}
                 onClick={() => {
-                  setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '' });
+                  setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' });
                   setIsMemoModalOpen(true);
                 }}
               >
@@ -1543,6 +1760,7 @@ export default function Home() {
                     <FileText size={13} />
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, marginLeft: '0.5rem' }}>
+                    {m.attrs.pinned && <Pin size={11} className="text-accent" style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} />}
                     <span
                       className="text-ellipsis whitespace-nowrap overflow-hidden"
                       style={{
@@ -1576,7 +1794,7 @@ export default function Home() {
                 )}
                 
                 <div className="card-hover-actions">
-                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '' }); setIsMemoModalOpen(true); }}>수정</button>
+                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoModalOpen(true); }}>수정</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }}>삭제</button>
                 </div>
               </div>
@@ -1671,7 +1889,7 @@ export default function Home() {
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">시간</span>
-                  <input type="time" className="input-sm" value={editingSchedule.attrs.time || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time: e.target.value }})} />
+                  <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
                 </div>
               </div>
               
@@ -1683,31 +1901,79 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">알림 설정</span>
-                  <select 
-                    className="input-sm" 
-                    value={editingSchedule.attrs.notifyOffset ?? 10} 
-                    onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, notifyOffset: Number(e.target.value) }})}
-                  >
-                    <option value={-1}>알림 없음</option>
-                    <option value={0}>정각</option>
-                    <option value={10}>10분 전</option>
-                    <option value={30}>30분 전</option>
-                    <option value={60}>1시간 전</option>
-                    <option value={1440}>1일 전</option>
-                  </select>
+                  <CustomSelect
+                    value={editingSchedule.attrs.notifyOffset ?? 10}
+                    options={[
+                      { value: -1, label: '알림 없음' },
+                      { value: 0, label: '정각' },
+                      { value: 10, label: '10분 전' },
+                      { value: 30, label: '30분 전' },
+                      { value: 60, label: '1시간 전' },
+                      { value: 1440, label: '1일 전' }
+                    ]}
+                    onChange={val => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, notifyOffset: Number(val) }})}
+                  />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">반복 주기</span>
-                  <select 
-                    className="input-sm" 
-                    value={editingSchedule.attrs.recurrence ?? 'none'} 
-                    onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, recurrence: e.target.value as any }})}
-                  >
-                    <option value="none">없음</option>
-                    <option value="daily">매일</option>
-                    <option value="weekly">매주</option>
-                    <option value="monthly">매월</option>
-                  </select>
+                  <CustomSelect
+                    value={editingSchedule.attrs.recurrence ?? 'none'}
+                    options={[
+                      { value: 'none', label: '없음' },
+                      { value: 'daily', label: '매일' },
+                      { value: 'weekly', label: '매주' },
+                      { value: 'monthly', label: '매월' }
+                    ]}
+                    onChange={val => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, recurrence: val as any }})}
+                  />
+                </div>
+              </div>
+
+              {/* Linked Related Data (Inventory/Memo) */}
+              <div className="form-group" style={{ marginTop: '0.6rem' }}>
+                <span className="form-label">연관 데이터 연결</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem', maxHeight: '110px', overflowY: 'auto', padding: '0.1rem' }}>
+                  {records
+                    .filter(r => r.type === 'asset' || r.type === 'memo')
+                    .map(r => {
+                      const isLinked = (editingSchedule.attrs.linkedIds || []).includes(r.id);
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => {
+                            const current = editingSchedule.attrs.linkedIds || [];
+                            const next = current.includes(r.id)
+                              ? current.filter(id => id !== r.id)
+                              : [...current, r.id];
+                            setEditingSchedule({
+                              ...editingSchedule,
+                              attrs: { ...editingSchedule.attrs, linkedIds: next }
+                            });
+                          }}
+                          style={{
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '20px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            border: isLinked ? '1px solid var(--accent)' : '1px solid var(--panel-border)',
+                            background: isLinked ? 'var(--accent-soft-bg)' : 'var(--bg-secondary)',
+                            color: isLinked ? 'var(--accent)' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+                          }}
+                        >
+                          <span>{r.type === 'asset' ? '📦' : '📝'}</span>
+                          <span>{r.title}</span>
+                        </button>
+                      );
+                    })}
+                  {records.filter(r => r.type === 'asset' || r.type === 'memo').length === 0 && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', paddingLeft: '0.2rem' }}>연결 가능한 재고나 메모가 없습니다.</span>
+                  )}
                 </div>
               </div>
               
@@ -1759,16 +2025,17 @@ export default function Home() {
               {/* Category Dropdown (Master Data Only) */}
               <div className="form-group">
                 <span className="form-label">카테고리</span>
-                <select 
-                  className="input-sm" 
-                  value={editingInventory.category || ''} 
-                  onChange={e => setEditingInventory({...editingInventory, category: e.target.value})}
-                >
-                  <option value="">카테고리 선택</option>
-                  {(appSettings.categories || ['재고', 'IT 장비', '촬영 장비', '사무 용품', '기타']).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={editingInventory.category || ''}
+                  options={[
+                    { value: '', label: '카테고리 선택' },
+                    ...(appSettings.categories || ['재고', 'IT 장비', '촬영 장비', '사무 용품', '기타']).map(cat => ({
+                      value: cat,
+                      label: cat
+                    }))
+                  ]}
+                  onChange={val => setEditingInventory({...editingInventory, category: val})}
+                />
               </div>
 
               <div style={{ display: 'flex', gap: '0.8rem' }}>
@@ -1778,45 +2045,43 @@ export default function Home() {
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">구분</span>
-                  <select 
-                    className="input-sm" 
-                    value={editingInventory.attrs.flow || 'IN'} 
-                    onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, flow: e.target.value }})}
-                  >
-                    <option value="IN">입고</option>
-                    <option value="OUT">출고</option>
-                  </select>
+                  <CustomSelect
+                    value={editingInventory.attrs.flow || 'IN'}
+                    options={[
+                      { value: 'IN', label: '입고' },
+                      { value: 'OUT', label: '출고' }
+                    ]}
+                    onChange={val => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, flow: val }})}
+                  />
                 </div>
               </div>
 
               {/* Storage Location Dropdown (Master Data Only) */}
               <div className="form-group">
                 <span className="form-label">보관 창고<span className="text-red-500 ml-1">*</span></span>
-                <select 
-                  className="input-sm" 
-                  value={editingInventory.attrs.loc || ''} 
-                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, loc: e.target.value }})}
-                >
-                  <option value="">보관 창고</option>
-                  {(appSettings.locations || ['비즈니스 창고', '메인 매장', '이동용 밴', 'A창고', 'B창고']).map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={editingInventory.attrs.loc || ''}
+                  placeholder="보관 창고 선택"
+                  options={(appSettings.locations || ['비즈니스 창고', '메인 매장', '이동용 밴', 'A창고', 'B창고']).map(loc => ({
+                    value: loc,
+                    label: loc
+                  }))}
+                  onChange={val => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, loc: val }})}
+                />
               </div>
 
               {/* Manager Dropdown (Master Data Only) */}
               <div className="form-group">
                 <span className="form-label">담당 관리자<span className="text-red-500 ml-1">*</span></span>
-                <select 
-                  className="input-sm" 
-                  value={editingInventory.attrs.mgr || ''} 
-                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, mgr: e.target.value }})}
-                >
-                  <option value="">담당 관리자</option>
-                  {(appSettings.managers || ['윤상영', '김철수', '이영희', '박민수']).map(mgr => (
-                    <option key={mgr} value={mgr}>{mgr}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={editingInventory.attrs.mgr || ''}
+                  placeholder="담당 관리자 선택"
+                  options={(appSettings.managers || ['윤상영', '김철수', '이영희', '박민수']).map(mgr => ({
+                    value: mgr,
+                    label: mgr
+                  }))}
+                  onChange={val => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, mgr: val }})}
+                />
               </div>
 
               {/* Serial Number Input */}
@@ -1895,7 +2160,16 @@ export default function Home() {
                     type="text" 
                     placeholder=""
                     className="memo-title-input"
-                    style={{ fontWeight: 700, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', width: '100%' }}
+                    style={{
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      padding: '0.6rem 0.8rem',
+                      width: '100%',
+                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                      ...getMemoCardStyle(memoForm.color || '', theme === 'dark')
+                    }}
                     value={memoForm.title} 
                     onChange={e => setMemoForm({...memoForm, title: e.target.value})} 
                   />
@@ -1906,10 +2180,72 @@ export default function Home() {
                     placeholder=""
                     rows={8}
                     className="memo-content-textarea"
-                    style={{ lineHeight: 1.6, background: 'var(--surface-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', padding: '0.6rem 0.8rem', resize: 'none', width: '100%' }}
+                    style={{
+                      lineHeight: 1.6,
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      padding: '0.6rem 0.8rem',
+                      resize: 'none',
+                      width: '100%',
+                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                      ...getMemoCardStyle(memoForm.color || '', theme === 'dark')
+                    }}
                     value={memoForm.content} 
                     onChange={e => setMemoForm({...memoForm, content: e.target.value})} 
                   />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.8rem', padding: '0 0.2rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <input 
+                      type="checkbox" 
+                      id="memo-pin-checkbox"
+                      checked={memoForm.pinned || false}
+                      onChange={e => setMemoForm({ ...memoForm, pinned: e.target.checked })}
+                      style={{ cursor: 'pointer', width: '1rem', height: '1rem', accentColor: 'var(--accent)' }}
+                    />
+                    <label htmlFor="memo-pin-checkbox" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      상단 고정
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.8rem' }}>
+                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>메모 색상</span>
+                  <div style={{ display: 'flex', gap: '0.5rem', padding: '0.2rem 0', flexWrap: 'wrap' }}>
+                    {[
+                      { value: '', label: '기본', color: 'var(--surface-color)', border: 'var(--panel-border)' },
+                      { value: 'red', label: '빨강', color: 'rgba(255, 59, 48, 0.15)', border: 'rgba(255, 59, 48, 0.3)' },
+                      { value: 'orange', label: '주황', color: 'rgba(255, 149, 0, 0.15)', border: 'rgba(255, 149, 0, 0.3)' },
+                      { value: 'yellow', label: '노랑', color: 'rgba(255, 204, 0, 0.15)', border: 'rgba(255, 204, 0, 0.3)' },
+                      { value: 'green', label: '초록', color: 'rgba(52, 199, 89, 0.15)', border: 'rgba(52, 199, 89, 0.3)' },
+                      { value: 'blue', label: '파랑', color: 'rgba(0, 122, 255, 0.15)', border: 'rgba(0, 122, 255, 0.3)' },
+                      { value: 'purple', label: '보라', color: 'rgba(175, 82, 222, 0.15)', border: 'rgba(175, 82, 222, 0.3)' }
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
+                        style={{
+                          width: '1.8rem',
+                          height: '1.8rem',
+                          borderRadius: '50%',
+                          backgroundColor: opt.value ? opt.color : 'var(--bg-secondary)',
+                          border: memoForm.color === opt.value ? '2px solid var(--accent)' : `1px solid ${opt.border}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={opt.label}
+                      >
+                        {memoForm.color === opt.value && (
+                          <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', backgroundColor: opt.value ? 'var(--text-primary)' : 'var(--accent)' }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               

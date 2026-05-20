@@ -110,6 +110,14 @@ export default function SettingsModal({ settings, setSettings, onClose, theme }:
               </select>
             </div>
             <div className="settings-row" style={{ padding: '0.6rem 0.8rem' }}>
+              <span className="settings-label" style={{ fontSize: '0.82rem' }}>글자 크기</span>
+              <select className="settings-select" value={local.fontSize || 'medium'} onChange={e => update({ fontSize: e.target.value as any })} style={{ fontSize: '0.8rem' }}>
+                <option value="small">작게</option>
+                <option value="medium">중간</option>
+                <option value="large">크게</option>
+              </select>
+            </div>
+            <div className="settings-row" style={{ padding: '0.6rem 0.8rem' }}>
               <span className="settings-label" style={{ fontSize: '0.82rem' }}>시간 표기</span>
               <select className="settings-select" value={local.timeFormat} onChange={e => update({ timeFormat: e.target.value as any })} style={{ fontSize: '0.8rem' }}>
                 <option value="24h">24시간</option>

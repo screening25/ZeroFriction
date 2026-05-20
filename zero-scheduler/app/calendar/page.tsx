@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Calendar } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026 } from '@/database';
+import CustomSelect from '@/frontend/components/CustomSelect';
 
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
 
@@ -219,18 +220,18 @@ export default function CalendarPage() {
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">알림 설정</span>
-                  <select 
-                    className="input-sm" 
-                    value={editingSchedule.attrs.notifyOffset ?? 10} 
-                    onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, notifyOffset: Number(e.target.value) }})}
-                  >
-                    <option value={-1}>알림 없음</option>
-                    <option value={0}>정각</option>
-                    <option value={10}>10분 전</option>
-                    <option value={30}>30분 전</option>
-                    <option value={60}>1시간 전</option>
-                    <option value={1440}>1일 전</option>
-                  </select>
+                  <CustomSelect
+                    value={editingSchedule.attrs.notifyOffset ?? 10}
+                    options={[
+                      { value: -1, label: '알림 없음' },
+                      { value: 0, label: '정각' },
+                      { value: 10, label: '10분 전' },
+                      { value: 30, label: '30분 전' },
+                      { value: 60, label: '1시간 전' },
+                      { value: 1440, label: '1일 전' }
+                    ]}
+                    onChange={val => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, notifyOffset: Number(val) }})}
+                  />
                 </div>
               </div>
               

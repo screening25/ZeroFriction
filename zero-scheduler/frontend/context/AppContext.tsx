@@ -43,8 +43,8 @@ interface AppContextProps {
   setIsMemoModalOpen: (o: boolean) => void;
   memoPage: number;
   setMemoPage: (p: number) => void;
-  memoForm: { id?: string; title: string; content: string };
-  setMemoForm: (f: { id?: string; title: string; content: string }) => void;
+  memoForm: { id?: string; title: string; content: string; pinned?: boolean; color?: string };
+  setMemoForm: (f: { id?: string; title: string; content: string; pinned?: boolean; color?: string }) => void;
   activeTab: 'all' | 'calendar' | 'inventory' | 'category' | 'settings';
   setActiveTab: (t: 'all' | 'calendar' | 'inventory' | 'category' | 'settings') => void;
   activeCategory: string | null;
@@ -99,7 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [editingInventory, setEditingInventory] = useState<UniversalRecord | null>(null);
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
   const [memoPage, setMemoPage] = useState(0);
-  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string}>({ title: '', content: '' });
+  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string}>({ title: '', content: '', pinned: false, color: '' });
   const [notified, setNotified] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'all' | 'calendar' | 'inventory' | 'category' | 'settings'>('all');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -121,6 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCalendarMode(s.calendarView);
     applyAccentColor(s.accentColor);
     document.documentElement.setAttribute('data-density', s.density);
+    document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
     setActivities(loadActivities());
     
     reloadRecords();
@@ -201,6 +202,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAppSettings(s);
     applyAccentColor(s.accentColor);
     document.documentElement.setAttribute('data-density', s.density);
+    document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
     persistSettings(s);
   };
 
@@ -220,7 +222,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const triggerTime = new Date(scheduleTime.getTime() - (s.attrs.notifyOffset ?? 10) * 60000);
           const diffSeconds = differenceInSeconds(now, triggerTime);
           if ((s.attrs.notifyOffset ?? 10) >= 0 && diffSeconds >= 0 && diffSeconds <= 300 && !notified.has(s.id)) {
-            fetch('/api/notify', { method: 'POST', body: JSON.stringify({ title: '일정 알림', body: `${s.title} (${s.attrs.time})` }) });
+            if (appSettings.enableNotifications !== false) {
+              const title = '일정 알림';
+              const body = `${s.title} (${s.attrs.time})`;
+
+              if (appSettings.notificationType === 'browser') {
+                if (typeof window !== 'undefined') {
+                  if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
+                    (window as any).ipcRenderer.send('send-notification', { title, body });
+                  } else if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification(title, { body });
+                  } else if ('Notification' in window && Notification.permission === 'denied') {
+                    // Do not fall back to backend notification if permission is explicitly denied in browser!
+                  } else {
+                    fetch('/api/notify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        title,
+                        body,
+                        type: 'browser'
+                      })
+                    });
+                  }
+                }
+              } else {
+                fetch('/api/notify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title,
+                    body,
+                    type: 'system'
+                  })
+                });
+              }
+            }
             newNotified.add(s.id);
             hasNew = true;
           }
@@ -441,7 +478,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const submitMemo = () => {
     if (!memoForm.title || !memoForm.content) return;
     if (memoForm.id) {
-      updateRecord(memoForm.id, { title: memoForm.title, attrs: { content: memoForm.content } });
+      updateRecord(memoForm.id, { 
+        title: memoForm.title, 
+        attrs: { 
+          content: memoForm.content,
+          pinned: memoForm.pinned || false,
+          color: memoForm.color || ''
+        } 
+      });
       logActivity('UPDATE_MEMO', '변동 사항 수정', memoForm.title);
     } else {
       addRecord({ 
@@ -450,12 +494,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         category: '메모',
         attrs: { 
           content: memoForm.content, 
+          pinned: memoForm.pinned || false,
+          color: memoForm.color || '',
           effectiveDate: new Date().toISOString().split('T')[0] 
         } 
       });
       logActivity('ADD_MEMO', '변동 사항 등록', memoForm.title);
     }
-    setMemoForm({ title: '', content: '' });
+    setMemoForm({ title: '', content: '', pinned: false, color: '' });
     setIsMemoModalOpen(false);
     reloadRecords();
     showToast('저장 완료');
@@ -463,7 +509,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteMemo = (id: string) => {
     deleteRecord(id);
-    setMemoForm({ title: '', content: '' });
+    setMemoForm({ title: '', content: '', pinned: false, color: '' });
     setIsMemoModalOpen(false);
     reloadRecords();
     reloadArchive();

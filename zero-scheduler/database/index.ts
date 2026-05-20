@@ -77,10 +77,13 @@ export interface AppSettings {
   timeFormat: '12h' | '24h';
   density: 'compact' | 'comfortable';
   deviceSize: 'default' | 'iphone' | 'galaxy' | 'ipad' | 'mac';
+  fontSize?: 'small' | 'medium' | 'large';
   locations?: string[];
   categories?: string[];
   managers?: string[];
   scheduleCategories?: string[];
+  notificationType?: 'system' | 'browser';
+  enableNotifications?: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -95,10 +98,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   timeFormat: '24h',
   density: 'comfortable',
   deviceSize: 'default',
+  fontSize: 'medium',
   locations: ['비즈니스 창고', '메인 매장', '이동용 밴', 'A창고', 'B창고'],
   categories: ['재고', 'IT 장비', '촬영 장비', '사무 용품', '기타'],
   managers: ['윤상영', '김철수', '이영희', '박민수'],
-  scheduleCategories: ['업무', '회의', '개인', '일반']
+  scheduleCategories: ['업무', '회의', '개인', '일반'],
+  notificationType: 'system',
+  enableNotifications: true
 };
 
 const ACCENT_COLORS = [

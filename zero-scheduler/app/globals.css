@@ -8,6 +8,7 @@
   --panel-border: rgba(0, 0, 0, 0.05);
   --panel-blur: blur(24px);
   --surface-color: rgba(242, 242, 247, 0.75);
+  --input-bg: #FFFFFF;
   --text-primary: #000000;
   --text-secondary: #8E8E93;
   --text-tertiary: #C7C7CC;
@@ -56,6 +57,7 @@
   --panel-border: rgba(255, 255, 255, 0.15);
   --panel-blur: blur(30px);
   --surface-color: rgba(0, 0, 0, 0.75);
+  --input-bg: #1C1C1E;
   --text-primary: #FFFFFF;
   --text-secondary: #8E8E93;
   --text-tertiary: #48484A;
@@ -88,6 +90,20 @@
 /* Density modes */
 [data-density='compact'] { --density-gap: 1.5rem; --density-padding: 0.8rem; }
 [data-density='comfortable'] { --density-gap: 2.5rem; --density-padding: 1.2rem; }
+
+/* Font size modes */
+html {
+  font-size: 16px;
+}
+[data-font-size='small'] {
+  font-size: 14px !important;
+}
+[data-font-size='medium'] {
+  font-size: 16px !important;
+}
+[data-font-size='large'] {
+  font-size: 18px !important;
+}
 
 * {
   box-sizing: border-box;
@@ -687,8 +703,12 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 .form-group { display: flex; flex-direction: column; gap: 0.2rem; }
 .form-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); padding-left: 0.2rem; }
 .input-sm {
-   padding: 0.5rem 0.65rem;
-   background: var(--bg-secondary);
+   display: flex;
+   align-items: center;
+   width: 100%;
+   height: 38px;
+   padding: 0 0.75rem;
+   background: var(--input-bg);
    border: 1px solid var(--panel-border);
    border-radius: 10px;
    color: var(--text-primary);
@@ -696,6 +716,12 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
    outline: none;
    font-weight: 500;
    transition: all 0.3s ease;
+   box-sizing: border-box;
+}
+textarea.input-sm {
+   height: auto;
+   padding: 0.5rem 0.75rem;
+   display: block;
 }
 .input-sm:focus {
    box-shadow: 0 0 0 3px var(--accent-glow);
@@ -852,16 +878,16 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 }
 .settings-btn-compact {
   font-size: 11px !important;
-  height: 1.75rem !important;
+  height: 32px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-radius: 6px !important;
+  border-radius: 10px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   transition: all 0.2s !important;
   border: 1px solid var(--panel-border) !important;
-  background: var(--surface-color) !important;
+  background: var(--input-bg) !important;
   color: var(--text-primary) !important;
 }
 .settings-btn-compact:hover {
@@ -1445,4 +1471,8 @@ nextjs-portal,
   transform: scale(1.05);
 }
 
-
+/* Settings Section Details Summary styling */
+.settings-section-details summary::-webkit-details-marker { display: none !important; }
+.settings-section-details summary::marker { content: '' !important; }
+.settings-section-details summary { outline: none !important; }
+.settings-section-details[open] .settings-chevron { transform: rotate(180deg) !important; }

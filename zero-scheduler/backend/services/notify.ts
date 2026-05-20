@@ -2,15 +2,22 @@ import { exec } from 'child_process';
 import { NextResponse } from 'next/server';
 
 /**
- * macOS osascript 기반 강제 알림 송출.
- * 방해금지 모드를 우회해 화면 중앙에 alert 다이얼로그를 띄운다 (10초 후 자동 닫힘).
+ * macOS osascript 기반 알림 송출.
+ * - 'system': 화면 중앙 경고 다이얼로그 (display alert)
+ * - 'browser': OS 표준 슬라이드 배너 알림 (display notification)
  */
 export async function notifyHandler(request: Request): Promise<NextResponse> {
   try {
-    const { title, body } = await request.json();
+    const { title, body, type } = await request.json();
     const safeTitle = String(title).replace(/"/g, '\\"');
     const safeBody = String(body).replace(/"/g, '\\"');
-    exec(`osascript -e 'display alert "${safeTitle}" message "${safeBody}" giving up after 10'`);
+    
+    if (type === 'browser') {
+      exec(`osascript -e 'display notification "${safeBody}" with title "${safeTitle}"'`);
+    } else {
+      exec(`osascript -e 'display alert "${safeTitle}" message "${safeBody}" giving up after 10'`);
+    }
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to send notification' }, { status: 500 });

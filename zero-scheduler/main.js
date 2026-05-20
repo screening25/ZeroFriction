@@ -1,5 +1,12 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification } = require('electron');
 const path = require('path');
+
+ipcMain.on('send-notification', (event, { title, body }) => {
+  new Notification({
+    title: title || 'Zero-Friction',
+    body: body || ''
+  }).show();
+});
 
 let mainWindow;
 
