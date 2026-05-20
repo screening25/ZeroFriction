@@ -511,8 +511,8 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>데이터 인사이트</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem' }}>
-              {/* Completion Rate Indicator */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
+              {/* Task Progress & Completion Rate Combined Indicator */}
               <div style={{
                 background: 'var(--insight-tile-bg)',
                 border: '1px solid var(--insight-tile-border)',
@@ -522,25 +522,45 @@ export default function Home() {
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>일정 달성률</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.15rem' }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-                    {Math.round((schedules.filter(s => s.attrs.completed).length / (schedules.length || 1)) * 100)}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>%</span>
-                </div>
-                {/* Progress Bar */}
-                <div style={{ height: '5px', background: 'var(--panel-border)', borderRadius: '3px', overflow: 'hidden', width: '100%' }}>
-                  <div style={{
-                    height: '100%',
-                    background: 'var(--accent)',
-                    width: `${Math.round((schedules.filter(s => s.attrs.completed).length / (schedules.length || 1)) * 100)}%`,
-                    transition: 'width 0.4s ease'
-                  }} />
-                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>업무 진행 및 달성</div>
+                {(() => {
+                  const todoCount = schedules.filter(s => !s.attrs.completed && s.attrs.status !== 'doing').length;
+                  const doingCount = schedules.filter(s => !s.attrs.completed && s.attrs.status === 'doing').length;
+                  const doneCount = schedules.filter(s => s.attrs.completed).length;
+                  const total = todoCount + doingCount + doneCount || 1;
+                  const pct = Math.round((doneCount / total) * 100);
+                  
+                  const todoPct = (todoCount / total) * 100;
+                  const doingPct = (doingCount / total) * 100;
+                  const donePct = (doneCount / total) * 100;
+                  
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.15rem' }}>
+                        <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                          {pct}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>% 달성</span>
+                      </div>
+                      
+                      {/* Segmented Progress Bar */}
+                      <div style={{ display: 'flex', height: '5px', borderRadius: '3px', overflow: 'hidden', background: 'var(--panel-border)', width: '100%', marginTop: '0.1rem' }}>
+                        {todoCount > 0 && <div style={{ width: `${todoPct}%`, background: '#9ca3af', height: '100%' }} title={`대기: ${todoCount}건`} />}
+                        {doingCount > 0 && <div style={{ width: `${doingPct}%`, background: 'var(--accent)', height: '100%' }} title={`진행: ${doingCount}건`} />}
+                        {doneCount > 0 && <div style={{ width: `${donePct}%`, background: 'var(--success)', height: '100%' }} title={`완료: ${doneCount}건`} />}
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                        <span>대기 {todoCount}</span>
+                        <span>진행 {doingCount}</span>
+                        <span>완료 {doneCount}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
-              {/* Safety Stock Indicator */}
+              {/* Inventory Health Indicator (Red / Yellow / Green) */}
               <div style={{
                 background: 'var(--insight-tile-bg)',
                 border: '1px solid var(--insight-tile-border)',
@@ -548,27 +568,50 @@ export default function Home() {
                 padding: '0.75rem 0.9rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.3rem'
+                gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>안전 재고 경고</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length > 0 ? (
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>재고 건전성</div>
+                {(() => {
+                  const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
+                  const outOfStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) === 0).length;
+                  
+                  let healthText = "양호";
+                  let healthColor = "var(--success)"; // Green
+                  let healthIcon = <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />;
+                  let healthDesc = "모든 품목 수량 충분";
+                  
+                  if (outOfStockItemsCount > 0 || lowStockItemsCount >= 3) {
+                    healthText = "위험";
+                    healthColor = "var(--danger)"; // Red
+                    healthIcon = <AlertTriangle size={14} style={{ color: 'var(--danger)' }} />;
+                    healthDesc = `${outOfStockItemsCount > 0 ? `품절 ${outOfStockItemsCount}개 · ` : ''}총 ${lowStockItemsCount}개 부족`;
+                  } else if (lowStockItemsCount > 0) {
+                    healthText = "주의";
+                    healthColor = "#EAB308"; // Amber/Yellow
+                    healthIcon = <AlertTriangle size={14} style={{ color: '#EAB308' }} />;
+                    healthDesc = `${lowStockItemsCount}개 품목 안전재고 이하`;
+                  }
+                  
+                  return (
                     <>
-                      <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
-                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--danger)' }}>
-                        {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length}개 품목 부족
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {healthIcon}
+                        <span style={{ fontSize: '1.4rem', fontWeight: 900, color: healthColor }}>
+                          {healthText}
+                        </span>
+                      </div>
+                      
+                      {/* Subtitle list of low stock items */}
+                      <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.1rem' }}>
+                        {healthDesc}
+                      </div>
+                      
+                      <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).map(i => i.title).join(', ') || '부족한 품목 없음'}
+                      </div>
                     </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={15} style={{ color: 'var(--success)' }} />
-                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--success)' }}>안전 상태</span>
-                    </>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).map(i => i.title).join(', ') || '모든 자물쇠 정상'}
-                </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -2178,125 +2221,225 @@ export default function Home() {
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }} 
               transition={{ duration: 0.15 }} 
-              className="modal-content memo-modal-content" 
+              className="modal-content memo-modal-content"
+              style={{
+                ...getMemoCardStyle(memoForm.color || '', theme === 'dark'),
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                padding: '1.25rem',
+                maxWidth: '480px',
+                borderRadius: '20px',
+                border: '1px solid var(--panel-border)',
+                transition: 'background-color 0.3s ease, border-color 0.3s ease'
+              }}
               onClick={e => e.stopPropagation()}
             >
-              <div className="memo-modal-header">
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '0.6rem' }}>
                 <button 
                   className="memo-text-btn" 
                   onClick={() => setIsMemoModalOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.82rem', cursor: 'pointer' }}
                 >
                   취소
                 </button>
-                <div className="ios-modal-title">메모</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>메모</div>
                 <button 
                   className="memo-text-btn save-btn" 
                   onClick={submitMemo}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
                 >
                   저장
                 </button>
               </div>
-              
-              <div className="memo-form-container">
-                {/* 메모 본문 카드 — 선택한 색상의 파스텔 톤이 은은하게 즉시 반영됨 */}
-                <div 
-                  className="memo-preview-card" 
-                  style={{ ...getMemoCardStyle(memoForm.color || '', theme === 'dark') }}
-                >
-                  <input
-                    type="text"
-                    placeholder="제목"
-                    className="memo-title-input"
-                    value={memoForm.title}
-                    onChange={e => setMemoForm({...memoForm, title: e.target.value})}
-                  />
-                  <textarea
-                    placeholder="내용을 입력하세요…"
-                    rows={8}
-                    className="memo-content-textarea"
-                    value={memoForm.content}
-                    onChange={e => setMemoForm({...memoForm, content: e.target.value})}
-                  />
-                </div>
-                
-                {/* 마크다운 헬퍼 */}
-                <div className="memo-md-hint">
-                  <span>마크다운 지원:</span>
-                  <code># 제목</code>
-                  <code>**굵게**</code>
-                  <code>- 목록</code>
-                  <code>- [ ] 체크</code>
-                </div>
 
-                {/* 옵션 그룹 (고정 + 색상) */}
-                <div className="memo-option-group">
-                  <div className="memo-option-row">
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Pin size={13} style={{ color: memoForm.pinned ? 'var(--accent)' : 'var(--text-tertiary)', transform: 'rotate(45deg)' }} />
-                      상단 고정
-                    </span>
+              {/* Editor Workspace */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="제목"
+                  value={memoForm.title}
+                  onChange={e => setMemoForm({...memoForm, title: e.target.value})}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    padding: '0.2rem 0'
+                  }}
+                />
+
+                {/* Minimalist Formatting Toolbar */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.4rem',
+                  alignItems: 'center',
+                  fontSize: '0.72rem',
+                  color: 'var(--text-secondary)',
+                  borderBottom: '1px solid rgba(0,0,0,0.04)',
+                  paddingBottom: '0.4rem'
+                }}>
+                  {[
+                    { label: 'H1', syntax: '# ' },
+                    { label: 'H2', syntax: '## ' },
+                    { label: '굵게', syntax: '**텍스트**' },
+                    { label: '기울임', syntax: '*텍스트*' },
+                    { label: '글머리', syntax: '\n- ' },
+                    { label: '할일', syntax: '\n- [ ] ' }
+                  ].map(btn => (
                     <button
+                      key={btn.label}
                       type="button"
-                      className={`ios-toggle accent ${memoForm.pinned ? 'on' : ''}`}
-                      aria-pressed={!!memoForm.pinned}
-                      onClick={() => setMemoForm({ ...memoForm, pinned: !memoForm.pinned })}
+                      onClick={() => {
+                        const textarea = document.querySelector('.memo-content-textarea') as HTMLTextAreaElement;
+                        if (!textarea) return;
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const text = textarea.value;
+                        const before = text.substring(0, start);
+                        const after = text.substring(end, text.length);
+                        const val = before + btn.syntax + after;
+                        setMemoForm({ ...memoForm, content: val });
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(start + btn.syntax.length, start + btn.syntax.length);
+                        }, 50);
+                      }}
+                      style={{
+                        background: 'rgba(0,0,0,0.03)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.2rem 0.45rem',
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <span className="ios-toggle-knob" />
+                      {btn.label}
                     </button>
-                  </div>
+                  ))}
+                </div>
 
-                  <div className="memo-option-row">
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>메모 색상</span>
-                    <div className="memo-color-list">
-                      {[
-                        { value: '', label: '기본', swatch: 'var(--row-bg)' },
-                        { value: 'red', label: '빨강', swatch: '#FF3B30' },
-                        { value: 'orange', label: '주황', swatch: '#FF9500' },
-                        { value: 'yellow', label: '노랑', swatch: '#FFCC00' },
-                        { value: 'green', label: '초록', swatch: '#34C759' },
-                        { value: 'blue', label: '파랑', swatch: '#007AFF' },
-                        { value: 'purple', label: '보라', swatch: '#AF52DE' }
-                      ].map(opt => {
-                        const active = memoForm.color === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
-                            title={opt.label}
-                            style={{
-                              width: '1.05rem',
-                              height: '1.05rem',
-                              borderRadius: '50%',
-                              backgroundColor: opt.swatch,
-                              border: opt.value === '' ? '1px solid var(--panel-border)' : 'none',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: active ? '0 0 0 2px var(--input-bg), 0 0 0 4.5px var(--accent)' : 'none',
-                              transition: 'all 0.15s ease',
-                              transform: active ? 'scale(0.92)' : 'none'
-                            }}
-                          >
-                            {active && (
-                              <span style={{ color: opt.value === '' || opt.value === 'yellow' ? 'var(--text-primary)' : '#fff', fontSize: '0.55rem', fontWeight: 900, lineHeight: 1 }}>✓</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                <textarea
+                  placeholder="내용을 마크다운으로 입력하세요…"
+                  className="memo-content-textarea"
+                  rows={10}
+                  value={memoForm.content}
+                  onChange={e => setMemoForm({...memoForm, content: e.target.value})}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    fontSize: '0.85rem',
+                    lineHeight: '1.5',
+                    color: 'var(--text-primary)',
+                    minHeight: '280px',
+                    padding: '0.4rem 0'
+                  }}
+                />
+              </div>
+
+              {/* Bottom Settings Control Bar */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                padding: '0.65rem 0.85rem',
+                borderRadius: '12px',
+                border: '1px solid var(--panel-border)',
+                marginTop: '0.2rem'
+              }}>
+                {/* Pin Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Pin size={13} style={{ color: memoForm.pinned ? 'var(--accent)' : 'var(--text-tertiary)', transform: 'rotate(45deg)' }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>상단 고정</span>
+                  <button
+                    type="button"
+                    className={`ios-toggle accent ${memoForm.pinned ? 'on' : ''}`}
+                    aria-pressed={!!memoForm.pinned}
+                    onClick={() => setMemoForm({ ...memoForm, pinned: !memoForm.pinned })}
+                    style={{ marginLeft: '0.2rem' }}
+                  >
+                    <span className="ios-toggle-knob" />
+                  </button>
+                </div>
+
+                {/* Color Swatches */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    {[
+                      { value: '', swatch: 'var(--row-bg)' },
+                      { value: 'red', swatch: '#FF3B30' },
+                      { value: 'orange', swatch: '#FF9500' },
+                      { value: 'yellow', swatch: '#FFCC00' },
+                      { value: 'green', swatch: '#34C759' },
+                      { value: 'blue', swatch: '#007AFF' },
+                      { value: 'purple', swatch: '#AF52DE' }
+                    ].map(opt => {
+                      const active = memoForm.color === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
+                          style={{
+                            width: '0.95rem',
+                            height: '0.95rem',
+                            borderRadius: '50%',
+                            backgroundColor: opt.swatch,
+                            border: opt.value === '' ? '1px solid var(--panel-border)' : 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: active ? '0 0 0 1.5px var(--bg-color), 0 0 0 3px var(--accent)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {active && (
+                            <span style={{ color: opt.value === '' || opt.value === 'yellow' ? 'var(--text-primary)' : '#fff', fontSize: '0.5rem', fontWeight: 900 }}>✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-              
+
+              {/* Destructive Delete Button */}
               {memoForm.id && (
                 <button 
                   type="button" 
-                  className="memo-delete-btn" 
-                  onClick={() => deleteMemo(memoForm.id!)}
+                  onClick={() => {
+                    if (confirm('정말로 이 메모를 삭제하시겠습니까?')) {
+                      deleteMemo(memoForm.id!);
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#ff4d4f',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: '0.4rem 0',
+                    width: '100%',
+                    textAlign: 'center',
+                    borderRadius: '8px',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 77, 79, 0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  메모 삭제
+                  메모 영구 삭제
                 </button>
               )}
             </motion.div>

@@ -13,11 +13,11 @@ import React from 'react';
 let keyCounter = 0;
 const nextKey = () => `md-${keyCounter++}`;
 
-// 인라인 파싱: 굵게/기울임/코드/링크/취소선
+// 인라인 파싱: 굵게/기울임/코드/링크/취소선/해시태그
 function parseInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  // 순서 중요: 코드 → 링크 → 굵게 → 취소선 → 기울임
-  const pattern = /(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(~~[^~]+~~)|(\*[^*]+\*)|(_[^_]+_)/;
+  // 순서 중요: 코드 → 링크 → 굵게 → 취소선 → 기울임 → 해시태그
+  const pattern = /(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(~~[^~]+~~)|(\*[^*]+\*)|(_[^_]+_)|(#[a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/;
   let remaining = text;
 
   while (remaining.length > 0) {
@@ -54,13 +54,48 @@ function parseInline(text: string): React.ReactNode[] {
       nodes.push(<em key={nextKey()} style={{ fontStyle: 'italic' }}>{token.slice(1, -1)}</em>);
     } else if (token.startsWith('_')) {
       nodes.push(<em key={nextKey()} style={{ fontStyle: 'italic' }}>{token.slice(1, -1)}</em>);
+    } else if (token.startsWith('#')) {
+      const tagText = token.slice(1);
+      nodes.push(
+        <span 
+          key={nextKey()} 
+          style={{ 
+            color: 'var(--accent)', 
+            background: 'var(--accent-soft-bg)', 
+            padding: '0.05rem 0.35rem', 
+            borderRadius: '4px', 
+            fontSize: '0.85em', 
+            fontWeight: 700, 
+            cursor: 'pointer',
+            display: 'inline-block',
+            margin: '0 0.1rem',
+            userSelect: 'none',
+            border: '1px solid rgba(0, 122, 255, 0.15)'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            const event = new CustomEvent('filter-by-tag', { detail: tagText });
+            window.dispatchEvent(event);
+          }}
+        >
+          #{tagText}
+        </span>
+      );
     }
     remaining = remaining.slice(match.index + token.length);
   }
   return nodes;
 }
 
-export default function Markdown({ content, compact = false }: { content: string; compact?: boolean }) {
+export default function Markdown({ 
+  content, 
+  compact = false,
+  onCheckboxToggle
+}: { 
+  content: string; 
+  compact?: boolean; 
+  onCheckboxToggle?: (lineIndex: number, newCheckedState: boolean) => void;
+}) {
   if (!content) return null;
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const blocks: React.ReactNode[] = [];
@@ -81,7 +116,7 @@ export default function Markdown({ content, compact = false }: { content: string
 
   const mb = compact ? '0.1rem' : '0.35rem';
 
-  lines.forEach(rawLine => {
+  lines.forEach((rawLine, lineIndex) => {
     const line = rawLine.trimEnd();
 
     // 빈 줄
@@ -101,13 +136,24 @@ export default function Markdown({ content, compact = false }: { content: string
       const checked = checkMatch[1].toLowerCase() === 'x';
       blocks.push(
         <div key={nextKey()} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.05rem 0' }}>
-          <span style={{
-            width: '14px', height: '14px', borderRadius: '4px', flexShrink: 0, marginTop: '0.15rem',
-            border: `1.5px solid ${checked ? 'var(--success)' : 'var(--text-tertiary)'}`,
-            background: checked ? 'var(--success)' : 'transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: '0.6rem', fontWeight: 900
-          }}>{checked ? '✓' : ''}</span>
+          <span 
+            onClick={(e) => {
+              if (onCheckboxToggle) {
+                e.stopPropagation();
+                onCheckboxToggle(lineIndex, !checked);
+              }
+            }}
+            style={{
+              width: '14px', height: '14px', borderRadius: '4px', flexShrink: 0, marginTop: '0.15rem',
+              border: `1.5px solid ${checked ? 'var(--success)' : 'var(--text-tertiary)'}`,
+              background: checked ? 'var(--success)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '0.6rem', fontWeight: 900,
+              cursor: onCheckboxToggle ? 'pointer' : 'default'
+            }}
+          >
+            {checked ? '✓' : ''}
+          </span>
           <span style={{ textDecoration: checked ? 'line-through' : 'none', opacity: checked ? 0.6 : 1 }}>
             {parseInline(checkMatch[2])}
           </span>

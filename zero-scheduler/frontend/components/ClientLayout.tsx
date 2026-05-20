@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Tag, Command, FileText } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Tag, Command, FileText, X, Workflow } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -253,57 +253,105 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             style={{
               position: 'fixed',
               top: 0, left: 0, right: 0, bottom: 0,
-              background: 'transparent',
-              zIndex: 999,
+              background: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'default'
             }}
           >
             <motion.div 
-              initial={{ opacity: 0, y: -10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -10 }} 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
               transition={{ duration: 0.15 }}
-              className="popover-content" 
               onClick={e => e.stopPropagation()}
               style={{
-                position: 'absolute',
-                right: '1.2rem',
-                top: '4.8rem',
-                width: '320px',
-                maxHeight: '450px',
-                background: 'var(--panel-bg)',
-                backdropFilter: 'var(--panel-blur)',
-                WebkitBackdropFilter: 'var(--panel-blur)',
+                width: '100%',
+                maxWidth: '520px',
+                maxHeight: '75vh',
+                background: 'var(--bg-color)',
                 border: '1px solid var(--panel-border)',
-                borderRadius: '18px',
-                boxShadow: '0 15px 45px var(--shadow-color)',
-                overflowY: 'auto',
-                padding: '1.2rem 1rem',
+                borderRadius: '20px',
+                boxShadow: '0 15px 45px rgba(0, 0, 0, 0.3)',
+                overflow: 'hidden',
+                padding: '1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.8rem',
-                zIndex: 1000
+                zIndex: 1001
               }}
             >
-              <div className="ios-modal-header" style={{ borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.5rem', marginBottom: '0.2rem' }}>
-                <div className="ios-modal-title" style={{ fontSize: '1rem', fontWeight: 700 }}>활동 내역</div>
+              <div className="ios-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.65rem', marginBottom: '0.2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+                  <Activity size={16} style={{ color: 'var(--accent)' }} />
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800 }}>전체 활동 내역</span>
+                  <span style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 700, 
+                    color: 'var(--text-secondary)', 
+                    background: 'var(--hover-bg)', 
+                    padding: '0.15rem 0.45rem', 
+                    borderRadius: '6px' 
+                  }}>
+                    {activities.length}개 기록됨
+                  </span>
+                </div>
                 <button 
                   onClick={() => setIsActivityDrawerOpen(false)} 
-                  style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-                >닫기</button>
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'var(--text-secondary)', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.2rem',
+                    borderRadius: '50%',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', overflowY: 'auto', maxHeight: '55vh', paddingRight: '2px' }}>
                 {activities.length === 0 ? (
-                  <div style={{ padding: '1.5rem 1rem', fontSize: '0.78rem', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--panel-border)', borderRadius: '10px' }}>
-                    활동 내역이 없습니다.
+                  <div style={{ padding: '3rem 1.5rem', fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-tertiary)', border: '1px dashed var(--panel-border)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                    <Activity size={24} style={{ opacity: 0.3 }} />
+                    <span>활동 내역이 없습니다.</span>
                   </div>
                 ) : (
                   activities.map((act) => (
-                    <div key={act.id} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', position: 'relative', padding: '0.45rem 0.6rem', background: getActivityBgColor(act.type), border: '1px solid var(--panel-border)', borderRadius: '10px' }}>
-                      <div className="timeline-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: getActivityColor(act.type), marginTop: '0.35rem', flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: 'var(--text-primary)', lineHeight: 1.4, fontWeight: 500 }}>{getActivityMessage(act)}</div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.65rem', marginTop: '0.15rem' }}>{getRelativeTime(act.timestamp)}</div>
+                    <div 
+                      key={act.id} 
+                      style={{ 
+                        display: 'flex', 
+                        gap: '0.65rem', 
+                        fontSize: '0.78rem', 
+                        alignItems: 'flex-start',
+                        padding: '0.65rem 0.8rem', 
+                        background: 'var(--surface-elevated)', 
+                        border: '1px solid var(--panel-border)', 
+                        borderRadius: '10px' 
+                      }}
+                    >
+                      <div style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%', 
+                        background: getActivityColor(act.type), 
+                        marginTop: '0.35rem', 
+                        flexShrink: 0 
+                      }} />
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                        <div style={{ color: 'var(--text-primary)', lineHeight: 1.45, fontWeight: 600 }}>{getActivityMessage(act)}</div>
+                        <div style={{ color: 'var(--text-tertiary)', fontSize: '0.68rem', marginTop: '0.2rem' }}>{getRelativeTime(act.timestamp)}</div>
                       </div>
                     </div>
                   ))

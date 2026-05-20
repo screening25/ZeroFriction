@@ -75,6 +75,7 @@ interface AppContextProps {
   submitMemo: () => void;
   deleteMemo: (id: string) => void;
   deleteInventoryItem: (id: string) => void;
+  exportToCsv: (type: 'event' | 'asset') => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -541,6 +542,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (target) logActivity('DEL_INV', '재고 삭제', target.title);
   };
 
+  const exportToCsv = (type: 'event' | 'asset') => {
+    const filtered = records.filter(r => r.type === type);
+    let csvContent = "";
+    
+    if (type === 'event') {
+      csvContent += "구분,제목,카테고리,날짜,시간,완료여부\n";
+      filtered.forEach(r => {
+        const title = `"${(r.title || '').replace(/"/g, '""')}"`;
+        const cat = `"${(r.category || '').replace(/"/g, '""')}"`;
+        const date = r.attrs.date || '';
+        const time = r.attrs.time || '';
+        const done = r.attrs.completed ? "완료" : "미완료";
+        csvContent += `일정,${title},${cat},${date},${time},${done}\n`;
+      });
+    } else {
+      csvContent += "구분,품명,카테고리,수량,상태,위치,담당자\n";
+      filtered.forEach(r => {
+        const title = `"${(r.title || '').replace(/"/g, '""')}"`;
+        const cat = `"${(r.category || '').replace(/"/g, '""')}"`;
+        const qty = r.attrs.qty || 0;
+        const flow = r.attrs.flow === 'OUT' ? '출고' : '입고';
+        const loc = `"${(r.attrs.location || '').replace(/"/g, '""')}"`;
+        const mgr = `"${(r.attrs.manager || '').replace(/"/g, '""')}"`;
+        csvContent += `재고,${title},${cat},${qty},${flow},${loc},${mgr}\n`;
+      });
+    }
+
+    const bom = "\uFEFF"; // BOM for Excel encoding
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `zero_${type === 'event' ? 'schedule' : 'inventory'}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`${type === 'event' ? '일정' : '재고'} CSV 내보내기 완료`);
+  };
+
   return (
     <AppContext.Provider value={{
       theme, setTheme, records, setRecords, toast, setToast, activities, setActivities, appSettings, setAppSettings,
@@ -553,7 +593,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
-      showCompleted, setShowCompleted
+      showCompleted, setShowCompleted, exportToCsv
     }}>
       {children}
     </AppContext.Provider>

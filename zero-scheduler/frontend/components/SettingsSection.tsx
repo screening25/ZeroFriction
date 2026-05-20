@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Download, Upload, AlertTriangle, Settings } from 'lucide-react';
+import { ChevronDown, Download, Upload, AlertTriangle, Settings, Trash2, RotateCcw, X } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNotifications } from '@/frontend/hooks/useNotifications';
+import { format, parseISO } from 'date-fns';
 import { createPortal } from 'react-dom';
 
 interface CustomSelectCompactProps {
@@ -193,6 +194,7 @@ export default function SettingsSection() {
     permanentDelete,
     emptyArchive,
     clearActivities,
+    exportToCsv
   } = useApp();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -754,6 +756,24 @@ export default function SettingsSection() {
             />
           </div>
 
+          {/* Row 1.5 (CSV Exports): 일정 CSV & 재고 CSV 내보내기 */}
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+            <button
+              className="settings-btn-compact"
+              onClick={() => exportToCsv('event')}
+              style={{ flex: 1, gap: '0.25rem' }}
+            >
+              <Download size={12} /> 일정 백업 (.csv)
+            </button>
+            <button
+              className="settings-btn-compact"
+              onClick={() => exportToCsv('asset')}
+              style={{ flex: 1, gap: '0.25rem' }}
+            >
+              <Download size={12} /> 재고 백업 (.csv)
+            </button>
+          </div>
+
           {/* Row 2 (Trash & Logs): 휴지통 & 활동 로그 초기화 */}
           <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
             <button
@@ -793,64 +813,270 @@ export default function SettingsSection() {
       {/* Soft Delete Trash Modal (Instant overlay within Settings!) */}
       <AnimatePresence>
         {isTrashModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center backdrop-blur-md bg-white/95 dark:bg-zinc-900/95 p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-            <style>{`.group:hover .group-hover\\:opacity-100 { opacity: 1 !important; }`}</style>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.15 }} className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col gap-4" style={{ width: '100%', maxWidth: '400px', borderRadius: '16px', padding: '1.2rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--panel-border)', background: 'var(--bg-color)', boxShadow: '0 15px 45px rgba(0,0,0,0.25)' }}>
-              <div className="flex justify-between items-center" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50" style={{ fontSize: '1.1rem', fontWeight: 800 }}>휴지통 ({archive.length})</h3>
-                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                  {archive.length > 0 && (
-                    <button
-                      className="text-sm cursor-pointer"
-                      onClick={() => {
-                        if (confirm('휴지통을 완전히 비우시겠습니까? 모든 데이터가 영구히 삭제됩니다.')) {
-                          emptyArchive();
-                        }
-                      }}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      전체 비우기
-                    </button>
-                  )}
-                  <button className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer" onClick={() => setIsTrashModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>닫기</button>
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4" 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              zIndex: 1000, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              background: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(12px)', 
+              WebkitBackdropFilter: 'blur(12px)' 
+            }}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              transition={{ duration: 0.15 }} 
+              style={{ 
+                width: '100%', 
+                maxWidth: '440px', 
+                borderRadius: '20px', 
+                padding: '1.25rem', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '1rem', 
+                border: '1px solid var(--panel-border)', 
+                background: 'var(--bg-color)', 
+                boxShadow: '0 15px 45px rgba(0,0,0,0.25)',
+                maxHeight: '85vh',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+                  <Trash2 size={16} style={{ color: 'var(--danger)' }} />
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800 }}>휴지통</span>
+                  <span style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 700, 
+                    color: 'var(--text-secondary)', 
+                    background: 'var(--hover-bg)', 
+                    padding: '0.15rem 0.45rem', 
+                    borderRadius: '6px' 
+                  }}>
+                    {archive.length}개 보관됨
+                  </span>
                 </div>
+                <button 
+                  onClick={() => setIsTrashModalOpen(false)} 
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'var(--text-secondary)', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.2rem',
+                    borderRadius: '50%',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <div className="flex flex-col gap-2 overflow-y-auto max-h-[300px]" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+
+              {/* Subtitle / Tip */}
+              <div style={{ 
+                fontSize: '0.72rem', 
+                color: 'var(--text-secondary)', 
+                lineHeight: '1.4', 
+                textAlign: 'left',
+                borderBottom: '1px solid var(--panel-border)',
+                paddingBottom: '0.75rem'
+              }}>
+                휴지통의 데이터는 최대 200개까지 보관되며, 언제든지 원래 탭으로 복구하거나 영구히 삭제할 수 있습니다.
+              </div>
+
+              {/* Trash Items List */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.6rem', 
+                maxHeight: '350px', 
+                overflowY: 'auto',
+                paddingRight: '2px'
+              }}>
                 {archive.length === 0 ? (
-                  <div className="text-center text-zinc-500 text-sm py-8" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>휴지통이 비어 있습니다.</div>
+                  <div style={{ 
+                    padding: '3rem 1.5rem', 
+                    textAlign: 'center', 
+                    color: 'var(--text-tertiary)', 
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}>
+                    <Trash2 size={24} style={{ opacity: 0.3 }} />
+                    <span>휴지통이 비어 있습니다.</span>
+                  </div>
                 ) : (
-                  archive.map((item, idx) => (
-                    <div key={item.id} className="group flex justify-between items-center p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 hover:bg-zinc-100 dark:hover:bg-zinc-800" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.7rem', background: 'var(--row-bg)', border: '1px solid var(--row-border)', borderRadius: '8px' }}>
-                      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200" style={{ fontSize: '0.85rem', color: 'var(--text-primary)', textAlign: 'left' }}>
-                        #{String(idx + 1).padStart(2, '0')} {item.title || '(제목 없음)'}
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-2" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginLeft: '0.5rem' }}>
-                          ({item.type === 'event' ? '일정' : item.type === 'asset' ? '재고' : '메모'})
-                        </span>
-                      </span>
-                      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => restoreArchived(item.id)}
-                          style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        >
-                          복구
-                        </button>
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            if (confirm('이 항목을 영구 삭제하시겠습니까?')) {
-                              permanentDelete(item.id);
-                            }
-                          }}
-                          style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--danger)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        >
-                          삭제
-                        </button>
+                  archive.map((item) => {
+                    const formattedDate = item.archivedAt 
+                      ? format(parseISO(item.archivedAt), 'yy.MM.dd HH:mm') 
+                      : '';
+                    const typeLabel = item.type === 'event' ? '일정' : item.type === 'asset' ? '재고' : '메모';
+                    
+                    // Type-specific badge styling
+                    const typeColor = item.type === 'event' 
+                      ? 'var(--accent)' 
+                      : item.type === 'asset' 
+                        ? 'var(--success)' 
+                        : 'var(--purple)';
+                    const typeBg = item.type === 'event' 
+                      ? 'var(--accent-soft-bg)' 
+                      : item.type === 'asset' 
+                        ? 'var(--success-soft-bg)' 
+                        : 'var(--purple-soft-bg)';
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          padding: '0.65rem 0.8rem', 
+                          background: 'var(--surface-elevated)', 
+                          border: '1px solid var(--panel-border)', 
+                          borderRadius: '10px',
+                          gap: '0.75rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0, textAlign: 'left' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                            <span style={{ 
+                              fontSize: '0.62rem', 
+                              fontWeight: 800, 
+                              color: typeColor, 
+                              background: typeBg, 
+                              padding: '0.1rem 0.35rem', 
+                              borderRadius: '4px',
+                              flexShrink: 0
+                            }}>
+                              {typeLabel}
+                            </span>
+                            <span 
+                              style={{ 
+                                fontSize: '0.82rem', 
+                                fontWeight: 600, 
+                                color: 'var(--text-primary)', 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis', 
+                                whiteSpace: 'nowrap' 
+                              }}
+                              title={item.title}
+                            >
+                              {item.title || '(제목 없음)'}
+                            </span>
+                          </div>
+                          {formattedDate && (
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
+                              {formattedDate} 삭제됨
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+                          <button
+                            onClick={() => restoreArchived(item.id)}
+                            style={{ 
+                              background: 'var(--hover-bg)', 
+                              border: 'none', 
+                              color: 'var(--accent)', 
+                              cursor: 'pointer',
+                              padding: '0.3rem 0.5rem',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <RotateCcw size={10} />
+                            복구
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('이 항목을 영구 삭제하시겠습니까?')) {
+                                permanentDelete(item.id);
+                              }
+                            }}
+                            style={{ 
+                              background: 'var(--hover-bg)', 
+                              border: 'none', 
+                              color: 'var(--danger)', 
+                              cursor: 'pointer',
+                              padding: '0.3rem 0.5rem',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <Trash2 size={10} />
+                            삭제
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
+
+              {/* Bottom Actions / Footer */}
+              {archive.length > 0 && (
+                <div style={{ 
+                  marginTop: '0.2rem', 
+                  borderTop: '1px solid var(--panel-border)', 
+                  paddingTop: '0.8rem',
+                  display: 'flex',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    onClick={() => {
+                      if (confirm('휴지통을 완전히 비우시겠습니까? 모든 데이터가 영구히 삭제됩니다.')) {
+                        emptyArchive();
+                      }
+                    }}
+                    style={{ 
+                      background: 'var(--danger-soft-bg)', 
+                      border: '1px solid var(--danger-soft-border)', 
+                      color: 'var(--danger)', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      cursor: 'pointer',
+                      padding: '0.45rem 0.8rem',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    휴지통 비우기
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
