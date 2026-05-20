@@ -43,27 +43,29 @@ const getCategoryBorder = (cat: string) => {
 };
 
 const getMemoCardStyle = (color: string, isDark: boolean) => {
-  if (isDark) {
-    switch (color) {
-      case 'red': return { backgroundColor: 'rgba(255, 69, 58, 0.12)', border: '1px solid rgba(255, 69, 58, 0.3)' };
-      case 'orange': return { backgroundColor: 'rgba(255, 159, 10, 0.12)', border: '1px solid rgba(255, 159, 10, 0.3)' };
-      case 'yellow': return { backgroundColor: 'rgba(255, 214, 10, 0.12)', border: '1px solid rgba(255, 214, 10, 0.3)' };
-      case 'green': return { backgroundColor: 'rgba(48, 209, 88, 0.12)', border: '1px solid rgba(48, 209, 88, 0.3)' };
-      case 'blue': return { backgroundColor: 'rgba(10, 132, 255, 0.12)', border: '1px solid rgba(10, 132, 255, 0.3)' };
-      case 'purple': return { backgroundColor: 'rgba(191, 90, 242, 0.12)', border: '1px solid rgba(191, 90, 242, 0.3)' };
-      default: return { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--panel-border)' };
-    }
-  } else {
-    switch (color) {
-      case 'red': return { backgroundColor: 'rgba(255, 59, 48, 0.08)', border: '1px solid rgba(255, 59, 48, 0.2)' };
-      case 'orange': return { backgroundColor: 'rgba(255, 149, 0, 0.08)', border: '1px solid rgba(255, 149, 0, 0.2)' };
-      case 'yellow': return { backgroundColor: 'rgba(255, 204, 0, 0.08)', border: '1px solid rgba(255, 204, 0, 0.2)' };
-      case 'green': return { backgroundColor: 'rgba(52, 199, 89, 0.08)', border: '1px solid rgba(52, 199, 89, 0.2)' };
-      case 'blue': return { backgroundColor: 'rgba(0, 122, 255, 0.08)', border: '1px solid rgba(0, 122, 255, 0.2)' };
-      case 'purple': return { backgroundColor: 'rgba(175, 82, 222, 0.08)', border: '1px solid rgba(175, 82, 222, 0.2)' };
-      default: return { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--panel-border)' };
-    }
-  }
+  // 프리미엄 소프트 틴트 — 라이트는 파스텔-50, 다크는 저채도 muted
+  const light: Record<string, { backgroundColor: string; border: string }> = {
+    red:    { backgroundColor: '#FEF2F2', border: '1px solid rgba(239, 68, 68, 0.14)' },
+    orange: { backgroundColor: '#FFF7ED', border: '1px solid rgba(249, 115, 22, 0.14)' },
+    yellow: { backgroundColor: '#FEFCE8', border: '1px solid rgba(234, 179, 8, 0.16)' },
+    green:  { backgroundColor: '#F0FDF4', border: '1px solid rgba(34, 197, 94, 0.14)' },
+    blue:   { backgroundColor: '#EFF6FF', border: '1px solid rgba(59, 130, 246, 0.14)' },
+    purple: { backgroundColor: '#FAF5FF', border: '1px solid rgba(168, 85, 247, 0.14)' },
+  };
+  const dark: Record<string, { backgroundColor: string; border: string }> = {
+    red:    { backgroundColor: 'rgba(248, 113, 113, 0.10)', border: '1px solid rgba(248, 113, 113, 0.18)' },
+    orange: { backgroundColor: 'rgba(251, 146, 60, 0.10)',  border: '1px solid rgba(251, 146, 60, 0.18)' },
+    yellow: { backgroundColor: 'rgba(250, 204, 21, 0.10)',  border: '1px solid rgba(250, 204, 21, 0.18)' },
+    green:  { backgroundColor: 'rgba(74, 222, 128, 0.10)',  border: '1px solid rgba(74, 222, 128, 0.18)' },
+    blue:   { backgroundColor: 'rgba(96, 165, 250, 0.10)',  border: '1px solid rgba(96, 165, 250, 0.18)' },
+    purple: { backgroundColor: 'rgba(192, 132, 252, 0.10)', border: '1px solid rgba(192, 132, 252, 0.18)' },
+  };
+  const palette = isDark ? dark : light;
+  if (color && palette[color]) return palette[color];
+  // 기본(무색) — 깔끔한 중립 카드
+  return isDark
+    ? { backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.08)' }
+    : { backgroundColor: '#FFFFFF', border: '1px solid rgba(0, 0, 0, 0.06)' };
 };
 
 
@@ -278,7 +280,9 @@ export default function Home() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayIncompleteSchedules = schedules.filter(s => s.attrs.date === todayStr && !s.attrs.completed);
   const overdueSchedules = schedules.filter(s => s.attrs.date < todayStr && !s.attrs.completed);
-  const todaySchedulesFull = schedules.filter(s => s.attrs.date === todayStr);
+  const todaySchedulesFull = schedules
+    .filter(s => s.attrs.date === todayStr)
+    .sort((a, b) => (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59'));
   const todaySchedules = todaySchedulesFull.slice(0, appSettings.maxEventsShown || 5);
   const recentMemos = memos.slice(0, appSettings.maxMemosShown || 3); // Show latest memos on Dashboard up to limit
   const lowStockItems = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0); // Critical items with negative stock (qty < 0)
@@ -569,51 +573,72 @@ export default function Home() {
             </div>
 
             {/* Category stacked bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                <span>일정 카테고리 구성 비율</span>
-                <span>총 {schedules.length}건</span>
-              </div>
-              <div style={{ height: '14px', borderRadius: '7px', display: 'flex', overflow: 'hidden', background: 'var(--panel-border)', width: '100%' }}>
-                {['업무', '회의', '개인', '기타'].map(cat => {
-                  const cnt = schedules.filter(s => (s.category || '기타') === cat).length;
-                  const pct = Math.round((cnt / (schedules.length || 1)) * 100);
-                  if (pct === 0) return null;
-                  return (
-                    <div
-                      key={cat}
-                      style={{
-                        height: '100%',
-                        background: getCategoryColor(cat),
-                        width: `${pct}%`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#ffffff',
-                        fontSize: '0.55rem',
-                        fontWeight: 800,
-                        transition: 'width 0.4s ease'
-                      }}
-                      title={`${cat}: ${cnt}건 (${pct}%)`}
-                    >
-                      {pct > 10 && cat}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
-                {['업무', '회의', '개인', '기타'].map(cat => {
-                  const cnt = schedules.filter(s => (s.category || '기타') === cat).length;
-                  return (
-                    <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: getCategoryColor(cat) }} />
-                      <span>{cat}</span>
-                      <span style={{ color: 'var(--text-tertiary)' }}>{cnt}건</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {(() => {
+              const masterCats = appSettings.scheduleCategories || ['업무', '회의', '개인', '일반'];
+              const displayCats = [...masterCats];
+              const hasOther = schedules.some(s => !masterCats.includes(s.category || '일반'));
+              if (hasOther) {
+                displayCats.push('기타');
+              }
+              const getCountForCat = (cat: string) => {
+                return schedules.filter(s => {
+                  const c = s.category || '일반';
+                  if (cat === '기타') {
+                    return !masterCats.includes(c);
+                  }
+                  return c === cat;
+                }).length;
+              };
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    <span>일정 카테고리 구성 비율</span>
+                    <span>총 {schedules.length}건</span>
+                  </div>
+                  <div style={{ height: '14px', borderRadius: '7px', display: 'flex', overflow: 'hidden', background: 'var(--panel-border)', width: '100%' }}>
+                    {displayCats.map(cat => {
+                      const cnt = getCountForCat(cat);
+                      const pct = Math.round((cnt / (schedules.length || 1)) * 100);
+                      if (pct === 0) return null;
+                      return (
+                        <div
+                          key={cat}
+                          style={{
+                            height: '100%',
+                            background: getCategoryColor(cat),
+                            width: `${pct}%`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ffffff',
+                            fontSize: '0.55rem',
+                            fontWeight: 800,
+                            transition: 'width 0.4s ease'
+                          }}
+                          title={`${cat}: ${cnt}건 (${pct}%)`}
+                        >
+                          {pct > 10 && cat}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
+                    {displayCats.map(cat => {
+                      const cnt = getCountForCat(cat);
+                      if (cnt === 0) return null;
+                      return (
+                        <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: getCategoryColor(cat) }} />
+                          <span>{cat}</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>{cnt}건</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Unified Overview Status Widget */}
@@ -655,11 +680,8 @@ export default function Home() {
                         onClick={() => setEditingSchedule(s)}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          {/* Col 1: Index + Complete Check Icon */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
-                            <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
-                              #{String(idx + 1).padStart(2, '0')}
-                            </span>
+                          {/* Col 1: Complete Check Icon */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '1.5rem', flexShrink: 0 }}>
                             <div
                               onClick={(e) => toggleComplete(e, s)}
                               style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -1150,11 +1172,8 @@ export default function Home() {
                 onClick={() => setEditingSchedule(s)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                  {/* Col 1: Index + Complete Check Icon */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
-                    <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
-                      #{String(schedulePage * schedulesPerPage + idx + 1).padStart(2, '0')}
-                    </span>
+                  {/* Col 1: Complete Check Icon */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '1.5rem', flexShrink: 0 }}>
                     <div
                       onClick={(e) => toggleComplete(e, s)}
                       style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -2154,16 +2173,36 @@ export default function Home() {
       <AnimatePresence>
         {isMemoModalOpen && (
           <div className="modal-overlay" onClick={() => setIsMemoModalOpen(false)}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.15 }} className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="ios-modal-header">
-                <button className="ios-text-btn" onClick={() => setIsMemoModalOpen(false)}>취소</button>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              transition={{ duration: 0.15 }} 
+              className="modal-content memo-modal-content" 
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="memo-modal-header">
+                <button 
+                  className="memo-text-btn" 
+                  onClick={() => setIsMemoModalOpen(false)}
+                >
+                  취소
+                </button>
                 <div className="ios-modal-title">메모</div>
-                <button className="ios-text-btn bold" onClick={submitMemo}>저장</button>
+                <button 
+                  className="memo-text-btn save-btn" 
+                  onClick={submitMemo}
+                >
+                  저장
+                </button>
               </div>
               
               <div className="memo-form-container">
-                {/* 색상 라이브 프리뷰 카드 — 색 선택 시 즉시 반영 */}
-                <div className="memo-preview-card" style={{ ...getMemoCardStyle(memoForm.color || '', theme === 'dark') }}>
+                {/* 메모 본문 카드 — 선택한 색상의 파스텔 톤이 은은하게 즉시 반영됨 */}
+                <div 
+                  className="memo-preview-card" 
+                  style={{ ...getMemoCardStyle(memoForm.color || '', theme === 'dark') }}
+                >
                   <input
                     type="text"
                     placeholder="제목"
@@ -2171,23 +2210,28 @@ export default function Home() {
                     value={memoForm.title}
                     onChange={e => setMemoForm({...memoForm, title: e.target.value})}
                   />
-                  <div className="memo-preview-divider" />
                   <textarea
                     placeholder="내용을 입력하세요…"
-                    rows={7}
+                    rows={8}
                     className="memo-content-textarea"
                     value={memoForm.content}
                     onChange={e => setMemoForm({...memoForm, content: e.target.value})}
                   />
                 </div>
-                <span className="memo-md-hint">
-                  마크다운 지원 · <code># 제목</code> <code>**굵게**</code> <code>- 목록</code> <code>- [ ] 체크</code>
-                </span>
+                
+                {/* 마크다운 헬퍼 */}
+                <div className="memo-md-hint">
+                  <span>마크다운 지원:</span>
+                  <code># 제목</code>
+                  <code>**굵게**</code>
+                  <code>- 목록</code>
+                  <code>- [ ] 체크</code>
+                </div>
 
                 {/* 옵션 그룹 (고정 + 색상) */}
                 <div className="memo-option-group">
-                  <div className="ios-toggle-row">
-                    <span className="ios-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div className="memo-option-row">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                       <Pin size={13} style={{ color: memoForm.pinned ? 'var(--accent)' : 'var(--text-tertiary)', transform: 'rotate(45deg)' }} />
                       상단 고정
                     </span>
@@ -2201,11 +2245,9 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="memo-option-divider" />
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span className="ios-toggle-label">메모 색상</span>
-                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <div className="memo-option-row">
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>메모 색상</span>
+                    <div className="memo-color-list">
                       {[
                         { value: '', label: '기본', swatch: 'var(--row-bg)' },
                         { value: 'red', label: '빨강', swatch: '#FF3B30' },
@@ -2223,8 +2265,8 @@ export default function Home() {
                             onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
                             title={opt.label}
                             style={{
-                              width: '1.5rem',
-                              height: '1.5rem',
+                              width: '1.05rem',
+                              height: '1.05rem',
                               borderRadius: '50%',
                               backgroundColor: opt.swatch,
                               border: opt.value === '' ? '1px solid var(--panel-border)' : 'none',
@@ -2232,13 +2274,13 @@ export default function Home() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              boxShadow: active ? '0 0 0 2px var(--input-bg), 0 0 0 4px var(--accent)' : 'none',
+                              boxShadow: active ? '0 0 0 2px var(--input-bg), 0 0 0 4.5px var(--accent)' : 'none',
                               transition: 'all 0.15s ease',
                               transform: active ? 'scale(0.92)' : 'none'
                             }}
                           >
                             {active && (
-                              <span style={{ color: opt.value === '' || opt.value === 'yellow' ? 'var(--text-primary)' : '#fff', fontSize: '0.7rem', fontWeight: 900, lineHeight: 1 }}>✓</span>
+                              <span style={{ color: opt.value === '' || opt.value === 'yellow' ? 'var(--text-primary)' : '#fff', fontSize: '0.55rem', fontWeight: 900, lineHeight: 1 }}>✓</span>
                             )}
                           </button>
                         );
@@ -2248,7 +2290,15 @@ export default function Home() {
                 </div>
               </div>
               
-              {memoForm.id && <button className="ios-delete-btn" onClick={() => deleteMemo(memoForm.id!)}>메모 삭제</button>}
+              {memoForm.id && (
+                <button 
+                  type="button" 
+                  className="memo-delete-btn" 
+                  onClick={() => deleteMemo(memoForm.id!)}
+                >
+                  메모 삭제
+                </button>
+              )}
             </motion.div>
           </div>
         )}

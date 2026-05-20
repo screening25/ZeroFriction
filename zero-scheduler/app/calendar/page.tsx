@@ -7,6 +7,8 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Calendar } from 'lucid
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026 } from '@/database';
 import CustomSelect from '@/frontend/components/CustomSelect';
+import CustomDatePicker from '@/frontend/components/CustomDatePicker';
+import CustomTimePicker from '@/frontend/components/CustomTimePicker';
 
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
 
@@ -160,14 +162,10 @@ export default function CalendarPage() {
             background: 'transparent'
           }}>등록된 일정이 존재하지 않습니다.</div>
         ) : (
-          selectedSchedules.map((s, index) => {
-            const orderNum = `#${String(index + 1).padStart(2, '0')}`;
+          selectedSchedules.map((s) => {
             return (
               <div key={s.id} className="card card-compact" onClick={() => setEditingSchedule(s)} style={{ padding: '0.5rem 0.65rem', borderRadius: '10px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', width: '22px', flexShrink: 0 }}>
-                    {orderNum}
-                  </span>
                   <div onClick={(e) => toggleComplete(e, s)} style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                     {s.attrs.completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                   </div>
@@ -204,11 +202,11 @@ export default function CalendarPage() {
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">날짜</span>
-                  <input type="date" className="input-sm" value={editingSchedule.attrs.date || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date: e.target.value }})} />
+                  <CustomDatePicker value={editingSchedule.attrs.date || ''} onChange={date => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">시간</span>
-                  <input type="time" className="input-sm" value={editingSchedule.attrs.time || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time: e.target.value }})} />
+                  <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
                 </div>
               </div>
               
