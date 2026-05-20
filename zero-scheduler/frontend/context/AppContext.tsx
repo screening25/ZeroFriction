@@ -73,6 +73,7 @@ interface AppContextProps {
   toggleDone: (e: React.MouseEvent, r: UniversalRecord) => void;
   handleDeleteSchedule: (id: string) => void;
   submitMemo: () => void;
+  updateMemoContentDirectly: (id: string, newContent: string) => void;
   deleteMemo: (id: string) => void;
   deleteInventoryItem: (id: string) => void;
   exportToCsv: (type: 'event' | 'asset') => void;
@@ -523,6 +524,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast('저장 완료');
   };
 
+  const updateMemoContentDirectly = (id: string, newContent: string) => {
+    const memo = records.find(r => r.id === id);
+    if (!memo) return;
+    updateRecord(id, {
+      attrs: {
+        ...memo.attrs,
+        content: newContent
+      }
+    });
+    reloadRecords();
+  };
+
   const deleteMemo = (id: string) => {
     deleteRecord(id);
     setMemoForm({ title: '', content: '', pinned: false, color: '' });
@@ -590,7 +603,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isMemoModalOpen, setIsMemoModalOpen, memoPage, setMemoPage, memoForm, setMemoForm,
       activeTab, setActiveTab, activeCategory, setActiveCategory,
       reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, handleUpdateSchedule,
-      toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, deleteMemo, deleteInventoryItem,
+      toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
       showCompleted, setShowCompleted, exportToCsv

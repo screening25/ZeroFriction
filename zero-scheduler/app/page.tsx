@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin } from 'lucide-react';
+import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin, Sparkles, Coffee, AlertCircle, Calendar, Trophy } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -91,7 +91,7 @@ export default function Home() {
     logActivity,
     handleUpdateSchedule,
     toggleComplete, handleDeleteSchedule,
-    submitMemo, deleteMemo, deleteInventoryItem,
+    submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
     archive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
     activities,
     searchQuery, searchType, setSearchResult
@@ -217,6 +217,25 @@ export default function Home() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   const inventory = records.filter(r => r.type === 'asset');
+
+  const handleMemoCheckboxToggle = (memoId: string, lineIndex: number, newCheckedState: boolean) => {
+    const memo = records.find(m => m.id === memoId && m.type === 'memo');
+    if (!memo) return;
+    const content = memo.attrs.content || '';
+    const lines = content.replace(/\r\n/g, '\n').split('\n');
+    if (lineIndex < 0 || lineIndex >= lines.length) return;
+    
+    const line = lines[lineIndex];
+    // Find checkbox pattern: - [ ] or - [x]
+    const updatedLine = line.replace(/^(\s*[-*]\s+\[)([ xX])(\]\s+.*)$/, (_match: string, prefix: string, _checked: string, suffix: string) => {
+      return `${prefix}${newCheckedState ? 'x' : ' '}${suffix}`;
+    });
+    
+    lines[lineIndex] = updatedLine;
+    const newContent = lines.join('\n');
+    
+    updateMemoContentDirectly(memo.id, newContent);
+  };
 
   // Calendar rendering logic (Used inside Calendar Page)
   let days: Date[] = [];
@@ -457,6 +476,156 @@ export default function Home() {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>{format(new Date(), 'yyyy년 M월 d일 EEEE')}</div>
             </div>
           </div>
+
+          {/* Smart Daily Briefing Widget */}
+          {(() => {
+            const totalTodaySchedules = schedules.filter(s => s.attrs.date === todayStr).length;
+            const remainingTodaySchedules = todayIncompleteSchedules.length;
+            const overdueSchedulesCount = overdueSchedules.length;
+            const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
+            
+            let greeting = "좋은 하루입니다!";
+            const hour = new Date().getHours();
+            if (hour >= 5 && hour < 9) greeting = "활기찬 아침입니다!";
+            else if (hour >= 9 && hour < 12) greeting = "생산적인 오전입니다!";
+            else if (hour >= 12 && hour < 14) greeting = "즐거운 점심시간입니다!";
+            else if (hour >= 14 && hour < 18) greeting = "활기찬 오후입니다!";
+            else if (hour >= 18 && hour < 22) greeting = "보람찬 저녁입니다!";
+            else greeting = "평안한 밤입니다!";
+            
+            let briefing: {
+              greeting: string;
+              statusLevel: 'calm' | 'busy' | 'warning' | 'done';
+              scheduleMessage: string;
+              inventoryMessage: string;
+              actionTip: string;
+            };
+            
+            if (lowStockItemsCount > 0 || overdueSchedulesCount > 0) {
+              const schedMsg = overdueSchedulesCount > 0 
+                ? `미완료된 지난 일정이 ${overdueSchedulesCount}건 있습니다.`
+                : `오늘 대기 중인 일정이 ${remainingTodaySchedules}건 있습니다.`;
+              const invMsg = lowStockItemsCount > 0
+                ? `수량이 부족한 품목이 ${lowStockItemsCount}건 감지되었습니다.`
+                : "재고 상태가 양호합니다.";
+              
+              briefing = {
+                greeting,
+                statusLevel: 'warning',
+                scheduleMessage: schedMsg,
+                inventoryMessage: invMsg,
+                actionTip: "빠른 확인 및 조치를 권장합니다."
+              };
+            } else if (totalTodaySchedules > 0 && remainingTodaySchedules === 0) {
+              briefing = {
+                greeting,
+                statusLevel: 'done',
+                scheduleMessage: "금일 등록된 일정이 모두 완료되었습니다.",
+                inventoryMessage: "재고 상태가 양호합니다.",
+                actionTip: "편안한 마음으로 남은 업무를 점검해 보세요."
+              };
+            } else if (remainingTodaySchedules > 0) {
+              briefing = {
+                greeting,
+                statusLevel: 'busy',
+                scheduleMessage: `오늘 ${remainingTodaySchedules}건의 일정이 대기 중입니다.`,
+                inventoryMessage: "재고 상태가 양호합니다.",
+                actionTip: "화이팅 넘치는 하루 되세요!"
+              };
+            } else {
+              briefing = {
+                greeting,
+                statusLevel: 'calm',
+                scheduleMessage: "오늘 새로 등록된 일정이 없습니다.",
+                inventoryMessage: "재고 상태가 양호하게 유지되고 있습니다.",
+                actionTip: "시간이 날 때 다음 주 일정을 미리 계획해 볼까요?"
+              };
+            }
+            
+            let styles = {
+              textClass: "text-emerald-600 dark:text-emerald-400",
+              containerBg: "rgba(5, 150, 105, 0.05)",
+              containerBorder: "1px solid rgba(5, 150, 105, 0.15)",
+              iconBg: "rgba(5, 150, 105, 0.12)",
+              iconColor: "#059669",
+              IconComponent: Coffee
+            };
+            
+            if (briefing.statusLevel === 'warning') {
+              styles = {
+                textClass: "text-amber-600 dark:text-amber-400",
+                containerBg: "rgba(217, 119, 6, 0.05)",
+                containerBorder: "1px solid rgba(217, 119, 6, 0.15)",
+                iconBg: "rgba(217, 119, 6, 0.12)",
+                iconColor: "#d97706",
+                IconComponent: AlertCircle
+              };
+            } else if (briefing.statusLevel === 'busy') {
+              styles = {
+                textClass: "text-blue-600 dark:text-blue-400",
+                containerBg: "rgba(37, 99, 235, 0.05)",
+                containerBorder: "1px solid rgba(37, 99, 235, 0.15)",
+                iconBg: "rgba(37, 99, 235, 0.12)",
+                iconColor: "#2563eb",
+                IconComponent: Calendar
+              };
+            } else if (briefing.statusLevel === 'done') {
+              styles = {
+                textClass: "text-indigo-600 dark:text-indigo-400",
+                containerBg: "rgba(79, 70, 229, 0.05)",
+                containerBorder: "1px solid rgba(79, 70, 229, 0.15)",
+                iconBg: "rgba(79, 70, 229, 0.12)",
+                iconColor: "#4f46e5",
+                IconComponent: Trophy
+              };
+            }
+            
+            return (
+              <div style={{
+                background: styles.containerBg,
+                backdropFilter: 'var(--panel-blur)',
+                WebkitBackdropFilter: 'var(--panel-blur)',
+                border: styles.containerBorder,
+                borderRadius: '16px',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                boxShadow: 'var(--shadow-sm)',
+                textAlign: 'left'
+              }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: styles.iconBg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: styles.iconColor,
+                  flexShrink: 0
+                }}>
+                  <styles.IconComponent size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800 }} className={styles.textClass}>
+                    {briefing.greeting}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', paddingLeft: '0.1rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: styles.iconColor, fontSize: '0.8rem' }}>•</span> {briefing.scheduleMessage}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: styles.iconColor, fontSize: '0.8rem' }}>•</span> {briefing.inventoryMessage}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-500 italic" style={{ marginTop: '0.1rem', fontSize: '0.68rem', opacity: 0.8 }}>
+                    💡 {briefing.actionTip}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* KPI Strip — 4 핵심 지표 한눈에 */}
           <div className="kpi-strip">
@@ -1852,7 +2021,13 @@ export default function Home() {
                       lineHeight: '1.4'
                     }}
                   >
-                    <Markdown content={m.attrs.content} compact />
+                    <Markdown 
+                      content={m.attrs.content} 
+                      compact 
+                      onCheckboxToggle={(lineIndex, newCheckedState) => {
+                        handleMemoCheckboxToggle(m.id, lineIndex, newCheckedState);
+                      }} 
+                    />
                   </div>
                 )}
 
