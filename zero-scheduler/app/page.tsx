@@ -10,6 +10,8 @@ import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecur
 import SettingsSection from '@/frontend/components/SettingsSection';
 import CustomTimePicker from '@/frontend/components/CustomTimePicker';
 import CustomSelect from '@/frontend/components/CustomSelect';
+import CustomDatePicker from '@/frontend/components/CustomDatePicker';
+import Markdown from '@/frontend/components/Markdown';
 
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
 
@@ -502,14 +504,14 @@ export default function Home() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
               <Sliders size={15} style={{ color: 'var(--accent)' }} />
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>비주얼 분석 리포트</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>데이터 인사이트</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem' }}>
               {/* Completion Rate Indicator */}
               <div style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--panel-border)',
+                background: 'var(--insight-tile-bg)',
+                border: '1px solid var(--insight-tile-border)',
                 borderRadius: '12px',
                 padding: '0.75rem 0.9rem',
                 display: 'flex',
@@ -536,8 +538,8 @@ export default function Home() {
 
               {/* Safety Stock Indicator */}
               <div style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--panel-border)',
+                background: 'var(--insight-tile-bg)',
+                border: '1px solid var(--insight-tile-border)',
                 borderRadius: '12px',
                 padding: '0.75rem 0.9rem',
                 display: 'flex',
@@ -1518,19 +1520,19 @@ export default function Home() {
                 const qtyNum = Number(item.attrs.qty) || 0;
                 const isNegative = qtyNum < 0;
                 return (
-                <div 
-                  key={item.id} 
-                  className="card card-compact" 
-                  style={{ 
-                    padding: '1.25rem', 
-                    borderRadius: '10px', 
-                    cursor: 'pointer', 
-                    height: '115px', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'space-between', 
-                    overflow: 'hidden' 
-                  }} 
+                <div
+                  key={item.id}
+                  className="card card-compact"
+                  style={{
+                    padding: '1.25rem',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    height: '115px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    overflow: 'hidden'
+                  }}
                   onClick={() => setEditingInventory ? setEditingInventory(item) : null}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -1713,7 +1715,7 @@ export default function Home() {
       {searchQuery === null && activeTab === ('memo' as any) && (
         <section>
           <div className="section-header">
-            <div className="section-title">메모 관리</div>
+            <div className="section-title">메모</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
               <button 
                 className="btn-ghost" 
@@ -1738,12 +1740,12 @@ export default function Home() {
               <div
                 key={m.id}
                 className="card card-compact"
-                style={{ 
-                  padding: '1.25rem', 
-                  borderRadius: '10px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '0.5rem', 
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
                   cursor: 'pointer',
                   ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                 }}
@@ -1756,7 +1758,7 @@ export default function Home() {
                   <span className="text-xs font-mono text-gray-400 w-7 shrink-0" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af', width: '1.75rem', flexShrink: 0, textAlign: 'left' }}>
                     #{String(memoPage * memosPerPage + idx + 1).padStart(2, '0')}
                   </span>
-                  <div style={{ color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                     <FileText size={13} />
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, marginLeft: '0.5rem' }}>
@@ -1777,22 +1779,21 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                
+
                 {m.attrs.content && (
-                  <div 
-                    style={{ 
-                      fontSize: '0.75rem', 
-                      color: 'var(--text-secondary)', 
-                      paddingLeft: '3.1rem', 
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      paddingLeft: '3.1rem',
                       textAlign: 'left',
-                      whiteSpace: 'pre-wrap',
                       lineHeight: '1.4'
                     }}
                   >
-                    {m.attrs.content}
+                    <Markdown content={m.attrs.content} compact />
                   </div>
                 )}
-                
+
                 <div className="card-hover-actions">
                   <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoModalOpen(true); }}>수정</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }}>삭제</button>
@@ -1839,7 +1840,7 @@ export default function Home() {
               </div>
               
               <div className="form-group">
-                <span className="form-label">제목<span className="text-red-500 ml-1">*</span></span>
+                <span className="form-label">제목<span className="req-star">*</span></span>
                 <input type="text" className="input-sm" placeholder="" value={editingSchedule.title} onChange={e => setEditingSchedule({...editingSchedule, title: e.target.value})} />
               </div>
 
@@ -1884,8 +1885,8 @@ export default function Home() {
               
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">날짜<span className="text-red-500 ml-1">*</span></span>
-                  <input type="date" className="input-sm" value={editingSchedule.attrs.date || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date: e.target.value }})} />
+                  <span className="form-label">날짜<span className="req-star">*</span></span>
+                  <CustomDatePicker value={editingSchedule.attrs.date || ''} onChange={date => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">시간</span>
@@ -1977,11 +1978,18 @@ export default function Home() {
                 </div>
               </div>
               
-              <label className="custom-checkbox">
-                <input type="checkbox" checked={!!editingSchedule.attrs.completed} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, completed: e.target.checked }})} />
-                <span>완료 처리</span>
-              </label>
-              
+              <div className="ios-toggle-row">
+                <span className="ios-toggle-label">완료 처리</span>
+                <button
+                  type="button"
+                  className={`ios-toggle ${editingSchedule.attrs.completed ? 'on' : ''}`}
+                  aria-pressed={!!editingSchedule.attrs.completed}
+                  onClick={() => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, completed: !editingSchedule.attrs.completed } })}
+                >
+                  <span className="ios-toggle-knob" />
+                </button>
+              </div>
+
               {editingSchedule.id && <button className="ios-delete-btn" onClick={() => handleDeleteSchedule(editingSchedule.id)}>일정 삭제</button>}
             </motion.div>
           </div>
@@ -2012,7 +2020,7 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <span className="form-label">품목명<span className="text-red-500 ml-1">*</span></span>
+                <span className="form-label">품목명<span className="req-star">*</span></span>
                 <input 
                   type="text" 
                   className="input-sm" 
@@ -2040,7 +2048,7 @@ export default function Home() {
 
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">수량<span className="text-red-500 ml-1">*</span></span>
+                  <span className="form-label">수량<span className="req-star">*</span></span>
                   <input type="number" className="input-sm" value={editingInventory.attrs.qty ?? 0} onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, qty: Number(e.target.value) }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -2058,7 +2066,7 @@ export default function Home() {
 
               {/* Storage Location Dropdown (Master Data Only) */}
               <div className="form-group">
-                <span className="form-label">보관 창고<span className="text-red-500 ml-1">*</span></span>
+                <span className="form-label">보관 창고<span className="req-star">*</span></span>
                 <CustomSelect
                   value={editingInventory.attrs.loc || ''}
                   placeholder="보관 창고 선택"
@@ -2072,7 +2080,7 @@ export default function Home() {
 
               {/* Manager Dropdown (Master Data Only) */}
               <div className="form-group">
-                <span className="form-label">담당 관리자<span className="text-red-500 ml-1">*</span></span>
+                <span className="form-label">담당 관리자<span className="req-star">*</span></span>
                 <CustomSelect
                   value={editingInventory.attrs.mgr || ''}
                   placeholder="담당 관리자 선택"
@@ -2154,97 +2162,88 @@ export default function Home() {
               </div>
               
               <div className="memo-form-container">
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>제목<span className="text-red-500 ml-1">*</span></span>
-                  <input 
-                    type="text" 
-                    placeholder=""
+                {/* 색상 라이브 프리뷰 카드 — 색 선택 시 즉시 반영 */}
+                <div className="memo-preview-card" style={{ ...getMemoCardStyle(memoForm.color || '', theme === 'dark') }}>
+                  <input
+                    type="text"
+                    placeholder="제목"
                     className="memo-title-input"
-                    style={{
-                      fontWeight: 700,
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      outline: 'none',
-                      padding: '0.6rem 0.8rem',
-                      width: '100%',
-                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                      ...getMemoCardStyle(memoForm.color || '', theme === 'dark')
-                    }}
-                    value={memoForm.title} 
-                    onChange={e => setMemoForm({...memoForm, title: e.target.value})} 
+                    value={memoForm.title}
+                    onChange={e => setMemoForm({...memoForm, title: e.target.value})}
                   />
-                </div>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>상세 내용<span className="text-red-500 ml-1">*</span></span>
-                  <textarea 
-                    placeholder=""
-                    rows={8}
+                  <div className="memo-preview-divider" />
+                  <textarea
+                    placeholder="내용을 입력하세요…"
+                    rows={7}
                     className="memo-content-textarea"
-                    style={{
-                      lineHeight: 1.6,
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      outline: 'none',
-                      padding: '0.6rem 0.8rem',
-                      resize: 'none',
-                      width: '100%',
-                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                      ...getMemoCardStyle(memoForm.color || '', theme === 'dark')
-                    }}
-                    value={memoForm.content} 
-                    onChange={e => setMemoForm({...memoForm, content: e.target.value})} 
+                    value={memoForm.content}
+                    onChange={e => setMemoForm({...memoForm, content: e.target.value})}
                   />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.8rem', padding: '0 0.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <input 
-                      type="checkbox" 
-                      id="memo-pin-checkbox"
-                      checked={memoForm.pinned || false}
-                      onChange={e => setMemoForm({ ...memoForm, pinned: e.target.checked })}
-                      style={{ cursor: 'pointer', width: '1rem', height: '1rem', accentColor: 'var(--accent)' }}
-                    />
-                    <label htmlFor="memo-pin-checkbox" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      상단 고정
-                    </label>
-                  </div>
-                </div>
+                <span className="memo-md-hint">
+                  마크다운 지원 · <code># 제목</code> <code>**굵게**</code> <code>- 목록</code> <code>- [ ] 체크</code>
+                </span>
 
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.8rem' }}>
-                  <span className="form-label" style={{ paddingLeft: '0.2rem' }}>메모 색상</span>
-                  <div style={{ display: 'flex', gap: '0.5rem', padding: '0.2rem 0', flexWrap: 'wrap' }}>
-                    {[
-                      { value: '', label: '기본', color: 'var(--surface-color)', border: 'var(--panel-border)' },
-                      { value: 'red', label: '빨강', color: 'rgba(255, 59, 48, 0.15)', border: 'rgba(255, 59, 48, 0.3)' },
-                      { value: 'orange', label: '주황', color: 'rgba(255, 149, 0, 0.15)', border: 'rgba(255, 149, 0, 0.3)' },
-                      { value: 'yellow', label: '노랑', color: 'rgba(255, 204, 0, 0.15)', border: 'rgba(255, 204, 0, 0.3)' },
-                      { value: 'green', label: '초록', color: 'rgba(52, 199, 89, 0.15)', border: 'rgba(52, 199, 89, 0.3)' },
-                      { value: 'blue', label: '파랑', color: 'rgba(0, 122, 255, 0.15)', border: 'rgba(0, 122, 255, 0.3)' },
-                      { value: 'purple', label: '보라', color: 'rgba(175, 82, 222, 0.15)', border: 'rgba(175, 82, 222, 0.3)' }
-                    ].map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
-                        style={{
-                          width: '1.8rem',
-                          height: '1.8rem',
-                          borderRadius: '50%',
-                          backgroundColor: opt.value ? opt.color : 'var(--bg-secondary)',
-                          border: memoForm.color === opt.value ? '2px solid var(--accent)' : `1px solid ${opt.border}`,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title={opt.label}
-                      >
-                        {memoForm.color === opt.value && (
-                          <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', backgroundColor: opt.value ? 'var(--text-primary)' : 'var(--accent)' }} />
-                        )}
-                      </button>
-                    ))}
+                {/* 옵션 그룹 (고정 + 색상) */}
+                <div className="memo-option-group">
+                  <div className="ios-toggle-row">
+                    <span className="ios-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Pin size={13} style={{ color: memoForm.pinned ? 'var(--accent)' : 'var(--text-tertiary)', transform: 'rotate(45deg)' }} />
+                      상단 고정
+                    </span>
+                    <button
+                      type="button"
+                      className={`ios-toggle accent ${memoForm.pinned ? 'on' : ''}`}
+                      aria-pressed={!!memoForm.pinned}
+                      onClick={() => setMemoForm({ ...memoForm, pinned: !memoForm.pinned })}
+                    >
+                      <span className="ios-toggle-knob" />
+                    </button>
+                  </div>
+
+                  <div className="memo-option-divider" />
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <span className="ios-toggle-label">메모 색상</span>
+                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      {[
+                        { value: '', label: '기본', swatch: 'var(--row-bg)' },
+                        { value: 'red', label: '빨강', swatch: '#FF3B30' },
+                        { value: 'orange', label: '주황', swatch: '#FF9500' },
+                        { value: 'yellow', label: '노랑', swatch: '#FFCC00' },
+                        { value: 'green', label: '초록', swatch: '#34C759' },
+                        { value: 'blue', label: '파랑', swatch: '#007AFF' },
+                        { value: 'purple', label: '보라', swatch: '#AF52DE' }
+                      ].map(opt => {
+                        const active = memoForm.color === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setMemoForm({ ...memoForm, color: opt.value })}
+                            title={opt.label}
+                            style={{
+                              width: '1.5rem',
+                              height: '1.5rem',
+                              borderRadius: '50%',
+                              backgroundColor: opt.swatch,
+                              border: opt.value === '' ? '1px solid var(--panel-border)' : 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: active ? '0 0 0 2px var(--input-bg), 0 0 0 4px var(--accent)' : 'none',
+                              transition: 'all 0.15s ease',
+                              transform: active ? 'scale(0.92)' : 'none'
+                            }}
+                          >
+                            {active && (
+                              <span style={{ color: opt.value === '' || opt.value === 'yellow' ? 'var(--text-primary)' : '#fff', fontSize: '0.7rem', fontWeight: 900, lineHeight: 1 }}>✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>

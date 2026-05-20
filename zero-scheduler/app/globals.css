@@ -20,6 +20,9 @@
   --warning: #FF9500;
   --hover-bg: rgba(0, 0, 0, 0.06);
   --shadow-color: rgba(0, 0, 0, 0.08);
+  /* 인사이트 타일 — 라이트모드에서 순백 카드 */
+  --insight-tile-bg: #FFFFFF;
+  --insight-tile-border: rgba(0, 0, 0, 0.08);
 
   /* Semantic surface/soft-tint tokens (light) */
   --surface-elevated: rgba(255, 255, 255, 0.85);
@@ -66,6 +69,9 @@
   --accent-glow: rgba(10, 132, 255, 0.4);
   --hover-bg: rgba(255, 255, 255, 0.12);
   --shadow-color: rgba(0, 0, 0, 0.4);
+  /* 인사이트 타일 — 다크모드에서는 살짝 밝은 표면(순백은 눈부심) */
+  --insight-tile-bg: rgba(255, 255, 255, 0.07);
+  --insight-tile-border: rgba(255, 255, 255, 0.1);
 
   /* Semantic surface/soft-tint tokens (dark) */
   --surface-elevated: rgba(255, 255, 255, 0.04);
@@ -686,22 +692,130 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 /* ===== MEMO FORM STYLES ===== */
 .memo-form-container {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.2rem;
   flex-direction: column;
-  background: var(--bg-color);
-  border-radius: 20px;
-  padding: 0.9rem;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+/* 메모 라이브 프리뷰 카드 (색상 즉시 반영) */
+.memo-preview-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.memo-preview-divider {
+  height: 1px;
+  background: var(--panel-border);
+  margin: 0.5rem 0;
+  opacity: 0.7;
 }
 .memo-title-input {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--text-primary);
+  padding: 0.1rem 0.1rem;
 }
 .memo-content-textarea {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--text-primary);
+  padding: 0.1rem 0.1rem;
+  resize: vertical;
+  min-height: 130px;
+  font-family: inherit;
+}
+.memo-title-input::placeholder,
+.memo-content-textarea::placeholder { color: var(--text-tertiary); }
+.memo-md-hint {
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+  padding-left: 0.2rem;
+  margin-top: 0.25rem;
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.memo-md-hint code {
+  background: var(--row-bg);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.6rem;
+  font-family: ui-monospace, monospace;
+  color: var(--text-secondary);
+}
+.memo-option-group {
+  margin-top: 0.9rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--surface-elevated-border);
+  border-radius: 12px;
+  padding: 0.3rem 0.8rem;
+}
+.memo-option-divider {
+  height: 1px;
+  background: var(--panel-border);
+  margin: 0.1rem -0.8rem;
 }
 
 /* ===== FORM ELEMENTS ===== */
 .form-group { display: flex; flex-direction: column; gap: 0.2rem; }
 .form-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); padding-left: 0.2rem; }
+/* 필수 입력 표시 별표 (Tailwind 미사용 환경 대응) */
+.req-star { color: var(--danger); margin-left: 2px; font-weight: 700; }
+
+/* ===== iOS STYLE TOGGLE SWITCH ===== */
+.ios-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.35rem 0.1rem;
+}
+.ios-toggle-row .ios-toggle-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ios-toggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: var(--row-bg);
+  transition: background 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-app-region: no-drag;
+  padding: 0;
+}
+/* ON 상태는 파란색(accent) */
+.ios-toggle.on,
+.ios-toggle.on.accent { background: var(--accent); }
+.ios-toggle .ios-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ios-toggle.on .ios-toggle-knob { transform: translateX(16px); }
+.ios-toggle-row { padding: 0.25rem 0.1rem; }
 .input-sm {
    display: flex;
    align-items: center;
@@ -1277,7 +1391,7 @@ textarea.input-sm {
     font-size: 0.85rem;
   }
   .command-input {
-    font-size: 16px; /* iOS/Android 자동 줌 방지 — 16px 이상 강제 */
+    font-size: 0.9rem;
   }
   .kpi-strip {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -1341,9 +1455,13 @@ textarea.input-sm {
   .drawer-content {
     width: min(86vw, 320px);
   }
-  /* 입력 필드들 — 모바일에서 16px 미만이면 자동 zoom 발생 (설정 컴팩트 인풋은 제외) */
+  /* 입력 필드 — 컴팩트한 본문 크기 유지 (Galaxy/Android는 포커스 줌 없음) */
   .input-sm, input[type="text"]:not(.settings-select-compact), input[type="number"]:not(.settings-select-compact), input[type="date"]:not(.settings-select-compact), input[type="time"]:not(.settings-select-compact), input[type="password"]:not(.settings-select-compact), textarea, select:not(.settings-select-compact) {
-    font-size: 16px !important;
+    font-size: 0.85rem !important;
+  }
+  /* 플레이스홀더는 한 단계 더 작게 — 비대해 보이지 않도록 */
+  .input-sm::placeholder, input::placeholder, textarea::placeholder {
+    font-size: 0.8rem;
   }
   /* 캘린더 셀: 점이 너무 작아 보이므로 조금 확대 */
   .cal-cell {

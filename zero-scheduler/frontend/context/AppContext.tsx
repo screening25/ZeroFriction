@@ -70,6 +70,7 @@ interface AppContextProps {
   handleNlpSubmit: (e: React.KeyboardEvent<HTMLInputElement>) => Promise<void>;
   handleUpdateSchedule: (id: string, updatedFields: Partial<UniversalRecord>) => void;
   toggleComplete: (e: React.MouseEvent, s: UniversalRecord) => void;
+  toggleDone: (e: React.MouseEvent, r: UniversalRecord) => void;
   handleDeleteSchedule: (id: string) => void;
   submitMemo: () => void;
   deleteMemo: (id: string) => void;
@@ -455,6 +456,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logActivity(updatedStatus ? 'DONE_SCHED' : 'UPDATE_SCHED', updatedStatus ? '일정 완료' : '일정 재개', s.title);
   };
 
+  // 일정/재고/메모 공통 완료 토글 (업무 플로우 관리용)
+  const toggleDone = (e: React.MouseEvent, r: UniversalRecord) => {
+    e.stopPropagation();
+    if (r.type === 'event') { toggleComplete(e, r); return; }
+    const updatedStatus = !r.attrs.completed;
+    updateRecord(r.id, { attrs: { ...r.attrs, completed: updatedStatus } });
+    reloadRecords();
+    if (r.type === 'asset') {
+      logActivity(updatedStatus ? 'UPDATE_INV' : 'UPDATE_INV', updatedStatus ? '재고 완료 처리' : '재고 재개', r.title);
+    } else {
+      logActivity(updatedStatus ? 'UPDATE_MEMO' : 'UPDATE_MEMO', updatedStatus ? '메모 완료 처리' : '메모 재개', r.title);
+    }
+  };
+
   const handleDeleteSchedule = (id: string) => {
     if (id.includes('__v_')) {
       // Delete the source schedule of this virtual schedule
@@ -535,7 +550,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isMemoModalOpen, setIsMemoModalOpen, memoPage, setMemoPage, memoForm, setMemoForm,
       activeTab, setActiveTab, activeCategory, setActiveCategory,
       reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, handleUpdateSchedule,
-      toggleComplete, handleDeleteSchedule, submitMemo, deleteMemo, deleteInventoryItem,
+      toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
       showCompleted, setShowCompleted

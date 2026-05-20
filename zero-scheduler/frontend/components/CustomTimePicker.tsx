@@ -32,15 +32,31 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
 
   const { isPM, hourStr, minuteStr } = parseTime(value);
 
-  // Update coords when opening or resizing
+  // Update coords when opening or resizing — 화면 밖으로 나가지 않도록 클램프 + 위/아래 플립
   const updateCoords = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
+      const margin = 8;
+      const popWidth = Math.min(280, window.innerWidth - margin * 2);
+      const estHeight = 330; // 시간 피커 예상 높이
+
+      // 좌우 클램프
+      let left = rect.left + window.scrollX;
+      if (left + popWidth > window.innerWidth - margin) {
+        left = window.innerWidth - popWidth - margin;
+      }
+      if (left < margin) left = margin;
+
+      // 아래 공간이 부족하면 위로 플립
+      const spaceBelow = window.innerHeight - rect.bottom;
+      let top: number;
+      if (spaceBelow < estHeight && rect.top > estHeight) {
+        top = rect.top + window.scrollY - estHeight - 6;
+      } else {
+        top = rect.bottom + window.scrollY + 6;
+      }
+
+      setCoords({ top, left, width: popWidth });
     }
   };
 
@@ -126,11 +142,11 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             zIndex: 99999,
-            width: '280px',
-            backgroundColor: 'var(--bg-secondary)',
+            width: `${coords.width}px`,
+            backgroundColor: 'var(--input-bg)',
             border: '1px solid var(--panel-border)',
             borderRadius: '12px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+            boxShadow: '0 8px 30px var(--shadow-color)',
             padding: '0.8rem',
             display: 'flex',
             flexDirection: 'column',
@@ -139,7 +155,7 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
           }}
         >
           {/* AM / PM Segmented Control */}
-          <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '2px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+          <div style={{ display: 'flex', background: 'var(--row-bg)', padding: '2px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
             <button
               type="button"
               onClick={() => handleSelect(false, hourStr, minuteStr)}
