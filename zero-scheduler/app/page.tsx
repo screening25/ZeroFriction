@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin, Sparkles, Coffee, AlertCircle, Calendar, Trophy } from 'lucide-react';
+import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin, Sparkles, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -114,6 +114,11 @@ export default function Home() {
   // States for @mention suggestion autocomplete popup
   const [mentionTriggerInfo, setMentionTriggerInfo] = useState<{ query: string; triggerIndex: number } | null>(null);
   const [hoveredMentionId, setHoveredMentionId] = useState<string | null>(null);
+
+  // States for Cmd+F Command Palette
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState<string>('');
+  const [commandPaletteSelectedIndex, setCommandPaletteSelectedIndex] = useState<number>(0);
 
   useEffect(() => {
     setSchedulePage(0);
@@ -312,6 +317,140 @@ export default function Home() {
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 50);
   };
+
+  const filteredPaletteItems = useMemo(() => {
+    if (!commandPaletteQuery.trim()) return [];
+    const q = commandPaletteQuery.toLowerCase().trim();
+    
+    const results: {
+      id: string;
+      title: string;
+      type: 'event' | 'asset' | 'memo';
+      subtitle?: string;
+      record: any;
+    }[] = [];
+    
+    records.forEach(r => {
+      if (r.type === 'event') {
+        const matchTitle = r.title.toLowerCase().includes(q);
+        const matchDesc = (r.attrs.description || '').toLowerCase().includes(q);
+        const matchCat = (r.attrs.category || '').toLowerCase().includes(q);
+        if (matchTitle || matchDesc || matchCat) {
+          results.push({
+            id: r.id,
+            title: r.title,
+            type: 'event',
+            subtitle: `${r.attrs.date} | ${r.attrs.category || '기본'}`,
+            record: r
+          });
+        }
+      } else if (r.type === 'asset') {
+        const matchTitle = r.title.toLowerCase().includes(q);
+        const matchSerial = (r.attrs.serial || '').toLowerCase().includes(q);
+        const matchMgr = (r.attrs.mgr || '').toLowerCase().includes(q);
+        const matchCat = (r.attrs.category || '').toLowerCase().includes(q);
+        if (matchTitle || matchSerial || matchMgr || matchCat) {
+          results.push({
+            id: r.id,
+            title: r.title,
+            type: 'asset',
+            subtitle: `재고: ${r.attrs.qty}개 | 담당: ${r.attrs.mgr || '없음'}`,
+            record: r
+          });
+        }
+      } else if (r.type === 'memo') {
+        const matchTitle = (r.attrs.title || '제목 없음').toLowerCase().includes(q);
+        const matchContent = (r.attrs.content || '').toLowerCase().includes(q);
+        if (matchTitle || matchContent) {
+          results.push({
+            id: r.id,
+            title: r.attrs.title || '제목 없음',
+            type: 'memo',
+            subtitle: r.attrs.content ? (r.attrs.content.substring(0, 40) + '...') : '내용 없음',
+            record: r
+          });
+        }
+      }
+    });
+    
+    return results.slice(0, 10);
+  }, [records, commandPaletteQuery]);
+
+  const selectPaletteItem = (item: { id: string; title: string; type: 'event' | 'asset' | 'memo'; record: any }) => {
+    setIsCommandPaletteOpen(false);
+    setCommandPaletteQuery('');
+    setCommandPaletteSelectedIndex(0);
+    
+    if (item.type === 'event') {
+      setEditingSchedule(item.record);
+      showToast(`일정 '${item.title}' 상세 조회를 엽니다.`);
+    } else if (item.type === 'asset') {
+      setEditingInventory(item.record);
+      showToast(`재고 '${item.title}' 상세 조회를 엽니다.`);
+    } else if (item.type === 'memo') {
+      setMemoForm({
+        id: item.record.id,
+        title: item.record.attrs.title || '',
+        content: item.record.attrs.content || '',
+        color: item.record.attrs.color || 'blue',
+        pinned: item.record.attrs.pinned || false
+      });
+      setIsMemoModalOpen(true);
+      showToast(`메모 '${item.title}'를 엽니다.`);
+    }
+  };
+
+  // Keyboard shortcut listener and navigator
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => {
+          const next = !prev;
+          if (next) {
+            setTimeout(() => {
+              const inp = document.getElementById('command-palette-search-input') as HTMLInputElement;
+              if (inp) inp.focus();
+            }, 50);
+          }
+          return next;
+        });
+        setCommandPaletteQuery('');
+        setCommandPaletteSelectedIndex(0);
+        return;
+      }
+      
+      if (!isCommandPaletteOpen) return;
+      
+      if (e.key === 'Escape') {
+        setIsCommandPaletteOpen(false);
+        setCommandPaletteQuery('');
+        setCommandPaletteSelectedIndex(0);
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCommandPaletteSelectedIndex(prev => 
+          Math.min(prev + 1, filteredPaletteItems.length - 1)
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCommandPaletteSelectedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const selectedItem = filteredPaletteItems[commandPaletteSelectedIndex];
+        if (selectedItem) {
+          selectPaletteItem(selectedItem);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [isCommandPaletteOpen, filteredPaletteItems, commandPaletteSelectedIndex]);
 
   const handleMemoCheckboxToggle = (memoId: string, lineIndex: number, newCheckedState: boolean) => {
     const memo = records.find(m => m.id === memoId && m.type === 'memo');
@@ -887,14 +1026,14 @@ export default function Home() {
               if (hasOther) {
                 displayCats.push('기타');
               }
-              const getCountForCat = (cat: string) => {
+              const getSchedulesForCat = (cat: string) => {
                 return schedules.filter(s => {
                   const c = s.category || '일반';
                   if (cat === '기타') {
                     return !masterCats.includes(c);
                   }
                   return c === cat;
-                }).length;
+                });
               };
 
               return (
@@ -903,42 +1042,101 @@ export default function Home() {
                     <span>일정 카테고리 구성 비율</span>
                     <span>총 {schedules.length}건</span>
                   </div>
-                  <div style={{ height: '14px', borderRadius: '7px', display: 'flex', overflow: 'hidden', background: 'var(--panel-border)', width: '100%' }}>
-                    {displayCats.map(cat => {
-                      const cnt = getCountForCat(cat);
-                      const pct = Math.round((cnt / (schedules.length || 1)) * 100);
-                      if (pct === 0) return null;
-                      return (
-                        <div
-                          key={cat}
-                          style={{
-                            height: '100%',
-                            background: getCategoryColor(cat),
-                            width: `${pct}%`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#ffffff',
-                            fontSize: '0.55rem',
-                            fontWeight: 800,
-                            transition: 'width 0.4s ease'
-                          }}
-                          title={`${cat}: ${cnt}건 (${pct}%)`}
-                        >
-                          {pct > 10 && cat}
-                        </div>
-                      );
-                    })}
+                  <div style={{ height: '14px', borderRadius: '7px', display: 'flex', overflow: 'visible', background: 'var(--panel-border)', width: '100%', position: 'relative' }}>
+                    {(() => {
+                      const activeCats = displayCats.map(cat => {
+                        const catSchedules = getSchedulesForCat(cat);
+                        return { cat, catSchedules, cnt: catSchedules.length };
+                      }).filter(c => c.cnt > 0);
+                      
+                      return activeCats.map((item, idx) => {
+                        const { cat, catSchedules, cnt } = item;
+                        const pct = Math.round((cnt / (schedules.length || 1)) * 100);
+                        
+                        const isFirst = idx === 0;
+                        const isLast = idx === activeCats.length - 1;
+                        
+                        return (
+                          <div
+                            key={cat}
+                            className="ratio-bar-segment"
+                            style={{
+                              height: '100%',
+                              background: getCategoryColor(cat),
+                              width: `${pct}%`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              fontSize: '0.55rem',
+                              fontWeight: 800,
+                              transition: 'width 0.4s ease',
+                              cursor: 'pointer',
+                              borderTopLeftRadius: isFirst ? '7px' : '0',
+                              borderBottomLeftRadius: isFirst ? '7px' : '0',
+                              borderTopRightRadius: isLast ? '7px' : '0',
+                              borderBottomRightRadius: isLast ? '7px' : '0'
+                            }}
+                          >
+                            {pct > 10 && cat}
+                            
+                            {/* Custom instant breakdown tooltip */}
+                            <div className="custom-tooltip">
+                              <div style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem', color: getCategoryColor(cat), display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                                <span>{cat}</span>
+                                <span>{cnt}건 ({pct}%)</span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                {catSchedules.map(s => (
+                                  <div key={s.id} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    • {s.title}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                   <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
                     {displayCats.map(cat => {
-                      const cnt = getCountForCat(cat);
+                      const catSchedules = getSchedulesForCat(cat);
+                      const cnt = catSchedules.length;
                       if (cnt === 0) return null;
+
                       return (
-                        <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        <div 
+                          key={cat} 
+                          className="legend-item-container"
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.25rem', 
+                            fontSize: '0.65rem', 
+                            color: 'var(--text-secondary)', 
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
                           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: getCategoryColor(cat) }} />
                           <span>{cat}</span>
                           <span style={{ color: 'var(--text-tertiary)' }}>{cnt}건</span>
+
+                          {/* Custom instant breakdown tooltip */}
+                          <div className="custom-tooltip">
+                            <div style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem', color: getCategoryColor(cat), display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                              <span>{cat}</span>
+                              <span>{cnt}건</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {catSchedules.map(s => (
+                                <div key={s.id} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  • {s.title}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -966,7 +1164,7 @@ export default function Home() {
               </div>
               
               {isTodaySchedulesExpanded && (
-                <div className="card-list" style={{ gap: '1.25rem' }}>
+                <div className="card-list" style={{ gap: '0.35rem' }}>
                   {todaySchedules.length === 0 ? (
                     <div style={{ padding: '0.4rem 0.1rem', fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500, textAlign: 'left' }}>등록된 일정이 존재하지 않습니다.</div>
                   ) : (
@@ -975,74 +1173,70 @@ export default function Home() {
                         key={s.id} 
                         className={`card card-compact ${s.attrs.completed ? 'completed opacity-40 line-through' : ''}`} 
                         style={{ 
-                          padding: '1.25rem', 
+                          padding: '0.5rem 0.8rem', 
                           borderRadius: '10px', 
                           opacity: s.attrs.completed ? 0.4 : undefined,
-                          height: '78px',
+                          height: '56px',
                           display: 'flex',
                           flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          overflow: 'hidden'
+                          justifyContent: 'center',
+                          gap: '0.15rem',
+                          overflow: 'hidden',
+                          cursor: 'pointer'
                         }} 
                         onClick={() => setEditingSchedule(s)}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          {/* Col 1: Complete Check Icon */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '1.5rem', flexShrink: 0 }}>
-                            <div
-                              onClick={(e) => toggleComplete(e, s)}
-                              style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              {s.attrs.completed ? <CheckCircle2 size={13} /> : <Circle size={13} />}
-                            </div>
+                          {/* Complete Check Icon */}
+                          <div 
+                            onClick={(e) => toggleComplete(e, s)}
+                            style={{ color: s.attrs.completed ? 'var(--success)' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', marginRight: '0.4rem', flexShrink: 0 }}
+                          >
+                            {s.attrs.completed ? <CheckCircle2 size={13} /> : <Circle size={13} />}
                           </div>
 
-                          {/* Col 2: Title (flex: 1) */}
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.5rem' }}>
+                          {/* Title (flex: 1) & Category badge */}
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
                             <span
                               style={{
-                                fontSize: '0.82rem',
-                                fontWeight: 600,
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
                                 color: s.attrs.completed ? 'var(--text-tertiary)' : 'var(--text-primary)',
                                 textDecoration: s.attrs.completed ? 'line-through' : 'none',
                                 textAlign: 'left',
-                                maxWidth: '120px',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: 'inline-block'
+                                textOverflow: 'ellipsis'
                               }}
                               title={s.title}
                             >
                               {s.title}
                             </span>
-                          </div>
-
-                          {/* Col 3: Time (fixed width/aligned) */}
-                          <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            {s.attrs.time && (
-                              <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>{s.attrs.time}</span>
-                            )}
-                          </div>
-
-                          {/* Col 4: Category badge (aligned right) */}
-                          <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                             {s.category && (
-                              <span className="badge" style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600, maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.category}</span>
+                              <span className="badge" style={{ fontSize: '0.55rem', padding: '0.05rem 0.3rem', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
+                                {s.category}
+                              </span>
                             )}
                           </div>
+
+                          {/* Time */}
+                          {s.attrs.time && (
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600, flexShrink: 0, marginLeft: '0.5rem' }}>
+                              {s.attrs.time}
+                            </span>
+                          )}
                         </div>
-                        {/* Linked Badges */}
+                        
+                        {/* Linked Badges (Single row below title) */}
                         {s.attrs.linkedIds && s.attrs.linkedIds.length > 0 && (
-                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.4rem', marginLeft: '2.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.2rem', overflow: 'hidden', whiteSpace: 'nowrap', paddingLeft: '1.05rem' }}>
                             {s.attrs.linkedIds.map((linkedId: string) => {
                               const linkedRecord = records.find(r => r.id === linkedId);
                               if (!linkedRecord) return null;
                               return (
                                 <span 
                                   key={linkedId} 
-                                  className="text-xs bg-white/5 text-gray-400 rounded-full px-2 py-1"
-                                  style={{ fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#a1a1aa', borderRadius: '9999px', padding: '0.15rem 0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}
+                                  style={{ fontSize: '0.58rem', backgroundColor: 'rgba(0,0,0,0.03)', color: 'var(--text-secondary)', borderRadius: '4px', padding: '0.02rem 0.25rem', border: '1px solid var(--panel-border)', flexShrink: 0 }}
                                 >
                                   #{linkedRecord.title}
                                 </span>
@@ -1083,20 +1277,35 @@ export default function Home() {
                         key={m.id} 
                         className="card card-compact" 
                         style={{ 
-                          padding: '0.5rem 0.7rem',
+                          padding: '0.5rem 0.8rem',
+                          borderRadius: '10px',
+                          height: '56px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          gap: '0.15rem',
+                          cursor: 'pointer',
+                          overflow: 'hidden',
                           ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                         }} 
                         onClick={() => { 
-                          setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); 
+                          setMemoForm({ id: m.id, title: m.title || '제목 없음', content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); 
                           setIsMemoModalOpen(true); 
                         }}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem', width: '100%' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', width: '100%' }}>
-                            {m.attrs.pinned && <Pin size={11} className="text-accent" style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} />}
-                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>{m.title}</span>
-                          </div>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{format(parseISO(m.updatedAt || new Date().toISOString()), 'yy.MM.dd')} 업데이트</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', width: '100%' }}>
+                          {m.attrs.pinned && <Pin size={11} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} />}
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+                            {m.title || '제목 없음'}
+                          </span>
+                          <span style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                            {format(parseISO(m.updatedAt || new Date().toISOString()), 'yy.MM.dd')}
+                          </span>
+                        </div>
+                        
+                        {/* Excerpt of content */}
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: m.attrs.pinned ? '0.85rem' : '0' }}>
+                          {m.attrs.content ? m.attrs.content.substring(0, 50).replace(/[\r\n]+/g, ' ') : '내용 없음'}
                         </div>
                       </div>
                     ))
@@ -1138,79 +1347,74 @@ export default function Home() {
                     recentInventoryFlow.map((item, idx) => {
                       const qtyNum = Number(item.attrs.qty) || 0;
                       const isNegative = qtyNum < 0;
+                      const isOut = item.attrs.flow === 'OUT';
                       return (
                         <div 
                           key={item.id} 
                           className="inv-card" 
                           style={{ 
-                            padding: '0.5rem 0.65rem', 
+                            padding: '0.5rem 0.8rem', 
                             borderRadius: '10px',
-                            height: '42px',
+                            height: '56px',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            overflow: 'hidden'
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            gap: '0.15rem',
+                            overflow: 'hidden',
+                            cursor: 'pointer'
                           }} 
                           onClick={() => setEditingInventory(item)}
                         >
-                          {/* Col 1: Index */}
-                          <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#9ca3af', width: '1.4rem', flexShrink: 0, textAlign: 'left' }}>
-                            #{String(idx + 1).padStart(2, '0')}
-                          </span>
-
-                          {/* Col 2: Code badge (fixed width) */}
-                          <div style={{ width: '50px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                            {item.attrs.code ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            {/* Flow Badge & Title */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
                               <span 
                                 className="badge" 
                                 style={{ 
+                                  background: isOut ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', 
+                                  color: isOut ? 'var(--danger)' : 'var(--success)', 
                                   fontSize: '0.55rem', 
-                                  padding: '0.08rem 0.2rem',
-                                  maxWidth: '42px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  display: 'inline-block',
-                                  textAlign: 'center'
+                                  padding: '0.05rem 0.25rem', 
+                                  borderRadius: '4px', 
+                                  fontWeight: 800,
+                                  flexShrink: 0
                                 }}
-                                title={item.attrs.code}
                               >
-                                {item.attrs.code}
+                                {isOut ? '출고' : '입고'}
                               </span>
-                            ) : (
-                              <span style={{ width: '42px' }} />
+                              <span 
+                                style={{ 
+                                  fontSize: '0.78rem', 
+                                  fontWeight: 700, 
+                                  color: 'var(--text-primary)', 
+                                  textOverflow: 'ellipsis', 
+                                  overflow: 'hidden', 
+                                  whiteSpace: 'nowrap',
+                                  textAlign: 'left'
+                                }}
+                                title={item.title}
+                              >
+                                {item.title}
+                              </span>
+                            </div>
+                            
+                            {/* Quantity */}
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.15rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: isNegative ? 'var(--danger)' : 'var(--text-primary)' }}>
+                                {qtyNum}
+                              </span>
+                              <span style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)' }}>개</span>
+                            </div>
+                          </div>
+
+                          {/* Subtitle row: Index & Code Badge */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.62rem', color: 'var(--text-tertiary)', paddingLeft: '1.95rem' }}>
+                            <span style={{ fontFamily: 'monospace' }}>#{String(idx + 1).padStart(2, '0')}</span>
+                            {item.attrs.code && (
+                              <span className="badge" style={{ fontSize: '0.52rem', padding: '0.01rem 0.25rem', borderRadius: '3px' }}>
+                                Code: {item.attrs.code}
+                              </span>
                             )}
-                          </div>
-
-                          {/* Col 3: Title (flex: 1) */}
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0, paddingLeft: '0.3rem' }}>
-                            <span
-                              style={{
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: 'inline-block',
-                                maxWidth: '100px'
-                              }}
-                              title={item.title}
-                            >
-                              {item.title}
-                            </span>
-                          </div>
-
-                          {/* Col 4: Flow badge (fixed width/aligned) */}
-                          <div style={{ width: '42px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', fontSize: '0.55rem', padding: '0.08rem 0.25rem', borderRadius: '4px', fontWeight: 600 }}>
-                              {item.attrs.flow === 'OUT' ? '출고' : '입고'}
-                            </span>
-                          </div>
-
-                          {/* Col 5: Quantity Badge (aligned right) */}
-                          <div style={{ width: '38px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isNegative ? 'var(--danger)' : 'var(--text-primary)' }}>{qtyNum}개</span>
                           </div>
                         </div>
                       );
@@ -2604,12 +2808,12 @@ export default function Home() {
                       left: 0,
                       right: 0,
                       zIndex: 100,
-                      background: 'var(--panel-bg)',
+                      background: 'var(--input-bg)',
                       backdropFilter: 'var(--panel-blur)',
                       WebkitBackdropFilter: 'var(--panel-blur)',
                       border: '1px solid var(--panel-border)',
                       borderRadius: '12px',
-                      boxShadow: 'var(--shadow-lg)',
+                      boxShadow: '0 8px 24px var(--shadow-color)',
                       padding: '0.4rem',
                       display: 'flex',
                       flexDirection: 'column',
@@ -2798,6 +3002,255 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      {/* Cmd+F Command Palette Modal */}
+      <AnimatePresence>
+        {isCommandPaletteOpen && (
+          <div 
+            className="modal-overlay" 
+            onClick={() => {
+              setIsCommandPaletteOpen(false);
+              setCommandPaletteQuery('');
+              setCommandPaletteSelectedIndex(0);
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 2000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              paddingTop: '25vh'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: -20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: -20 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="modal-content"
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+                background: 'var(--input-bg)',
+                borderRadius: '20px',
+                border: '1px solid var(--panel-border)',
+                boxShadow: '0 20px 60px var(--shadow-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                padding: 0
+              }}
+            >
+              {/* Search Input Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '1.2rem',
+                borderBottom: '1px solid var(--panel-border)',
+                background: 'rgba(255,255,255,0.01)'
+              }}>
+                <Search size={20} style={{ color: 'var(--text-tertiary)' }} />
+                <input
+                  id="command-palette-search-input"
+                  type="text"
+                  placeholder="일정, 재고, 메모 검색... (방향키 이동 & Enter 선택)"
+                  value={commandPaletteQuery}
+                  onChange={e => {
+                    setCommandPaletteQuery(e.target.value);
+                    setCommandPaletteSelectedIndex(0);
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '1.05rem',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    padding: 0
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setIsCommandPaletteOpen(false);
+                    setCommandPaletteQuery('');
+                    setCommandPaletteSelectedIndex(0);
+                  }}
+                  style={{
+                    background: 'var(--row-bg)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ESC
+                </button>
+              </div>
+
+              {/* Results List */}
+              <div style={{
+                maxHeight: '350px',
+                overflowY: 'auto',
+                padding: '0.6rem'
+              }}>
+                {!commandPaletteQuery.trim() ? (
+                  <div style={{
+                    padding: '3rem 2rem',
+                    textAlign: 'center',
+                    color: 'var(--text-tertiary)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.6rem'
+                  }}>
+                    <Search size={32} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+                    <div style={{ fontSize: '0.86rem', fontWeight: 600 }}>통합 검색 및 명령 팔레트</div>
+                    <div style={{ fontSize: '0.76rem', opacity: 0.7 }}>일정, 재고(품목명/시리얼/담당자), 메모 제목 및 본문을 검색해 보세요.</div>
+                  </div>
+                ) : filteredPaletteItems.length === 0 ? (
+                  <div style={{
+                    padding: '3rem 2rem',
+                    textAlign: 'center',
+                    color: 'var(--text-tertiary)',
+                    fontSize: '0.84rem',
+                    fontWeight: 600
+                  }}>
+                    {`'${commandPaletteQuery}'에 대한 검색 결과가 없습니다.`}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    {filteredPaletteItems.map((item, idx) => {
+                      const isSelected = idx === commandPaletteSelectedIndex;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => selectPaletteItem(item)}
+                          onMouseEnter={() => setCommandPaletteSelectedIndex(idx)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            background: isSelected ? 'var(--row-bg)' : 'transparent',
+                            transform: isSelected ? 'scale(1.005)' : 'none',
+                            borderLeft: isSelected ? '3px solid var(--accent)' : '3px solid transparent'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', overflow: 'hidden', flex: 1 }}>
+                            {/* Type Badge */}
+                            <span style={{
+                              fontSize: '0.65rem',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '6px',
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              background: item.type === 'event' 
+                                ? 'rgba(0,122,255,0.1)' 
+                                : item.type === 'asset'
+                                  ? 'rgba(52,199,89,0.1)'
+                                  : 'rgba(175,82,222,0.1)',
+                              color: item.type === 'event'
+                                ? '#007aff'
+                                : item.type === 'asset'
+                                  ? '#34c759'
+                                  : '#af52de',
+                              flexShrink: 0
+                            }}>
+                              {item.type === 'event' ? '일정' : item.type === 'asset' ? '재고' : '메모'}
+                            </span>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                              <span style={{
+                                fontSize: '0.86rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {item.title}
+                              </span>
+                              {item.subtitle && (
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  color: 'var(--text-secondary)',
+                                  marginTop: '0.15rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  opacity: 0.85
+                                }}>
+                                  {item.subtitle}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Quick Go Hint */}
+                          {isSelected && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              fontSize: '0.68rem',
+                              color: 'var(--text-tertiary)',
+                              fontWeight: 700,
+                              background: 'rgba(0,0,0,0.05)',
+                              padding: '0.15rem 0.4rem',
+                              borderRadius: '4px',
+                              flexShrink: 0
+                            }}>
+                              <span>이동</span>
+                              <CornerDownLeft size={10} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Hotkey Guide Bar */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.75rem 1.2rem',
+                borderTop: '1px solid var(--panel-border)',
+                background: 'rgba(0,0,0,0.02)',
+                fontSize: '0.68rem',
+                color: 'var(--text-tertiary)',
+                fontWeight: 600
+              }}>
+                <div style={{ display: 'flex', gap: '0.8rem' }}>
+                  <span>↑↓ 이동</span>
+                  <span>Enter 선택</span>
+                  <span>ESC 닫기</span>
+                </div>
+                <div>
+                  <span>Cmd + F 로 언제든지 열기</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
