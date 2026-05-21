@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useMemo } from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, Download, Upload, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, Settings, MapPin, Tag, User, Sliders, Pin, Sparkles, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -13,35 +12,40 @@ import CustomSelect from '@/frontend/components/CustomSelect';
 import CustomDatePicker from '@/frontend/components/CustomDatePicker';
 import Markdown from '@/frontend/components/Markdown';
 
+/**
+ * 주어진 날짜가 공휴일(양력 또는 2026년 음력 환산)인지 판별한다.
+ * @param date 검사할 날짜
+ * @returns 공휴일이면 true
+ */
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
 
-const getCategoryColor = (cat: string) => {
-  switch (cat) {
-    case '업무': return '#007AFF';
-    case '회의': return '#FF9500';
-    case '개인': return '#34C759';
-    default: return '#AF52DE';
-  }
+/**
+ * 카테고리별 색상 팔레트(단색/소프트 배경/테두리)를 한곳에서 관리한다.
+ * NOTE: 기존에 동일 분기가 3개 함수(switch)로 흩어져 있던 것을 단일 테이블로 통합(DRY)했다.
+ *       반환 값은 기존과 100% 동일하다.
+ */
+const CATEGORY_COLORS: Record<string, { solid: string; soft: string; border: string }> = {
+  '업무': { solid: '#007AFF', soft: 'rgba(0, 122, 255, 0.12)', border: 'rgba(0, 122, 255, 0.25)' },
+  '회의': { solid: '#FF9500', soft: 'rgba(255, 149, 0, 0.12)', border: 'rgba(255, 149, 0, 0.25)' },
+  '개인': { solid: '#34C759', soft: 'rgba(52, 199, 89, 0.12)', border: 'rgba(52, 199, 89, 0.25)' },
 };
+// 정의되지 않은 카테고리는 보라색 계열을 기본값으로 사용
+const CATEGORY_DEFAULT = { solid: '#AF52DE', soft: 'rgba(175, 82, 222, 0.12)', border: 'rgba(175, 82, 222, 0.25)' };
 
-const getCategorySoftBg = (cat: string) => {
-  switch (cat) {
-    case '업무': return 'rgba(0, 122, 255, 0.12)';
-    case '회의': return 'rgba(255, 149, 0, 0.12)';
-    case '개인': return 'rgba(52, 199, 89, 0.12)';
-    default: return 'rgba(175, 82, 222, 0.12)';
-  }
-};
+/** 카테고리 단색(주로 텍스트/아이콘 색)을 반환한다. */
+const getCategoryColor = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).solid;
+/** 카테고리 소프트 배경색(연한 틴트 배경)을 반환한다. */
+const getCategorySoftBg = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).soft;
+/** 카테고리 테두리색을 반환한다. */
+const getCategoryBorder = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).border;
 
-const getCategoryBorder = (cat: string) => {
-  switch (cat) {
-    case '업무': return 'rgba(0, 122, 255, 0.25)';
-    case '회의': return 'rgba(255, 149, 0, 0.25)';
-    case '개인': return 'rgba(52, 199, 89, 0.25)';
-    default: return 'rgba(175, 82, 222, 0.25)';
-  }
-};
-
+/**
+ * 메모 카드의 색상 테마(배경색 + 테두리)를 반환한다.
+ * 라이트/다크 모드별로 다른 팔레트를 사용하며, 색상 미지정 시 중립 카드 스타일을 적용한다.
+ * @param color 메모에 지정된 색상 키 (red/orange/yellow/green/blue/purple 또는 빈 문자열)
+ * @param isDark 다크 모드 여부
+ * @returns backgroundColor와 border를 담은 스타일 객체
+ */
 const getMemoCardStyle = (color: string, isDark: boolean) => {
   // 프리미엄 소프트 틴트 — 라이트는 파스텔-50, 다크는 저채도 muted
   const light: Record<string, { backgroundColor: string; border: string }> = {
@@ -69,6 +73,11 @@ const getMemoCardStyle = (color: string, isDark: boolean) => {
 };
 
 
+/**
+ * 메인 페이지(SPA 루트). activeTab에 따라 전체 개요·일정(캘린더)·재고·메모·설정 뷰를
+ * 한 화면에서 전환 렌더링하며, 각 도메인의 상세 모달과 커맨드 팔레트(⌘F)를 포함한다.
+ * 전역 데이터/액션은 useApp 컨텍스트에서 구독한다.
+ */
 export default function Home() {
   const {
     records,
@@ -119,6 +128,18 @@ export default function Home() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [commandPaletteQuery, setCommandPaletteQuery] = useState<string>('');
   const [commandPaletteSelectedIndex, setCommandPaletteSelectedIndex] = useState<number>(0);
+
+  // State for category ratio fixed tooltip (position: fixed to escape overflow clipping)
+  const [categoryTooltip, setCategoryTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    cat: string;
+    cnt: number;
+    pct?: number;
+    titles: string[];
+    color: string;
+  } | null>(null);
 
   useEffect(() => {
     setSchedulePage(0);
@@ -925,7 +946,7 @@ export default function Home() {
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>업무 진행 및 달성</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>업무 진행 및 달성</div>
                 {(() => {
                   const todoCount = schedules.filter(s => !s.attrs.completed && s.attrs.status !== 'doing').length;
                   const doingCount = schedules.filter(s => !s.attrs.completed && s.attrs.status === 'doing').length;
@@ -973,7 +994,7 @@ export default function Home() {
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>재고 건전성</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>재고 건전성</div>
                 {(() => {
                   const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
                   const outOfStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) === 0).length;
@@ -1077,23 +1098,22 @@ export default function Home() {
                               borderTopRightRadius: isLast ? '7px' : '0',
                               borderBottomRightRadius: isLast ? '7px' : '0'
                             }}
+                            onMouseEnter={e => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setCategoryTooltip({
+                                visible: true,
+                                x: rect.left + rect.width / 2,
+                                y: rect.top - 8,
+                                cat,
+                                cnt,
+                                pct,
+                                titles: catSchedules.map(s => s.title),
+                                color: getCategoryColor(cat)
+                              });
+                            }}
+                            onMouseLeave={() => setCategoryTooltip(null)}
                           >
                             {pct > 10 && cat}
-                            
-                            {/* Custom instant breakdown tooltip */}
-                            <div className="custom-tooltip">
-                              <div style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem', color: getCategoryColor(cat), display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                                <span>{cat}</span>
-                                <span>{cnt}건 ({pct}%)</span>
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                {catSchedules.map(s => (
-                                  <div key={s.id} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    • {s.title}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
                           </div>
                         );
                       });
@@ -1106,37 +1126,35 @@ export default function Home() {
                       if (cnt === 0) return null;
 
                       return (
-                        <div 
-                          key={cat} 
+                        <div
+                          key={cat}
                           className="legend-item-container"
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.25rem', 
-                            fontSize: '0.65rem', 
-                            color: 'var(--text-secondary)', 
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            fontSize: '0.65rem',
+                            color: 'var(--text-secondary)',
                             fontWeight: 600,
                             cursor: 'pointer'
                           }}
+                          onMouseEnter={e => {
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            setCategoryTooltip({
+                              visible: true,
+                              x: rect.left,
+                              y: rect.top - 8,
+                              cat,
+                              cnt,
+                              titles: catSchedules.map(s => s.title),
+                              color: getCategoryColor(cat)
+                            });
+                          }}
+                          onMouseLeave={() => setCategoryTooltip(null)}
                         >
                           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: getCategoryColor(cat) }} />
                           <span>{cat}</span>
                           <span style={{ color: 'var(--text-tertiary)' }}>{cnt}건</span>
-
-                          {/* Custom instant breakdown tooltip */}
-                          <div className="custom-tooltip">
-                            <div style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem', color: getCategoryColor(cat), display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                              <span>{cat}</span>
-                              <span>{cnt}건</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                              {catSchedules.map(s => (
-                                <div key={s.id} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  • {s.title}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
                         </div>
                       );
                     })}
@@ -2864,7 +2882,7 @@ export default function Home() {
                   )}
 
                   <textarea
-                    placeholder="내용을 마크다운으로 입력하세요…"
+                    placeholder="내용을 입력해주세요."
                     className="memo-content-textarea"
                     rows={10}
                     value={memoForm.content}
@@ -3251,6 +3269,41 @@ export default function Home() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Fixed-position category tooltip — escapes overflow/stacking-context clipping */}
+      {categoryTooltip && categoryTooltip.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            left: categoryTooltip.x,
+            top: categoryTooltip.y,
+            transform: 'translate(-50%, -100%)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--panel-border)',
+            boxShadow: '0 10px 30px var(--shadow-color)',
+            borderRadius: '8px',
+            padding: '0.6rem 0.8rem',
+            zIndex: 9999,
+            width: 'max-content',
+            maxWidth: '250px',
+            color: 'var(--text-primary)',
+            textAlign: 'left',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem', color: categoryTooltip.color, display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+            <span>{categoryTooltip.cat}</span>
+            <span>{categoryTooltip.cnt}건{categoryTooltip.pct !== undefined ? ` (${categoryTooltip.pct}%)` : ''}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {categoryTooltip.titles.map((title, i) => (
+              <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                • {title}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );

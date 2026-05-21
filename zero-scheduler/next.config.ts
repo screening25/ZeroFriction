@@ -2,9 +2,11 @@ import withPWAInit from "@ducanh2912/next-pwa";
 import type { NextConfig } from "next";
 
 const withPWA = withPWAInit({
+  // PWA 빌드 산출물(서비스 워커)은 반드시 루트 public/ 에 생성되어야 함 (Next.js 정적 자산 규약)
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  customWorkerDir: "worker",
+  // 커스텀 워커 소스 경로 — src/ 통합에 맞춰 worker → src/worker 로 갱신
+  customWorkerDir: "src/worker",
 });
 
 const nextConfig: NextConfig = {

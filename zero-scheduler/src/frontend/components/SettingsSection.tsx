@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Download, Upload, AlertTriangle, Settings, Trash2, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, Download, Upload, AlertTriangle, Trash2, RotateCcw, X } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useNotifications } from '@/frontend/hooks/useNotifications';
 import { format, parseISO } from 'date-fns';
 import { createPortal } from 'react-dom';
 
@@ -15,6 +14,14 @@ interface CustomSelectCompactProps {
   onChange: (val: any) => void;
 }
 
+/**
+ * 설정 화면 전용 컴팩트 셀렉트 박스.
+ * 드롭다운을 createPortal로 document.body에 렌더링하여 부모의 overflow 클리핑을 회피한다.
+ * 스크롤/리사이즈 시 자동으로 닫혀 위치 어긋남을 방지한다.
+ * @param value 현재 선택된 값
+ * @param options 선택 가능한 옵션 목록 ({ value, label })
+ * @param onChange 옵션 선택 시 호출되는 콜백
+ */
 function CustomSelectCompact({ value, options, onChange }: CustomSelectCompactProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -180,12 +187,16 @@ function CustomSelectCompact({ value, options, onChange }: CustomSelectCompactPr
   );
 }
 
+/**
+ * 환경설정 화면.
+ * 사용 가이드, AI 연동, 디스플레이/콘텐츠/알림 설정, 데이터 관리(백업·CSV·휴지통·초기화)를 제공한다.
+ * 설정 변경은 updateSingleSetting을 통해 즉시 반영·영속화된다.
+ */
 export default function SettingsSection() {
   const {
     theme,
     appSettings,
     handleSettingsChange,
-    setActiveTab,
     showToast,
     reloadRecords,
     logActivity,
@@ -198,31 +209,34 @@ export default function SettingsSection() {
   } = useApp();
 
   const fileRef = useRef<HTMLInputElement>(null);
+  // 화면 입력용 로컬 설정 사본 — 전역 appSettings와 분리해 즉시 UI 반영을 담당
   const [localSettings, setLocalSettings] = useState({ ...appSettings });
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [trashSearchQuery, setTrashSearchQuery] = useState('');
   const [trashFilterType, setTrashFilterType] = useState<'all' | 'event' | 'asset' | 'memo'>('all');
   const [expandedTrashId, setExpandedTrashId] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [settingsToast, setSettingsToast] = useState(false);
-  const settingsToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Electron 창 리사이즈 비교용 — 직전 deviceSize 값을 추적
   const prevDeviceSizeRef = useRef(appSettings.deviceSize);
-  const { permission, requestPermission } = useNotifications();
 
-  // Keep localSettings in sync with appSettings
+  // 전역 설정이 바뀌면 로컬 사본도 동기화
   useEffect(() => {
     setLocalSettings({ ...appSettings });
     prevDeviceSizeRef.current = appSettings.deviceSize;
   }, [appSettings]);
 
+  /**
+   * 단일 설정 항목을 즉시 반영·영속화한다.
+   * Electron 환경에서 deviceSize가 바뀌면 네이티브 창 크기 조정 IPC를 전송한다.
+   * @param newSettings 갱신된 전체 설정 객체
+   */
   const updateSingleSetting = (newSettings: typeof appSettings) => {
     setLocalSettings(newSettings);
     handleSettingsChange(newSettings);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zero_settings', JSON.stringify(newSettings));
 
-      // Apple Electron dynamic responsive frame resize logic!
+      // Electron에서만: deviceSize 변경 시 네이티브 프레임 리사이즈 트리거
       if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
         const size = newSettings.deviceSize || 'default';
         if (size !== prevDeviceSizeRef.current) {
@@ -234,23 +248,9 @@ export default function SettingsSection() {
     }
   };
 
-  const handleSaveSettings = () => {
-    setSaveStatus('saving');
-    handleSettingsChange(localSettings);
-    setTimeout(() => {
-      setSaveStatus('saved');
-      setTimeout(() => {
-        setSaveStatus('idle');
-        setActiveTab('all');
-        setSettingsToast(true);
-        setTimeout(() => {
-          setSettingsToast(false);
-        }, 2000);
-      }, 500);
-    }, 400);
-  };
-
-  // Export all databases into unified premium Zero Backup JSON!
+  /**
+   * 모든 로컬 데이터(레코드·활동로그·설정)를 단일 JSON 백업 파일로 내보낸다.
+   */
   const handleExportData = () => {
     try {
       const recordsData = localStorage.getItem('universal_records') || '[]';
@@ -280,7 +280,11 @@ export default function SettingsSection() {
     }
   };
 
-  // Import complete system backup and verify structural schemas!
+  /**
+   * JSON 백업 파일을 읽어 데이터를 복원한다.
+   * 형식 검증(records 배열 존재 여부) 후 사용자 확인을 거쳐 localStorage를 덮어쓰고 새로고침한다.
+   * @param e 파일 input change 이벤트
+   */
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -312,6 +316,9 @@ export default function SettingsSection() {
     reader.readAsText(file);
   };
 
+  /**
+   * 전체 시스템 초기화. 되돌릴 수 없으므로 2단계 확인 후 localStorage를 비우고 새로고침한다.
+   */
   const handleResetAll = () => {
     if (confirm('⚠️ [경고] 모든 데이터(일정, 재고, 메모, 설정, 활동로그)가 영구적으로 삭제됩니다. 계속하시겠습니까?')) {
       if (confirm('진짜로 초기화하시겠습니까? 이 작업은 취소할 수 없습니다.')) {
@@ -1227,15 +1234,6 @@ export default function SettingsSection() {
                 </div>
               )}
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Settings Saved Toast (Instant overlay within Settings!) */}
-      <AnimatePresence>
-        {settingsToast && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[70] bg-zinc-800 text-white rounded-full px-4 py-1.5 text-xs shadow-md" style={{ position: 'fixed', top: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 70, backgroundColor: '#27272a', color: '#ffffff', borderRadius: '9999px', padding: '0.375rem 1rem', fontSize: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
-            설정이 변경되었습니다.
           </div>
         )}
       </AnimatePresence>

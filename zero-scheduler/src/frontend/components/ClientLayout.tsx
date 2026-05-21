@@ -2,38 +2,40 @@
 
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Tag, Command, FileText, X, Workflow } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
-const getActivityColor = (type: string) => {
-  if (type.includes('ADD_SCHED')) return 'var(--accent)';
-  if (type.includes('DONE_SCHED')) return 'var(--success)';
-  if (type.includes('UPDATE_SCHED')) return 'var(--purple)';
-  if (type.includes('DEL_SCHED')) return 'var(--danger)';
-  if (type.includes('ADD_MEMO')) return 'var(--warning)';
-  if (type.includes('UPDATE_MEMO')) return 'var(--warning)';
-  if (type.includes('DEL_MEMO')) return 'var(--danger)';
-  if (type.includes('ADD_INV')) return 'var(--success)';
-  if (type.includes('UPDATE_INV')) return 'var(--purple)';
-  if (type.includes('DEL_INV')) return 'var(--danger)';
-  return 'var(--text-secondary)';
-};
+/**
+ * 활동 유형(접두사) → 표시 색상(CSS 변수) 매핑 테이블.
+ * NOTE: 순서가 곧 우선순위다. 위에서부터 부분 문자열(includes)이 처음 일치하는 색을 사용한다.
+ */
+const ACTIVITY_COLOR_MAP: ReadonlyArray<[prefix: string, color: string]> = [
+  ['ADD_SCHED', 'var(--accent)'],
+  ['DONE_SCHED', 'var(--success)'],
+  ['UPDATE_SCHED', 'var(--purple)'],
+  ['DEL_SCHED', 'var(--danger)'],
+  ['ADD_MEMO', 'var(--warning)'],
+  ['UPDATE_MEMO', 'var(--warning)'],
+  ['DEL_MEMO', 'var(--danger)'],
+  ['ADD_INV', 'var(--success)'],
+  ['UPDATE_INV', 'var(--purple)'],
+  ['DEL_INV', 'var(--danger)'],
+];
 
-const getActivityBgColor = (type: string) => {
-  if (type.includes('ADD_SCHED')) return 'var(--accent-soft-bg)';
-  if (type.includes('DONE_SCHED')) return 'var(--success-soft-bg)';
-  if (type.includes('UPDATE_SCHED')) return 'var(--purple-soft-bg)';
-  if (type.includes('DEL_SCHED')) return 'var(--danger-soft-bg)';
-  if (type.includes('ADD_MEMO')) return 'var(--warning-soft-bg)';
-  if (type.includes('UPDATE_MEMO')) return 'var(--warning-soft-bg)';
-  if (type.includes('DEL_MEMO')) return 'var(--danger-soft-bg)';
-  if (type.includes('ADD_INV')) return 'var(--success-soft-bg)';
-  if (type.includes('UPDATE_INV')) return 'var(--purple-soft-bg)';
-  if (type.includes('DEL_INV')) return 'var(--danger-soft-bg)';
-  return 'var(--hover-bg)';
-};
+/**
+ * 활동 로그 유형에 대응하는 점(dot) 색상을 반환한다.
+ * @param type 활동 로그 타입 문자열 (예: 'ADD_SCHED')
+ * @returns CSS 변수 형태의 색상 값. 매칭이 없으면 보조 텍스트 색.
+ */
+const getActivityColor = (type: string) =>
+  ACTIVITY_COLOR_MAP.find(([prefix]) => type.includes(prefix))?.[1] ?? 'var(--text-secondary)';
 
+/**
+ * 활동 로그 항목을 사용자에게 보여줄 한국어 메시지(JSX)로 변환한다.
+ * @param act 활동 로그 객체 ({ type, snippet, ... })
+ * @returns 활동 내역 리스트에 렌더링할 메시지 노드
+ */
 const getActivityMessage = (act: any) => {
   switch (act.type) {
     case 'ADD_SCHED': return <span>새로운 일정 <strong>{act.snippet}</strong> 항목을 추가했습니다.</span>;
@@ -50,44 +52,60 @@ const getActivityMessage = (act: any) => {
   }
 };
 
+/**
+ * 타임스탬프를 "방금 전 / N분 전 / N시간 전 / 날짜" 형태의 상대 시간으로 변환한다.
+ * @param timestamp 활동이 발생한 시각(ms 단위 epoch)
+ * @returns 사람이 읽기 쉬운 상대 시간 문자열
+ */
 const getRelativeTime = (timestamp: number) => {
   const diffMins = Math.floor((Date.now() - timestamp) / 60000);
   if (diffMins < 60) return diffMins === 0 ? '방금 전' : `${diffMins}분 전`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}시간 전`;
+  // 하루가 지난 항목은 절대 날짜로 표기
   return new Date(timestamp).toLocaleDateString();
 };
 
+/**
+ * 상단 세그먼트 네비게이션 탭 정의.
+ * NOTE: 동일한 마크업이 반복되던 4개 버튼을 데이터로 추출(DRY)하여 map으로 렌더링한다.
+ *       'memo'는 컨텍스트의 activeTab 유니온 타입에 없으므로 렌더 시 as any로 캐스팅한다(기존 동작 유지).
+ */
+const NAV_ITEMS: ReadonlyArray<{ tab: string; icon: React.ElementType; label: string }> = [
+  { tab: 'all', icon: Layers, label: '전체' },
+  { tab: 'calendar', icon: Calendar, label: '일정' },
+  { tab: 'inventory', icon: Package, label: '재고' },
+  { tab: 'memo', icon: FileText, label: '메모' },
+];
+
+/**
+ * 앱 전역 셸(Shell) 레이아웃.
+ * 상단 헤더(브랜드/빠른 동작/커맨드 바/탭 네비), 메인 스크롤 영역, 푸터,
+ * 활동 내역 드로워, 테마 토글 FAB, 토스트, 커맨드 팔레트를 구성한다.
+ * @param children 현재 탭/라우트에 해당하는 페이지 콘텐츠
+ */
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  // SSR/CSR 하이드레이션 불일치 방지용 마운트 플래그.
+  // 초기 렌더는 빈 셸만 그리고, 클라이언트 마운트 이후에 실제 UI를 노출한다.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // 전역 앱 상태/액션 (실제로 이 레이아웃에서 사용하는 값만 구독)
   const {
     theme, toggleTheme,
     toast,
     activities,
-    appSettings, handleSettingsChange,
-    isSettingsOpen, setIsSettingsOpen,
     isActivityDrawerOpen, setIsActivityDrawerOpen,
     nlpInput, setNlpInput, loading, handleNlpSubmit,
-    records,
     activeTab, setActiveTab,
-    activeCategory, setActiveCategory
   } = useApp();
 
-  // Extract unique categories (except memo)
-  const categories = Array.from(new Set(
-    records
-      .map(r => r.category || r.attrs.category)
-      .filter(c => c && c !== '메모')
-  ));
-
-  // Command Palette open state
+  // 커맨드 팔레트(⌘K) 열림 상태
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
-  // Global keyboard shortcuts
+  // 전역 키보드 단축키 등록
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -187,42 +205,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           className="app-nav"
           style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem', WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <button
-            type="button"
-            onClick={() => setActiveTab('all')}
-            className={`nav-link ${activeTab === 'all' ? 'active' : ''} focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0`}
-            style={{ flex: 1, cursor: 'pointer', border: 'none', outline: 'none', boxShadow: 'none' } as React.CSSProperties}
-          >
-            <Layers size={14} />
-            <span>전체</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('calendar')}
-            className={`nav-link ${activeTab === 'calendar' ? 'active' : ''} focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0`}
-            style={{ flex: 1, cursor: 'pointer', border: 'none', outline: 'none', boxShadow: 'none' } as React.CSSProperties}
-          >
-            <Calendar size={14} />
-            <span>일정</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('inventory')}
-            className={`nav-link ${activeTab === 'inventory' ? 'active' : ''} focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0`}
-            style={{ flex: 1, cursor: 'pointer', border: 'none', outline: 'none', boxShadow: 'none' } as React.CSSProperties}
-          >
-            <Package size={14} />
-            <span>재고</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('memo' as any)}
-            className={`nav-link ${activeTab === ('memo' as any) ? 'active' : ''} focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0`}
-            style={{ flex: 1, cursor: 'pointer', border: 'none', outline: 'none', boxShadow: 'none' } as React.CSSProperties}
-          >
-            <FileText size={14} />
-            <span>메모</span>
-          </button>
+          {/* NAV_ITEMS 데이터를 순회하여 동일 마크업의 탭 버튼을 생성 (기존 4개 버튼과 DOM 동일) */}
+          {NAV_ITEMS.map(({ tab, icon: Icon, label }) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab as any)}
+              className={`nav-link ${activeTab === (tab as any) ? 'active' : ''} focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0`}
+              style={{ flex: 1, cursor: 'pointer', border: 'none', outline: 'none', boxShadow: 'none' } as React.CSSProperties}
+            >
+              <Icon size={14} />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
       </header>
 

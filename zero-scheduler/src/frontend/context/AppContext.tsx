@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { format, parseISO, differenceInSeconds } from 'date-fns';
+import { parseISO, differenceInSeconds } from 'date-fns';
 import {
-  UniversalRecord, getRecords, saveRecords, addRecord, updateRecord, deleteRecord,
+  UniversalRecord, getRecords, addRecord, updateRecord, deleteRecord,
   ActivityLog, ActivityType, AppSettings, loadSettings, persistSettings,
   loadActivities, persistActivities, DEFAULT_SETTINGS,
   ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive
@@ -81,6 +81,15 @@ interface AppContextProps {
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
+/**
+ * 앱 전역 상태/액션을 제공하는 Context Provider.
+ *
+ * 일정(event)·재고(asset)·메모(memo)를 단일 `UniversalRecord` 모델로 통합 관리하며,
+ * 로컬 영속화(localStorage 기반 database 모듈), 활동 로그, 자연어 입력(NLP) 처리,
+ * 일정 알림 스케줄링, 휴지통(아카이브), CSV 내보내기 등을 담당한다.
+ *
+ * @param children Provider 하위에 렌더링할 React 노드
+ */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [records, setRecords] = useState<UniversalRecord[]>([]);
@@ -211,7 +220,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
-  // Notifications
+  // 일정 알림 스케줄러: 10초마다 임박한 일정을 검사해 알림을 발송한다.
+  // 트리거 시각(일정시각 - notifyOffset) 기준 0~300초 윈도 안에서, 아직 알리지 않은 건만 발송한다.
   useEffect(() => {
     const schedules = records.filter(r => r.type === 'event');
     const checkNotifications = () => {
@@ -274,7 +284,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [records, notified]);
 
+  /**
+   * 커맨드 바의 자연어 입력을 처리한다 (Enter 입력 시 동작).
+   * `/api/parse`로 텍스트를 보내 의도를 분석하고, 결과의 액션 코드에 따라 분기한다.
+   * - R: 검색 뷰만 활성화(DB 변경 없음)  - C: 생성  - U: 수정  - D: 삭제
+   * 그 외 enrichedAttrs로 반복(recurrence)·엔티티 링크(linkedIds)를 주입한다.
+   * @param e 입력창 keydown 이벤트
+   */
   const handleNlpSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter 키 + 공백 아닌 입력 + 비로딩 상태에서만 분석 실행
     if (e.key === 'Enter' && nlpInput.trim() && !loading) {
       setLoading(true);
       try {
@@ -458,17 +476,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logActivity(updatedStatus ? 'DONE_SCHED' : 'UPDATE_SCHED', updatedStatus ? '일정 완료' : '일정 재개', s.title);
   };
 
-  // 일정/재고/메모 공통 완료 토글 (업무 플로우 관리용)
+  /**
+   * 일정/재고/메모 공통 완료 토글 (업무 플로우 관리용).
+   * 일정(event)은 반복/가상 인스턴스 처리가 필요하므로 toggleComplete로 위임한다.
+   * @param e 클릭 이벤트 (버블링으로 인한 상위 핸들러 실행을 막기 위해 전파 차단)
+   * @param r 토글 대상 레코드
+   */
   const toggleDone = (e: React.MouseEvent, r: UniversalRecord) => {
     e.stopPropagation();
+    // 일정은 반복/가상 일정 분기 로직이 있으므로 전용 핸들러로 위임 후 조기 종료
     if (r.type === 'event') { toggleComplete(e, r); return; }
     const updatedStatus = !r.attrs.completed;
     updateRecord(r.id, { attrs: { ...r.attrs, completed: updatedStatus } });
     reloadRecords();
+    // NOTE: 활동 로그 타입은 완료/재개와 무관하게 동일(UPDATE_*)하며, 표시 문구만 달라진다.
     if (r.type === 'asset') {
-      logActivity(updatedStatus ? 'UPDATE_INV' : 'UPDATE_INV', updatedStatus ? '재고 완료 처리' : '재고 재개', r.title);
+      logActivity('UPDATE_INV', updatedStatus ? '재고 완료 처리' : '재고 재개', r.title);
     } else {
-      logActivity(updatedStatus ? 'UPDATE_MEMO' : 'UPDATE_MEMO', updatedStatus ? '메모 완료 처리' : '메모 재개', r.title);
+      logActivity('UPDATE_MEMO', updatedStatus ? '메모 완료 처리' : '메모 재개', r.title);
     }
   };
 
@@ -555,6 +580,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (target) logActivity('DEL_INV', '재고 삭제', target.title);
   };
 
+  /**
+   * 일정 또는 재고 데이터를 CSV 파일로 내보낸다.
+   * Excel 한글 깨짐 방지를 위해 BOM(﻿)을 선두에 추가한다.
+   * @param type 'event'(일정) 또는 'asset'(재고)
+   */
   const exportToCsv = (type: 'event' | 'asset') => {
     const filtered = records.filter(r => r.type === type);
     let csvContent = "";
@@ -613,6 +643,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * 앱 전역 컨텍스트에 접근하는 커스텀 훅.
+ * @throws AppProvider 외부에서 호출되면 에러를 던진다.
+ * @returns 전역 상태와 액션이 담긴 컨텍스트 값
+ */
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) throw new Error("useApp must be used within an AppProvider");

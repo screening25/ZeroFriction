@@ -24,37 +24,37 @@
     ],
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ],
       "@/app/*": [
-        "./app/*"
+        "./src/app/*"
       ],
       "@/frontend/*": [
-        "./frontend/*"
+        "./src/frontend/*"
       ],
       "@/backend/*": [
-        "./backend/*"
+        "./src/backend/*"
       ],
       "@/database": [
-        "./database"
+        "./src/database"
       ],
       "@/database/*": [
-        "./database/*"
+        "./src/database/*"
       ],
       "@/lib/*": [
-        "./lib/*"
+        "./src/lib/*"
       ]
     }
   },
   "include": [
     "next-env.d.ts",
-    "app/**/*.ts",
-    "app/**/*.tsx",
-    "frontend/**/*.ts",
-    "frontend/**/*.tsx",
-    "backend/**/*.ts",
-    "database/**/*.ts",
-    "lib/**/*.ts",
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/frontend/**/*.ts",
+    "src/frontend/**/*.tsx",
+    "src/backend/**/*.ts",
+    "src/database/**/*.ts",
+    "src/lib/**/*.ts",
     "**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
