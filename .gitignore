@@ -46,3 +46,6 @@ Thumbs.db
 # === Electron 빌드 ===
 /dist
 /release
+
+# === macOS 바로가기 앱 (로컬 사용) ===
+ZeroScheduler.app/

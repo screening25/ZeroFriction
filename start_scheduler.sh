@@ -4,7 +4,6 @@ export PATH=$PATH:/usr/local/bin:/opt/homebrew/bin:~/.npm-global/bin
 cd /Users/fitogether/Desktop/Manage
 docker-compose up -d
 
-cd zero-scheduler
 # 기존 프로세스 정리
 lsof -ti:3005 | xargs kill -9 2>/dev/null || true
 
