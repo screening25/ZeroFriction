@@ -111,6 +111,10 @@ export default function Home() {
   const [schedulePage, setSchedulePage] = useState<number>(0);
   const [inventoryPage, setInventoryPage] = useState<number>(0);
 
+  // States for @mention suggestion autocomplete popup
+  const [mentionTriggerInfo, setMentionTriggerInfo] = useState<{ query: string; triggerIndex: number } | null>(null);
+  const [hoveredMentionId, setHoveredMentionId] = useState<string | null>(null);
+
   useEffect(() => {
     setSchedulePage(0);
   }, [selectedScheduleCategory, selectedDate]);
@@ -118,6 +122,38 @@ export default function Home() {
   useEffect(() => {
     setInventoryPage(0);
   }, [selectedInventoryCategory]);
+
+  // Listen to custom mention click events from Markdown component
+  useEffect(() => {
+    const handleMentionClick = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const targetName = customEvent.detail;
+      if (!targetName) return;
+
+      const foundRecord = records.find(r => 
+        r.title.trim().toLowerCase() === targetName.trim().toLowerCase()
+      );
+
+      if (foundRecord) {
+        if (foundRecord.type === 'event') {
+          setEditingSchedule(foundRecord);
+          setIsMemoModalOpen(false);
+          showToast(`일정 '${foundRecord.title}' 상세 조회를 엽니다.`);
+        } else if (foundRecord.type === 'asset') {
+          setEditingInventory(foundRecord);
+          setIsMemoModalOpen(false);
+          showToast(`재고 '${foundRecord.title}' 상세 조회를 엽니다.`);
+        }
+      } else {
+        showToast(`'${targetName}' 일정이나 재고 항목을 찾을 수 없습니다.`);
+      }
+    };
+
+    window.addEventListener('mention-click', handleMentionClick);
+    return () => {
+      window.removeEventListener('mention-click', handleMentionClick);
+    };
+  }, [records, setEditingSchedule, setEditingInventory, setIsMemoModalOpen, showToast]);
 
   // Input states for custom category creation inside modals
   const [customScheduleCategory, setCustomScheduleCategory] = useState<string>('');
@@ -217,6 +253,65 @@ export default function Home() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   const inventory = records.filter(r => r.type === 'asset');
+
+  // Autocomplete / suggestion helpers for @mentions in textarea
+  const getMentionQuery = (text: string, cursorIndex: number) => {
+    const beforeCursor = text.substring(0, cursorIndex);
+    const lastAtIdx = beforeCursor.lastIndexOf('@');
+    if (lastAtIdx === -1) return null;
+    
+    const textSinceAt = beforeCursor.substring(lastAtIdx + 1);
+    if (/\s/.test(textSinceAt)) return null;
+    
+    if (lastAtIdx > 0 && !/\s/.test(beforeCursor[lastAtIdx - 1])) {
+      return null;
+    }
+    
+    return {
+      query: textSinceAt,
+      triggerIndex: lastAtIdx
+    };
+  };
+
+  const filteredMentionItems = (() => {
+    if (!mentionTriggerInfo) return [];
+    const q = mentionTriggerInfo.query.toLowerCase().trim();
+    
+    const candidates = [
+      ...schedules.map(s => ({ id: s.id, title: s.title, type: 'event' })),
+      ...inventory.map(i => ({ id: i.id, title: i.title, type: 'asset' }))
+    ];
+    
+    const filtered = q 
+      ? candidates.filter(c => c.title.toLowerCase().includes(q))
+      : candidates;
+      
+    return filtered.slice(0, 8);
+  })();
+
+  const selectMention = (title: string) => {
+    const textarea = document.querySelector('.memo-content-textarea') as HTMLTextAreaElement;
+    if (!textarea || !mentionTriggerInfo) return;
+    
+    const text = memoForm.content;
+    const start = mentionTriggerInfo.triggerIndex;
+    const end = textarea.selectionStart;
+    
+    const formattedMention = title.includes(' ') ? `@"${title}"` : `@${title}`;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    
+    const newContent = before + formattedMention + ' ' + after;
+    setMemoForm({ ...memoForm, content: newContent });
+    setMentionTriggerInfo(null);
+    setHoveredMentionId(null);
+    
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + formattedMention.length + 1;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 50);
+  };
 
   const handleMemoCheckboxToggle = (memoId: string, lineIndex: number, newCheckedState: boolean) => {
     const memo = records.find(m => m.id === memoId && m.type === 'memo');
@@ -484,14 +579,14 @@ export default function Home() {
             const overdueSchedulesCount = overdueSchedules.length;
             const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
             
-            let greeting = "좋은 하루입니다!";
+            let greeting = "오늘도 좋은 하루 보내시길 바랍니다!";
             const hour = new Date().getHours();
-            if (hour >= 5 && hour < 9) greeting = "활기찬 아침입니다!";
-            else if (hour >= 9 && hour < 12) greeting = "생산적인 오전입니다!";
-            else if (hour >= 12 && hour < 14) greeting = "즐거운 점심시간입니다!";
-            else if (hour >= 14 && hour < 18) greeting = "활기찬 오후입니다!";
-            else if (hour >= 18 && hour < 22) greeting = "보람찬 저녁입니다!";
-            else greeting = "평안한 밤입니다!";
+            if (hour >= 5 && hour < 9) greeting = "오늘도 힘차게 시작하는 좋은 아침입니다!";
+            else if (hour >= 9 && hour < 12) greeting = "업무에 집중하기 좋은 오전 시간입니다.";
+            else if (hour >= 12 && hour < 13) greeting = "맛있는 식사와 함께 편안한 점심시간 보내세요.";
+            else if (hour >= 13 && hour < 18) greeting = "오늘 오후도 활기차게 보내시길 바랍니다.";
+            else if (hour >= 18 && hour < 22) greeting = "오늘 하루도 수고 많으셨습니다. 편안한 저녁 보내세요.";
+            else greeting = "오늘 하루도 고생하셨습니다. 평안한 밤 되시길 바랍니다.";
             
             let briefing: {
               greeting: string;
@@ -2500,25 +2595,106 @@ export default function Home() {
                   ))}
                 </div>
 
-                <textarea
-                  placeholder="내용을 마크다운으로 입력하세요…"
-                  className="memo-content-textarea"
-                  rows={10}
-                  value={memoForm.content}
-                  onChange={e => setMemoForm({...memoForm, content: e.target.value})}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
-                    fontSize: '0.85rem',
-                    lineHeight: '1.5',
-                    color: 'var(--text-primary)',
-                    minHeight: '280px',
-                    padding: '0.4rem 0'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, marginTop: '0.4rem' }}>
+                  {/* Mention Autocomplete List (Absolute positioned overlaying the textarea, so it NEVER shifts layout!) */}
+                  {mentionTriggerInfo && filteredMentionItems.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      zIndex: 100,
+                      background: 'var(--panel-bg)',
+                      backdropFilter: 'var(--panel-blur)',
+                      WebkitBackdropFilter: 'var(--panel-blur)',
+                      border: '1px solid var(--panel-border)',
+                      borderRadius: '12px',
+                      boxShadow: 'var(--shadow-lg)',
+                      padding: '0.4rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.1rem',
+                      maxHeight: '140px',
+                      overflowY: 'auto',
+                      borderLeft: '4px solid var(--accent)'
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, padding: '0.2rem 0.4rem' }}>
+                        언급할 일정 또는 재고 선택
+                      </div>
+                      {filteredMentionItems.map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => selectMention(item.title)}
+                          onMouseEnter={() => setHoveredMentionId(item.id)}
+                          onMouseLeave={() => setHoveredMentionId(null)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            padding: '0.35rem 0.5rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.74rem',
+                            transition: 'background 0.15s ease',
+                            background: hoveredMentionId === item.id 
+                              ? 'var(--row-bg)' 
+                              : 'transparent'
+                          }}
+                        >
+                          <span style={{
+                            fontSize: '0.62rem',
+                            padding: '0.1rem 0.3rem',
+                            borderRadius: '4px',
+                            fontWeight: 800,
+                            background: item.type === 'event' ? 'rgba(0,122,255,0.1)' : 'rgba(52,199,89,0.1)',
+                            color: item.type === 'event' ? '#007aff' : '#34c759'
+                          }}>
+                            {item.type === 'event' ? '일정' : '재고'}
+                          </span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                            {item.title}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <textarea
+                    placeholder="내용을 마크다운으로 입력하세요…"
+                    className="memo-content-textarea"
+                    rows={10}
+                    value={memoForm.content}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setMemoForm({...memoForm, content: val});
+                      const trigger = getMentionQuery(val, e.target.selectionStart);
+                      setMentionTriggerInfo(trigger);
+                    }}
+                    onKeyUp={e => {
+                      const target = e.target as HTMLTextAreaElement;
+                      const trigger = getMentionQuery(target.value, target.selectionStart);
+                      setMentionTriggerInfo(trigger);
+                    }}
+                    onMouseUp={e => {
+                      const target = e.target as HTMLTextAreaElement;
+                      const trigger = getMentionQuery(target.value, target.selectionStart);
+                      setMentionTriggerInfo(trigger);
+                    }}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      resize: 'none',
+                      fontSize: '0.85rem',
+                      lineHeight: '1.5',
+                      color: 'var(--text-primary)',
+                      minHeight: '280px',
+                      padding: '0.4rem 0',
+                      flex: 1
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Bottom Settings Control Bar */}

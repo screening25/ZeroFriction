@@ -13,11 +13,11 @@ import React from 'react';
 let keyCounter = 0;
 const nextKey = () => `md-${keyCounter++}`;
 
-// 인라인 파싱: 굵게/기울임/코드/링크/취소선/해시태그
+// 인라인 파싱: 굵게/기울임/코드/링크/취소선/해시태그/@멘션
 function parseInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  // 순서 중요: 코드 → 링크 → 굵게 → 취소선 → 기울임 → 해시태그
-  const pattern = /(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(~~[^~]+~~)|(\*[^*]+\*)|(_[^_]+_)|(#[a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/;
+  // 순서 중요: 코드 → 링크 → 굵게 → 취소선 → 기울임 → 해시태그 → @멘션(큰따옴표/작은따옴표/일반단어)
+  const pattern = /(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(~~[^~]+~~)|(\*[^*]+\*)|(_[^_]+_)|(#[a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)|(@"[^"\n]+")|(@'[^'\n]+')|(@[a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/;
   let remaining = text;
 
   while (remaining.length > 0) {
@@ -79,6 +79,37 @@ function parseInline(text: string): React.ReactNode[] {
           }}
         >
           #{tagText}
+        </span>
+      );
+    } else if (token.startsWith('@')) {
+      let mentionName = token.slice(1);
+      if ((mentionName.startsWith('"') && mentionName.endsWith('"')) || 
+          (mentionName.startsWith("'") && mentionName.endsWith("'"))) {
+        mentionName = mentionName.slice(1, -1);
+      }
+      nodes.push(
+        <span 
+          key={nextKey()} 
+          style={{ 
+            color: 'var(--accent, #007aff)', 
+            background: 'var(--accent-soft-bg, rgba(0, 122, 255, 0.08))', 
+            padding: '0.05rem 0.35rem', 
+            borderRadius: '4px', 
+            fontSize: '0.85em', 
+            fontWeight: 700, 
+            cursor: 'pointer',
+            display: 'inline-block',
+            margin: '0 0.1rem',
+            userSelect: 'none',
+            border: '1px solid rgba(0, 122, 255, 0.15)'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            const event = new CustomEvent('mention-click', { detail: mentionName });
+            window.dispatchEvent(event);
+          }}
+        >
+          @{mentionName}
         </span>
       );
     }
