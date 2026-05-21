@@ -66,7 +66,7 @@ export default function CustomSelect({ value, onChange, options, placeholder, cl
   }, []);
 
   const selectedOpt = options.find(opt => String(opt.value) === String(value));
-  const displayText = selectedOpt ? selectedOpt.label : (placeholder || '선택...');
+  const displayText = selectedOpt ? selectedOpt.label : (placeholder || '');
 
   return (
     <>

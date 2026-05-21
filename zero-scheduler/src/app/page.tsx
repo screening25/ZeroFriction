@@ -129,6 +129,9 @@ export default function Home() {
   const [commandPaletteQuery, setCommandPaletteQuery] = useState<string>('');
   const [commandPaletteSelectedIndex, setCommandPaletteSelectedIndex] = useState<number>(0);
 
+  // 메모 모달 보기/수정 모드 — 상세보기는 읽기 전용으로 열리고, '수정' 클릭 시에만 편집 모드로 전환된다.
+  const [isMemoEditing, setIsMemoEditing] = useState<boolean>(false);
+
   // State for category ratio fixed tooltip (position: fixed to escape overflow clipping)
   const [categoryTooltip, setCategoryTooltip] = useState<{
     visible: boolean;
@@ -416,6 +419,7 @@ export default function Home() {
         color: item.record.attrs.color || 'blue',
         pinned: item.record.attrs.pinned || false
       });
+      setIsMemoEditing(false); // 상세보기는 읽기 전용으로 진입
       setIsMemoModalOpen(true);
       showToast(`메모 '${item.title}'를 엽니다.`);
     }
@@ -674,6 +678,7 @@ export default function Home() {
                       else if (item.type === 'asset') setEditingInventory(item);
                       else {
                         setMemoForm({ id: item.id, title: item.title, content: item.attrs.content || '', pinned: item.attrs.pinned || false, color: item.attrs.color || '' });
+                        setIsMemoEditing(false); // 상세보기 = 읽기 전용
                         setIsMemoModalOpen(true);
                       }
                     }}
@@ -1306,9 +1311,10 @@ export default function Home() {
                           overflow: 'hidden',
                           ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                         }} 
-                        onClick={() => { 
-                          setMemoForm({ id: m.id, title: m.title || '제목 없음', content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); 
-                          setIsMemoModalOpen(true); 
+                        onClick={() => {
+                          setMemoForm({ id: m.id, title: m.title || '제목 없음', content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' });
+                          setIsMemoEditing(false); // 상세보기 = 읽기 전용
+                          setIsMemoModalOpen(true);
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', width: '100%' }}>
@@ -2269,6 +2275,7 @@ export default function Home() {
                 className="btn-ghost" 
                 onClick={() => {
                   setMemoForm({ title: '', content: '', pinned: false, color: '' });
+                  setIsMemoEditing(true); // 신규 메모는 곧바로 편집 모드로 진입
                   setIsMemoModalOpen(true);
                 }}
                 title="메모 추가"
@@ -2295,10 +2302,13 @@ export default function Home() {
                   flexDirection: 'column',
                   gap: '0.5rem',
                   cursor: 'pointer',
+                  height: '150px',      // 모든 메모 카드 높이 통일
+                  overflow: 'hidden',   // 내용이 길어도 카드 크기는 고정 (초과분 클리핑)
                   ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                 }}
                 onClick={() => {
                   setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' });
+                  setIsMemoEditing(false); // 카드 클릭 = 상세보기(읽기 전용)
                   setIsMemoModalOpen(true);
                 }}
               >
@@ -2335,7 +2345,9 @@ export default function Home() {
                       color: 'var(--text-secondary)',
                       paddingLeft: '3.1rem',
                       textAlign: 'left',
-                      lineHeight: '1.4'
+                      lineHeight: '1.4',
+                      flex: 1,            // 남은 공간을 채워 카드 높이를 일정하게 유지
+                      overflow: 'hidden'  // 긴 내용은 카드 경계에서 잘림
                     }}
                   >
                     <Markdown 
@@ -2349,7 +2361,7 @@ export default function Home() {
                 )}
 
                 <div className="card-hover-actions">
-                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoModalOpen(true); }}>수정</button>
+                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoEditing(true); setIsMemoModalOpen(true); }}>수정</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }}>삭제</button>
                 </div>
               </div>
@@ -2729,23 +2741,37 @@ export default function Home() {
             >
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '0.6rem' }}>
-                <button 
-                  className="memo-text-btn" 
+                <button
+                  className="memo-text-btn"
                   onClick={() => setIsMemoModalOpen(false)}
                   style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.82rem', cursor: 'pointer' }}
                 >
-                  취소
+                  {isMemoEditing ? '취소' : '닫기'}
                 </button>
                 <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>메모</div>
-                <button 
-                  className="memo-text-btn save-btn" 
-                  onClick={submitMemo}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  저장
-                </button>
+                {/* 편집 모드: 저장 / 보기 모드: 수정 진입 */}
+                {isMemoEditing ? (
+                  <button
+                    className="memo-text-btn save-btn"
+                    onClick={submitMemo}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    저장
+                  </button>
+                ) : (
+                  <button
+                    className="memo-text-btn save-btn"
+                    onClick={() => setIsMemoEditing(true)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    수정
+                  </button>
+                )}
               </div>
 
+              {/* 보기 모드: 읽기 전용 상세보기 / 편집 모드: 에디터 */}
+              {isMemoEditing ? (
+              <>
               {/* Editor Workspace */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
                 <input
@@ -2986,6 +3012,23 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              </>
+              ) : (
+              /* 읽기 전용 상세보기 — 제목/내용만 표시, 편집 위젯 없음 */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1, minHeight: '280px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.2rem 0' }}>
+                  {memoForm.pinned && <Pin size={14} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} />}
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {memoForm.title || '(제목 없음)'}
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.85rem', lineHeight: '1.5', color: 'var(--text-primary)', flex: 1, overflowY: 'auto', paddingTop: '0.2rem' }}>
+                  {memoForm.content
+                    ? <Markdown content={memoForm.content} />
+                    : <span style={{ color: 'var(--text-tertiary)' }}>(내용 없음)</span>}
+                </div>
+              </div>
+              )}
 
               {/* Destructive Delete Button */}
               {memoForm.id && (
