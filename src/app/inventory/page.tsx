@@ -67,7 +67,7 @@ export default function InventoryPage() {
                   {qtyNum >= 0 ? '+' : ''}{qtyNum}개
                 </div>
                 <div className="card-hover-actions">
-                  <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={() => deleteInventoryItem(item.id)}>삭제</button>
+                  <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
                 </div>
               </div>
             );

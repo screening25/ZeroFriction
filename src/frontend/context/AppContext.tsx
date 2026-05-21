@@ -232,9 +232,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       schedules.forEach(s => {
         if (!s.attrs.completed && s.attrs.time) {
           const scheduleTime = parseISO(`${s.attrs.date}T${s.attrs.time}`);
-          const triggerTime = new Date(scheduleTime.getTime() - (s.attrs.notifyOffset ?? 10) * 60000);
+          const offset = s.attrs.notifyOffset ?? appSettings.defaultNotifyOffset ?? 0;
+          const triggerTime = new Date(scheduleTime.getTime() - offset * 60000);
           const diffSeconds = differenceInSeconds(now, triggerTime);
-          if ((s.attrs.notifyOffset ?? 10) >= 0 && diffSeconds >= 0 && diffSeconds <= 300 && !notified.has(s.id)) {
+          if (offset >= 0 && diffSeconds >= 0 && diffSeconds <= 300 && !notified.has(s.id)) {
             if (appSettings.enableNotifications !== false) {
               const title = '일정 알림';
               const body = `${s.title} (${s.attrs.time})`;
@@ -578,6 +579,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     reloadArchive();
     showToast('재고 삭제 (휴지통으로 이동)');
     if (target) logActivity('DEL_INV', '재고 삭제', target.title);
+    if (editingInventory && editingInventory.id === id) setEditingInventory(null);
   };
 
   /**

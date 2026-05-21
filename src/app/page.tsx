@@ -1554,7 +1554,7 @@ export default function Home() {
                     time: '12:00',
                     memo: '',
                     completed: false,
-                    notifyOffset: 10
+                    notifyOffset: appSettings.defaultNotifyOffset ?? 0
                   },
                   updatedAt: new Date().toISOString()
                 })}
@@ -2469,7 +2469,7 @@ export default function Home() {
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">알림 설정</span>
                   <CustomSelect
-                    value={editingSchedule.attrs.notifyOffset ?? 10}
+                    value={editingSchedule.attrs.notifyOffset ?? appSettings.defaultNotifyOffset ?? 0}
                     options={[
                       { value: -1, label: '알림 없음' },
                       { value: 0, label: '정각' },

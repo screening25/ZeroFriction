@@ -93,7 +93,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxEventsShown: 5,
   maxInventoryShown: 5,
   maxMemosShown: 3,
-  defaultNotifyOffset: 10,
+  defaultNotifyOffset: 0,
   weekStartsOn: 0,
   timeFormat: '24h',
   density: 'comfortable',

@@ -19,7 +19,8 @@ export default function CalendarPage() {
     selectedDate, setSelectedDate,
     calendarMode, setCalendarMode,
     editingSchedule, setEditingSchedule,
-    toggleComplete, handleDeleteSchedule, handleUpdateSchedule
+    toggleComplete, handleDeleteSchedule, handleUpdateSchedule,
+    appSettings
   } = useApp();
 
   const schedules = records.filter(r => r.type === 'event');
@@ -219,7 +220,7 @@ export default function CalendarPage() {
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">알림 설정</span>
                   <CustomSelect
-                    value={editingSchedule.attrs.notifyOffset ?? 10}
+                    value={editingSchedule.attrs.notifyOffset ?? appSettings.defaultNotifyOffset ?? 0}
                     options={[
                       { value: -1, label: '알림 없음' },
                       { value: 0, label: '정각' },

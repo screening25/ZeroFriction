@@ -23,7 +23,8 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     setIsMemoModalOpen,
     setMemoForm,
     toggleTheme,
-    theme
+    theme,
+    appSettings
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -50,7 +51,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         id: 'new-event', kind: 'action', title: '새 일정 작성', icon: <Calendar size={13} />,
         run: () => {
           setActiveTab('calendar');
-          setEditingSchedule({ id: '', title: '', type: 'event', category: '일반', attrs: { date: new Date().toISOString().split('T')[0], time: '12:00', memo: '', completed: false, notifyOffset: 10 }, updatedAt: new Date().toISOString() } as any);
+          setEditingSchedule({ id: '', title: '', type: 'event', category: '일반', attrs: { date: new Date().toISOString().split('T')[0], time: '12:00', memo: '', completed: false, notifyOffset: appSettings.defaultNotifyOffset ?? 0 }, updatedAt: new Date().toISOString() } as any);
           onClose();
         }
       },
@@ -103,7 +104,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     });
 
     return [...actions, ...recordItems];
-  }, [records, theme, setActiveTab, setEditingSchedule, setEditingInventory, setIsMemoModalOpen, setMemoForm, toggleTheme, onClose]);
+  }, [records, theme, setActiveTab, setEditingSchedule, setEditingInventory, setIsMemoModalOpen, setMemoForm, toggleTheme, onClose, appSettings]);
 
   // Fuzzy filter
   const filtered = useMemo(() => {

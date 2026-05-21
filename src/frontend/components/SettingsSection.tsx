@@ -640,7 +640,7 @@ export default function SettingsSection() {
           <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
             <span className="settings-label-compact">기본 알림 시간</span>
             <CustomSelectCompact
-              value={localSettings.defaultNotifyOffset ?? 10}
+              value={localSettings.defaultNotifyOffset ?? 0}
               options={[
                 { value: -1, label: '알림 없음' },
                 { value: 0, label: '정각' },
