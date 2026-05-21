@@ -2450,7 +2450,7 @@ export default function Home() {
               
               <div className="form-group">
                 <span className="form-label">메모</span>
-                <textarea rows={2} className="input-sm" value={editingSchedule.attrs.memo || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, memo: e.target.value }})} />
+                <textarea rows={4} className="input-sm" value={editingSchedule.attrs.memo || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, memo: e.target.value }})} />
               </div>
               
               <div style={{ display: 'flex', gap: '0.8rem' }}>
@@ -2568,8 +2568,8 @@ export default function Home() {
                   type="text" 
                   className="input-sm" 
                   value={editingInventory.attrs.code || ''} 
-                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, code: e.target.value }})} 
-                  placeholder="예: CODE-01"
+                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, code: e.target.value }})}
+                  placeholder=""
                 />
               </div>
 
@@ -2590,7 +2590,7 @@ export default function Home() {
                 <CustomSelect
                   value={editingInventory.category || ''}
                   options={[
-                    { value: '', label: '카테고리 선택' },
+                    { value: '', label: '' },
                     ...(appSettings.categories || ['재고', 'IT 장비', '촬영 장비', '사무 용품', '기타']).map(cat => ({
                       value: cat,
                       label: cat
@@ -2660,9 +2660,9 @@ export default function Home() {
 
               {/* Memo Textarea */}
               <div className="form-group">
-                <span className="form-label">특이사항</span>
+                <span className="form-label">메모</span>
                 <textarea
-                  rows={3}
+                  rows={5}
                   className="input-sm"
                   placeholder=""
                   style={{ resize: 'vertical', lineHeight: 1.5, fontSize: '0.85rem' }}
