@@ -5,6 +5,7 @@
 
 # === 빌드 산출물 ===
 /.next/
+/zero-scheduler/.next/
 /out/
 /build
 /coverage

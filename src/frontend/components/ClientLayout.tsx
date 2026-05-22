@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
@@ -85,6 +86,7 @@ const NAV_ITEMS: ReadonlyArray<{ tab: string; icon: React.ElementType; label: st
  * @param children 현재 탭/라우트에 해당하는 페이지 콘텐츠
  */
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   // SSR/CSR 하이드레이션 불일치 방지용 마운트 플래그.
   // 초기 렌더는 빈 셸만 그리고, 클라이언트 마운트 이후에 실제 UI를 노출한다.
   const [mounted, setMounted] = useState(false);
@@ -146,10 +148,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     toast,
     activities,
     isActivityDrawerOpen, setIsActivityDrawerOpen,
-    nlpInput, setNlpInput, loading, handleNlpSubmit,
+    nlpInput, setNlpInput, loading, handleNlpSubmit, executeNlpCommand,
     activeTab, setActiveTab,
     activeNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
   } = useApp();
+
+  // Listen to IPC 'execute-quick-nlp' and execute command on main window
+  useEffect(() => {
+    if (!mounted) return;
+    const ipc = (window as any).ipcRenderer;
+    if (ipc) {
+      const handler = async (event: any, text: string) => {
+        executeNlpCommand(text);
+      };
+      ipc.on('execute-quick-nlp', handler);
+      return () => {
+        ipc.removeListener('execute-quick-nlp', handler);
+      };
+    }
+  }, [mounted, executeNlpCommand]);
 
   // 커맨드 팔레트(⌘K) 열림 상태
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -201,6 +218,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   if (!mounted) {
     return <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F2F2F7' }} />;
+  }
+
+  if (pathname === '/quick-input') {
+    return <>{children}</>;
   }
 
   return (

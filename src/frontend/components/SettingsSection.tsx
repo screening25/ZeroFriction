@@ -197,7 +197,11 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.5.2", date: "2026-05-22", latest: true, items: [
+  { version: "v0.5.3", date: "2026-05-22", latest: true, items: [
+    { b: "일정 등록 시간 입력 UI 통일 및 수평 정렬", t: ": 시간(Time) 선택기의 트리거 인풋을 날짜 선택기(DatePicker)와 동일하게 일관된 버튼 형태로 변경하여 디자인 일인화를 이루었습니다. 또한 날짜/시간 라벨의 높이를 22px로 통일하여 두 입력 박스의 시작 수평 높이를 정밀하게 정렬했습니다." },
+    { b: "상단 바 퀵 액션 단축 패널 라이트 모드 전환 및 화이트 박스 버튼 통일", t: ": 자연어 입력창 하단 단축 패널의 테마를 깔끔한 라이트 모드(반투명 연회색)로 전면 변경하고, 하단의 모든 기능 버튼들을 선명한 테두리를 가진 단정한 화이트 박스 스타일로 통일하여 시인성과 조작성을 대폭 강화했습니다." }
+  ] },
+  { version: "v0.5.2", date: "2026-05-22", items: [
     { b: "macOS 상단 바 트레이 드롭다운 패널 연동", t: ": 트레이 아이콘 클릭 또는 '열기' 시 메인 윈도우가 상단 바 바로 아래에 드롭다운 형태로 자동 위치하도록 개선했습니다." },
     { b: "상단 바 퀵 입력 포커스(Auto-Focus)", t: ": 트레이 아이콘 클릭 시 자연어 분석 입력창(.command-input)에 자동으로 포커스 및 텍스트 전체 선택이 되어 바로 타이핑할 수 있습니다." },
     { b: "트레이 아이콘 시인성 및 브랜드 디자인 개선", t: ": Zero-Friction 브랜드 아이덴티티를 살린 '0 안의 체크마크' 스타일의 굵고 선명한 아이콘 디자인(trayTemplate.png)으로 전면 교체했습니다." },
@@ -873,7 +877,7 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.2)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.3)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>

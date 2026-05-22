@@ -17,6 +17,7 @@ ipcMain.on('focus-window', () => {
 });
 
 let mainWindow;
+let quickInputWindow;
 let tray;
 let isQuitting = false;
 
@@ -48,10 +49,38 @@ function createWindow() {
   });
 }
 
-function positionWindowUnderTray() {
-  if (!mainWindow || !tray) return;
+function createQuickInputWindow() {
+  quickInputWindow = new BrowserWindow({
+    width: 440,
+    height: 120,
+    frame: false,
+    transparent: true,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  quickInputWindow.loadURL('http://localhost:3005/quick-input');
+
+  quickInputWindow.on('blur', () => {
+    quickInputWindow.hide();
+  });
+
+  quickInputWindow.on('closed', () => {
+    quickInputWindow = null;
+  });
+}
+
+function positionWindowUnderTray(targetWindow = mainWindow) {
+  if (!targetWindow || !tray) return;
   const trayBounds = tray.getBounds();
-  const windowBounds = mainWindow.getBounds();
+  const windowBounds = targetWindow.getBounds();
   const activeScreen = screen.getDisplayMatching(trayBounds);
   const workArea = activeScreen.workArea;
 
@@ -75,7 +104,7 @@ function positionWindowUnderTray() {
     y = trayBounds.y - windowBounds.height;
   }
 
-  mainWindow.setPosition(x, y, false);
+  targetWindow.setPosition(x, y, false);
 }
 
 function createTray() {
@@ -88,7 +117,7 @@ function createTray() {
       label: '열기',
       click: () => {
         if (mainWindow) {
-          positionWindowUnderTray();
+          positionWindowUnderTray(mainWindow);
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
@@ -101,7 +130,7 @@ function createTray() {
       label: '새 일정 등록',
       click: () => {
         if (mainWindow) {
-          positionWindowUnderTray();
+          positionWindowUnderTray(mainWindow);
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
@@ -114,7 +143,7 @@ function createTray() {
       label: '새 재고 등록',
       click: () => {
         if (mainWindow) {
-          positionWindowUnderTray();
+          positionWindowUnderTray(mainWindow);
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
@@ -127,7 +156,7 @@ function createTray() {
       label: '새 메모 작성',
       click: () => {
         if (mainWindow) {
-          positionWindowUnderTray();
+          positionWindowUnderTray(mainWindow);
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
@@ -146,20 +175,21 @@ function createTray() {
     }
   ]);
 
-  tray.setContextMenu(contextMenu);
-
   tray.on('click', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible() && mainWindow.isFocused()) {
-        mainWindow.hide();
+    if (quickInputWindow) {
+      if (quickInputWindow.isVisible() && quickInputWindow.isFocused()) {
+        quickInputWindow.hide();
       } else {
-        positionWindowUnderTray();
-        if (mainWindow.isMinimized()) mainWindow.restore();
-        mainWindow.show();
-        mainWindow.focus();
-        mainWindow.webContents.send('focus-nlp-input');
+        positionWindowUnderTray(quickInputWindow);
+        quickInputWindow.show();
+        quickInputWindow.focus();
+        quickInputWindow.webContents.send('clear-quick-input');
       }
     }
+  });
+
+  tray.on('right-click', () => {
+    tray.popUpContextMenu(contextMenu);
   });
 }
 
@@ -175,8 +205,51 @@ ipcMain.on('resize-window', (event, { width, height, aspectRatio }) => {
   }
 });
 
+ipcMain.on('quick-nlp-submit', (event, text) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('execute-quick-nlp', text);
+  }
+  if (quickInputWindow) {
+    quickInputWindow.hide();
+  }
+});
+
+ipcMain.on('quick-nlp-close', () => {
+  if (quickInputWindow) {
+    quickInputWindow.hide();
+  }
+});
+
+ipcMain.on('quick-action', (event, action) => {
+  if (action === 'open') {
+    if (mainWindow) {
+      positionWindowUnderTray(mainWindow);
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('focus-nlp-input');
+    }
+  } else if (action === 'quit') {
+    isQuitting = true;
+    app.quit();
+  } else {
+    if (mainWindow) {
+      positionWindowUnderTray(mainWindow);
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('tray-action', action);
+      mainWindow.webContents.send('focus-nlp-input');
+    }
+  }
+  if (quickInputWindow) {
+    quickInputWindow.hide();
+  }
+});
+
 app.on('ready', () => {
   createWindow();
+  createQuickInputWindow();
   createTray();
 });
 

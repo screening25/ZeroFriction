@@ -232,6 +232,8 @@ export default function Home() {
         setMemoForm({ title: '', content: '', pinned: false, color: '' });
         setIsMemoEditing(true);
         setIsMemoModalOpen(true);
+      } else if (action === 'settings') {
+        setActiveTab('settings' as any);
       }
     };
 
@@ -2670,11 +2672,13 @@ export default function Home() {
               
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">날짜<span className="req-star">*</span></span>
+                  <div style={{ display: 'flex', alignItems: 'center', height: '22px' }}>
+                    <span className="form-label">날짜<span className="req-star">*</span></span>
+                  </div>
                   <CustomDatePicker value={editingSchedule.attrs.date || ''} onChange={date => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '22px' }}>
                     <span className="form-label">시간</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', transform: 'scale(0.85)', transformOrigin: 'right center' }}>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>하루 종일</span>

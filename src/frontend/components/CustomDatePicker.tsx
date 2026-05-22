@@ -40,7 +40,7 @@ export default function CustomDatePicker({ value, onChange }: CustomDatePickerPr
       const popWidth = Math.min(280, window.innerWidth - margin * 2);
       const estHeight = 340; // 달력 예상 높이
 
-      let left = rect.left + window.scrollX;
+      let left = rect.left;
       if (left + popWidth > window.innerWidth - margin) {
         left = window.innerWidth - popWidth - margin;
       }
@@ -49,9 +49,9 @@ export default function CustomDatePicker({ value, onChange }: CustomDatePickerPr
       const spaceBelow = window.innerHeight - rect.bottom;
       let top: number;
       if (spaceBelow < estHeight && rect.top > estHeight) {
-        top = rect.top + window.scrollY - estHeight - 6;
+        top = rect.top - estHeight - 6;
       } else {
-        top = rect.bottom + window.scrollY + 6;
+        top = rect.bottom + 6;
       }
 
       setCoords({ top, left, width: popWidth });
@@ -127,7 +127,7 @@ export default function CustomDatePicker({ value, onChange }: CustomDatePickerPr
         <div
           ref={popoverRef}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             zIndex: 99999,

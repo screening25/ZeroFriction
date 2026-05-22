@@ -68,6 +68,7 @@ interface AppContextProps {
   handleSettingsChange: (s: AppSettings) => void;
   showToast: (msg: string) => void;
   handleNlpSubmit: (e: React.KeyboardEvent<HTMLInputElement>) => Promise<void>;
+  executeNlpCommand: (text: string) => Promise<void>;
   handleUpdateSchedule: (id: string, updatedFields: Partial<UniversalRecord>) => void;
   toggleComplete: (e: React.MouseEvent, s: UniversalRecord) => void;
   toggleDone: (e: React.MouseEvent, r: UniversalRecord) => void;
@@ -509,138 +510,141 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * 그 외 enrichedAttrs로 반복(recurrence)·엔티티 링크(linkedIds)를 주입한다.
    * @param e 입력창 keydown 이벤트
    */
-  const handleNlpSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Enter 키 + 공백 아닌 입력 + 비로딩 상태에서만 분석 실행
-    if (e.key === 'Enter' && nlpInput.trim() && !loading) {
-      setLoading(true);
-      try {
-        const parseRes = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ text: nlpInput, apiKey: appSettings.apiKey || undefined }) });
-        const cleanErrorMessage = (rawErr: string) => {
-          if (!rawErr) return 'E-900';
-          const msg = String(rawErr).toLowerCase();
-          if (msg.includes('api_key') || msg.includes('invalid') || msg.includes('key') || msg.includes('400')) {
-            return 'E-100';
-          }
-          if (msg.includes('quota') || msg.includes('limit') || msg.includes('429')) {
-            return 'E-200';
-          }
-          if (msg.includes('network') || msg.includes('fetch') || msg.includes('connect')) {
-            return 'E-300';
-          }
-          return 'E-900';
-        };
-
-        const parsed = await parseRes.json();
-        if (parsed.error) { 
-          showToast(`⚠️ API 연결 실패: ${cleanErrorMessage(parsed.error)}`); 
-          setLoading(false); 
-          return; 
+  const executeNlpCommand = async (text: string) => {
+    if (!text.trim() || loading) return;
+    setLoading(true);
+    try {
+      const parseRes = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ text, apiKey: appSettings.apiKey || undefined }) });
+      const cleanErrorMessage = (rawErr: string) => {
+        if (!rawErr) return 'E-900';
+        const msg = String(rawErr).toLowerCase();
+        if (msg.includes('api_key') || msg.includes('invalid') || msg.includes('key') || msg.includes('400')) {
+          return 'E-100';
         }
-
-        // API Key diagnostic feedback
-        const isGemini = parsed._parser === 'gemini';
-        if (!isGemini && parsed._error && parsed._error !== 'API Key가 설정되어 있지 않습니다.') {
-          // Display the cleaned error E-code!
-          showToast(`⚠️ AI 연동 실패: ${cleanErrorMessage(parsed._error)} (로컬 처리됨)`);
-        } else if (isGemini) {
-          showToast('✨ AI 분석 완료');
-        } else {
-          showToast('로컬 분석 및 등록 완료');
+        if (msg.includes('quota') || msg.includes('limit') || msg.includes('429')) {
+          return 'E-200';
         }
-        
-        const action = parsed.a || 'C';
-        const type = parsed.t || 'event';
-        const category = parsed.c || '일반';
-        const val = parsed.v || '';
-        const attr = parsed.attr || {};
-        const kw = parsed.k || '';
-        const rec: 'none' | 'daily' | 'weekly' | 'monthly' = parsed.rec || 'none';
-        const linkKeywords: string[] = Array.isArray(parsed.link) ? parsed.link : [];
+        if (msg.includes('network') || msg.includes('fetch') || msg.includes('connect')) {
+          return 'E-300';
+        }
+        return 'E-900';
+      };
 
-        // 엔티티 링크 — 기존 records에서 link 키워드와 매칭되는 ID 수집
-        const linkedIds: string[] = [];
-        if (linkKeywords.length > 0) {
-          linkKeywords.forEach(kw2 => {
-            if (!kw2) return;
-            const lowered = String(kw2).toLowerCase();
-            records.forEach(r => {
-              const hay = `${r.title} ${r.category} ${r.attrs?.content || ''} ${r.attrs?.code || ''} ${r.attrs?.memo || ''}`.toLowerCase();
-              if (hay.includes(lowered) && !linkedIds.includes(r.id)) {
-                linkedIds.push(r.id);
-              }
-            });
+      const parsed = await parseRes.json();
+      if (parsed.error) { 
+        showToast(`⚠️ API 연결 실패: ${cleanErrorMessage(parsed.error)}`); 
+        setLoading(false); 
+        return; 
+      }
+
+      // API Key diagnostic feedback
+      const isGemini = parsed._parser === 'gemini';
+      if (!isGemini && parsed._error && parsed._error !== 'API Key가 설정되어 있지 않습니다.') {
+        // Display the cleaned error E-code!
+        showToast(`⚠️ AI 연동 실패: ${cleanErrorMessage(parsed._error)} (로컬 처리됨)`);
+      } else if (isGemini) {
+        showToast('✨ AI 분석 완료');
+      } else {
+        showToast('로컬 분석 및 등록 완료');
+      }
+      
+      const action = parsed.a || 'C';
+      const type = parsed.t || 'event';
+      const category = parsed.c || '일반';
+      const val = parsed.v || '';
+      const attr = parsed.attr || {};
+      const kw = parsed.k || '';
+      const rec: 'none' | 'daily' | 'weekly' | 'monthly' = parsed.rec || 'none';
+      const linkKeywords: string[] = Array.isArray(parsed.link) ? parsed.link : [];
+
+      // 엔티티 링크 — 기존 records에서 link 키워드와 매칭되는 ID 수집
+      const linkedIds: string[] = [];
+      if (linkKeywords.length > 0) {
+        linkKeywords.forEach(kw2 => {
+          if (!kw2) return;
+          const lowered = String(kw2).toLowerCase();
+          records.forEach(r => {
+            const hay = `${r.title} ${r.category} ${r.attrs?.content || ''} ${r.attrs?.code || ''} ${r.attrs?.memo || ''}`.toLowerCase();
+            if (hay.includes(lowered) && !linkedIds.includes(r.id)) {
+              linkedIds.push(r.id);
+            }
           });
+        });
+      }
+
+      // 자연어 질의 (READ) — DB 변경 없이 검색 뷰만 활성화
+      if (action === 'R') {
+        setSearchResult(kw || val || '', type || null);
+        showToast(`'${kw || val || type || '전체'}' 검색 결과를 표시합니다 (Esc로 닫기)`);
+        setLoading(false);
+        return;
+      }
+
+      // 새 레코드에 recurrence / linkedIds 주입
+      const enrichedAttrs = {
+        ...attr,
+        ...(rec !== 'none' && type === 'event' ? { recurrence: rec } : {}),
+        ...(linkedIds.length > 0 ? { linkedIds } : {})
+      };
+
+      if (action === 'C') {
+        const result = addRecord({ title: val, type, category, attrs: enrichedAttrs });
+        reloadRecords();
+        
+        if (type === 'event') {
+          logActivity('ADD_SCHED', '일정 등록', val);
+        } else if (type === 'memo') {
+          logActivity('ADD_MEMO', '변동 사항 등록', val);
+        } else if (type === 'asset') {
+          const opLabel = attr.flow === 'OUT' ? '출고' : '입고';
+          const netQty = Number(result.attrs.qty) || 0;
+          const lowStockNote = netQty < 0 ? ' ⚠️ 재고 부족' : '';
+          logActivity('ADD_INV', `재고 ${opLabel}`, `${result.title} ${attr.qty}개${lowStockNote}`);
         }
-
-        // 자연어 질의 (READ) — DB 변경 없이 검색 뷰만 활성화
-        if (action === 'R') {
-          setSearchResult(kw || val || '', type || null);
-          showToast(`'${kw || val || type || '전체'}' 검색 결과를 표시합니다 (Esc로 닫기)`);
-          setNlpInput('');
-          setLoading(false);
-          return;
-        }
-
-        // 새 레코드에 recurrence / linkedIds 주입
-        const enrichedAttrs = {
-          ...attr,
-          ...(rec !== 'none' && type === 'event' ? { recurrence: rec } : {}),
-          ...(linkedIds.length > 0 ? { linkedIds } : {})
-        };
-
-        if (action === 'C') {
-          const result = addRecord({ title: val, type, category, attrs: enrichedAttrs });
+      } 
+      else if (action === 'U') {
+        const target = records.find(r => r.type === type && (kw && r.title.includes(kw)));
+        if (target) {
+          updateRecord(target.id, { title: val || target.title, category, attrs: enrichedAttrs });
           reloadRecords();
           
           if (type === 'event') {
-            logActivity('ADD_SCHED', '일정 등록', val);
+            logActivity('UPDATE_SCHED', '일정 수정', val || target.title);
           } else if (type === 'memo') {
-            logActivity('ADD_MEMO', '변동 사항 등록', val);
+            logActivity('UPDATE_MEMO', '변동 사항 수정', val || target.title);
           } else if (type === 'asset') {
-            const opLabel = attr.flow === 'OUT' ? '출고' : '입고';
-            const netQty = Number(result.attrs.qty) || 0;
-            const lowStockNote = netQty < 0 ? ' ⚠️ 재고 부족' : '';
-            logActivity('ADD_INV', `재고 ${opLabel}`, `${result.title} ${attr.qty}개${lowStockNote}`);
+            logActivity('UPDATE_INV', '재고 수정', val || target.title);
           }
-        } 
-        else if (action === 'U') {
-          const target = records.find(r => r.type === type && (kw && r.title.includes(kw)));
-          if (target) {
-            updateRecord(target.id, { title: val || target.title, category, attrs: enrichedAttrs });
-            reloadRecords();
-            
-            if (type === 'event') {
-              logActivity('UPDATE_SCHED', '일정 수정', val || target.title);
-            } else if (type === 'memo') {
-              logActivity('UPDATE_MEMO', '변동 사항 수정', val || target.title);
-            } else if (type === 'asset') {
-              logActivity('UPDATE_INV', '재고 수정', val || target.title);
-            }
-          } else {
-            showToast('수정 대상을 찾을 수 없습니다.');
-          }
-        } 
-        else if (action === 'D') {
-          const target = records.find(r => r.type === type && (kw && r.title.includes(kw)));
-          if (target) {
-            deleteRecord(target.id);
-            reloadRecords();
-            
-            if (type === 'event') {
-              logActivity('DEL_SCHED', '일정 삭제', target.title);
-            } else if (type === 'memo') {
-              logActivity('DEL_MEMO', '변동 사항 삭제', target.title);
-            } else if (type === 'asset') {
-              logActivity('DEL_INV', '재고 삭제', target.title);
-            }
-          } else {
-            showToast('삭제 대상을 찾을 수 없습니다.');
-          }
+        } else {
+          showToast('수정 대상을 찾을 수 없습니다.');
         }
-        
-        setNlpInput('');
-      } catch (err) { showToast('오류 발생'); }
-      setLoading(false);
+      } 
+      else if (action === 'D') {
+        const target = records.find(r => r.type === type && (kw && r.title.includes(kw)));
+        if (target) {
+          deleteRecord(target.id);
+          reloadRecords();
+          
+          if (type === 'event') {
+            logActivity('DEL_SCHED', '일정 삭제', target.title);
+          } else if (type === 'memo') {
+            logActivity('DEL_MEMO', '변동 사항 삭제', target.title);
+          } else if (type === 'asset') {
+            logActivity('DEL_INV', '재고 삭제', target.title);
+          }
+        } else {
+          showToast('삭제 대상을 찾을 수 없습니다.');
+        }
+      }
+    } catch (err) { showToast('오류 발생'); }
+    setLoading(false);
+  };
+
+  const handleNlpSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter 키 + 공백 아닌 입력 + 비로딩 상태에서만 분석 실행
+    if (e.key === 'Enter' && nlpInput.trim() && !loading) {
+      await executeNlpCommand(nlpInput);
+      setNlpInput('');
     }
   };
 
@@ -1129,7 +1133,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       editingSchedule, setEditingSchedule, editingInventory, setEditingInventory, handleUpdateInventory,
       isMemoModalOpen, setIsMemoModalOpen, memoPage, setMemoPage, memoForm, setMemoForm,
       activeTab, setActiveTab, activeCategory, setActiveCategory,
-      reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, handleUpdateSchedule,
+      reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, executeNlpCommand, handleUpdateSchedule,
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,

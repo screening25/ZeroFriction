@@ -11,7 +11,7 @@ interface CustomTimePickerProps {
 export default function CustomTimePicker({ value, onChange }: CustomTimePickerProps) {
   const { theme } = useApp();
   const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
@@ -34,63 +34,62 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
   const hourStr = String(hour).padStart(2, '0');
   const minuteStr = String(minute).padStart(2, '0');
 
-  // Local state for typed time
-  const [inputValue, setInputValue] = useState(value || "12:00");
+  const [tempHour, setTempHour] = useState(hourStr);
+  const [tempMinute, setTempMinute] = useState(minuteStr);
 
   useEffect(() => {
-    setInputValue(value || "12:00");
-  }, [value]);
+    setTempHour(hourStr);
+  }, [hourStr]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    const filtered = val.replace(/[^0-9:]/g, '');
-    setInputValue(filtered);
+  useEffect(() => {
+    setTempMinute(minuteStr);
+  }, [minuteStr]);
 
-    // If it's a perfect match (HH:MM), propagate onChange immediately
-    if (/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(filtered)) {
-      onChange(filtered);
+  const handleTempHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+    setTempHour(val);
+    
+    // Proactive update if it's a valid 2-digit hour
+    const h = parseInt(val, 10);
+    if (!isNaN(h) && h >= 0 && h <= 23 && val.length === 2) {
+      handleSelect(h, minute);
     }
   };
 
-  const handleInputBlur = () => {
-    let timeStr = inputValue.trim();
-    if (!timeStr) {
-      setInputValue(value);
-      return;
-    }
-
-    if (/^\d{4}$/.test(timeStr)) {
-      timeStr = timeStr.slice(0, 2) + ':' + timeStr.slice(2);
-    } else if (/^\d{3}$/.test(timeStr)) {
-      timeStr = '0' + timeStr.slice(0, 1) + ':' + timeStr.slice(1);
-    } else if (/^\d{1,2}$/.test(timeStr)) {
-      const h = parseInt(timeStr, 10);
-      if (h >= 0 && h <= 23) {
-        timeStr = String(h).padStart(2, '0') + ':00';
-      }
-    }
-
-    const parts = timeStr.split(':');
-    if (parts.length === 2) {
-      const h = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      if (!isNaN(h) && h >= 0 && h <= 23 && !isNaN(m) && m >= 0 && m <= 59) {
-        const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        setInputValue(formatted);
-        onChange(formatted);
-        return;
-      }
-    }
-
-    setInputValue(value);
+  const handleTempHourBlur = () => {
+    let h = parseInt(tempHour, 10);
+    if (isNaN(h)) h = 0;
+    const clamped = Math.max(0, Math.min(23, h));
+    const formatted = String(clamped).padStart(2, '0');
+    setTempHour(formatted);
+    handleSelect(clamped, minute);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTempMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+    setTempMinute(val);
+    
+    // Proactive update if it's a valid 2-digit minute
+    const m = parseInt(val, 10);
+    if (!isNaN(m) && m >= 0 && m <= 59 && val.length === 2) {
+      handleSelect(hour, m);
+    }
+  };
+
+  const handleTempMinuteBlur = () => {
+    let m = parseInt(tempMinute, 10);
+    if (isNaN(m)) m = 0;
+    const clamped = Math.max(0, Math.min(59, m));
+    const formatted = String(clamped).padStart(2, '0');
+    setTempMinute(formatted);
+    handleSelect(hour, clamped);
+  };
+
+  const handleTempInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleInputBlur();
+      (e.target as HTMLInputElement).blur();
       setIsOpen(false);
-      triggerRef.current?.blur();
     }
   };
 
@@ -103,7 +102,7 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
       const estHeight = 140; // compact height
 
       // Center aligns relative to the button trigger
-      let left = rect.left + window.scrollX + (rect.width - popWidth) / 2;
+      let left = rect.left + (rect.width - popWidth) / 2;
       if (left + popWidth > window.innerWidth - margin) {
         left = window.innerWidth - popWidth - margin;
       }
@@ -113,9 +112,9 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
       const spaceBelow = window.innerHeight - rect.bottom;
       let top: number;
       if (spaceBelow < estHeight && rect.top > estHeight) {
-        top = rect.top + window.scrollY - estHeight - 6;
+        top = rect.top - estHeight - 6;
       } else {
-        top = rect.bottom + window.scrollY + 6;
+        top = rect.bottom + 6;
       }
 
       setCoords({ top, left, width: popWidth });
@@ -197,47 +196,34 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
         }
       `}</style>
 
-      <div style={{ position: 'relative', width: '100%' }}>
-        <Clock 
-          size={13} 
-          style={{ 
-            position: 'absolute', 
-            left: '0.75rem', 
-            top: '50%', 
-            transform: 'translateY(-50%)', 
-            color: 'var(--accent)', 
-            zIndex: 2, 
-            cursor: 'pointer' 
-          }} 
-          onClick={() => setIsOpen(!isOpen)}
-        />
-        <input
-          ref={triggerRef}
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setIsOpen(true)}
-          placeholder="HH:MM"
-          className="input-sm"
-          style={{
-            display: 'block',
-            boxSizing: 'border-box',
-            width: '100%',
-            height: '38px',
-            padding: '0 0.75rem 0 2rem',
-            fontSize: '0.85rem',
-            background: 'var(--input-bg)',
-            border: '1px solid var(--panel-border)',
-            borderRadius: '10px',
-            color: 'var(--text-primary)',
-            fontWeight: 500,
-            cursor: 'text',
-            outline: 'none',
-          }}
-        />
-      </div>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="input-sm"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          textAlign: 'left',
+          cursor: 'pointer',
+          height: '38px',
+          padding: '0 0.75rem',
+          fontSize: '0.85rem',
+          background: 'var(--input-bg)',
+          border: isOpen ? '1px solid var(--accent)' : '1px solid var(--panel-border)',
+          boxShadow: isOpen ? '0 0 0 3px var(--accent-glow)' : 'none',
+          borderRadius: '10px',
+          color: 'var(--text-primary)',
+          fontWeight: 500
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Clock size={13} style={{ color: 'var(--accent)' }} />
+          <span>{value || '12:00'}</span>
+        </span>
+      </button>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
         <div
@@ -246,7 +232,7 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             zIndex: 99999,
@@ -333,19 +319,36 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
                 style={{
                   width: '46px',
                   height: '36px',
-                  fontSize: '1.25rem',
-                  fontWeight: '700',
-                  color: 'var(--text-primary)',
                   backgroundColor: boxBg,
                   border: `1px solid ${selectionBorder}`,
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  userSelect: 'none',
                 }}
               >
-                {hourStr}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={tempHour}
+                  onChange={handleTempHourChange}
+                  onBlur={handleTempHourBlur}
+                  onKeyDown={handleTempInputKeyDown}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    padding: 0
+                  }}
+                />
               </div>
               <button
                 type="button"
@@ -403,19 +406,36 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
                 style={{
                   width: '46px',
                   height: '36px',
-                  fontSize: '1.25rem',
-                  fontWeight: '700',
-                  color: 'var(--text-primary)',
                   backgroundColor: boxBg,
                   border: `1px solid ${selectionBorder}`,
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  userSelect: 'none',
                 }}
               >
-                {minuteStr}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={tempMinute}
+                  onChange={handleTempMinuteChange}
+                  onBlur={handleTempMinuteBlur}
+                  onKeyDown={handleTempInputKeyDown}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    padding: 0
+                  }}
+                />
               </div>
               <button
                 type="button"
