@@ -121,6 +121,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, [mounted]);
 
+  // Listen to IPC 'focus-nlp-input' events and focus/select the input
+  useEffect(() => {
+    if (!mounted) return;
+    const ipc = (window as any).ipcRenderer;
+    if (ipc) {
+      const handler = () => {
+        const el = document.querySelector<HTMLInputElement>('.command-input');
+        if (el) {
+          el.focus();
+          el.select();
+        }
+      };
+      ipc.on('focus-nlp-input', handler);
+      return () => {
+        ipc.removeListener('focus-nlp-input', handler);
+      };
+    }
+  }, [mounted]);
+
   // 전역 앱 상태/액션 (실제로 이 레이아웃에서 사용하는 값만 구독)
   const {
     theme, toggleTheme,

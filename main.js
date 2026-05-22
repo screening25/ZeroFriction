@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, screen } = require('electron');
 const path = require('path');
 
 ipcMain.on('send-notification', (event, { title, body }) => {
@@ -48,6 +48,36 @@ function createWindow() {
   });
 }
 
+function positionWindowUnderTray() {
+  if (!mainWindow || !tray) return;
+  const trayBounds = tray.getBounds();
+  const windowBounds = mainWindow.getBounds();
+  const activeScreen = screen.getDisplayMatching(trayBounds);
+  const workArea = activeScreen.workArea;
+
+  // Align window center with tray center horizontally
+  let x = Math.round(trayBounds.x + (trayBounds.width / 2) - (windowBounds.width / 2));
+  // Align window top with tray bottom vertically
+  let y = Math.round(trayBounds.y + trayBounds.height);
+
+  // Clamp horizontal coordinates to work area to prevent offscreen rendering
+  if (x < workArea.x) {
+    x = workArea.x;
+  } else if (x + windowBounds.width > workArea.x + workArea.width) {
+    x = workArea.x + workArea.width - windowBounds.width;
+  }
+
+  // Clamp vertical coordinates
+  if (y < workArea.y) {
+    y = workArea.y;
+  } else if (y + windowBounds.height > workArea.y + workArea.height) {
+    // If tray is at the bottom (e.g. taskbar at the bottom of the screen), show window above tray
+    y = trayBounds.y - windowBounds.height;
+  }
+
+  mainWindow.setPosition(x, y, false);
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, 'public', 'trayTemplate.png');
   tray = new Tray(iconPath);
@@ -58,9 +88,11 @@ function createTray() {
       label: '열기',
       click: () => {
         if (mainWindow) {
+          positionWindowUnderTray();
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
+          mainWindow.webContents.send('focus-nlp-input');
         }
       }
     },
@@ -69,10 +101,12 @@ function createTray() {
       label: '새 일정 등록',
       click: () => {
         if (mainWindow) {
+          positionWindowUnderTray();
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
           mainWindow.webContents.send('tray-action', 'new-schedule');
+          mainWindow.webContents.send('focus-nlp-input');
         }
       }
     },
@@ -80,10 +114,12 @@ function createTray() {
       label: '새 재고 등록',
       click: () => {
         if (mainWindow) {
+          positionWindowUnderTray();
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
           mainWindow.webContents.send('tray-action', 'new-inventory');
+          mainWindow.webContents.send('focus-nlp-input');
         }
       }
     },
@@ -91,10 +127,12 @@ function createTray() {
       label: '새 메모 작성',
       click: () => {
         if (mainWindow) {
+          positionWindowUnderTray();
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
           mainWindow.webContents.send('tray-action', 'new-memo');
+          mainWindow.webContents.send('focus-nlp-input');
         }
       }
     },
@@ -112,12 +150,14 @@ function createTray() {
 
   tray.on('click', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
+      if (mainWindow.isVisible() && mainWindow.isFocused()) {
         mainWindow.hide();
       } else {
+        positionWindowUnderTray();
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.show();
         mainWindow.focus();
+        mainWindow.webContents.send('focus-nlp-input');
       }
     }
   });
