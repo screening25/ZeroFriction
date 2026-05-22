@@ -78,6 +78,17 @@ interface AppContextProps {
   deleteInventoryItem: (id: string) => void;
   exportToCsv: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
   printToPdf: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
+  activeNotification: {
+    id: string;
+    title: string;
+    body: string;
+    time: string;
+    date: string;
+  } | null;
+  setActiveNotification: (n: { id: string; title: string; body: string; time: string; date: string } | null) => void;
+  handleDismissNotification: () => void;
+  handleSnoozeNotification: (scheduleId: string) => void;
+  handleCompleteNotificationSchedule: (scheduleId: string) => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -271,6 +282,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [memoPage, setMemoPage] = useState(0);
   const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string}>({ title: '', content: '', pinned: false, color: '' });
   const [notified, setNotified] = useState<Set<string>>(new Set());
+  const [activeNotification, setActiveNotification] = useState<{
+    id: string;
+    title: string;
+    body: string;
+    time: string;
+    date: string;
+  } | null>(null);
+  const [snoozedSchedules, setSnoozedSchedules] = useState<Record<string, number>>({});
+
+  const handleDismissNotification = () => {
+    setActiveNotification(null);
+  };
+
+  const handleSnoozeNotification = (scheduleId: string) => {
+    setSnoozedSchedules(prev => ({
+      ...prev,
+      [scheduleId]: Date.now() + 10 * 60 * 1000
+    }));
+    setNotified(prev => {
+      const next = new Set(prev);
+      next.delete(scheduleId);
+      return next;
+    });
+    const schedule = records.find(r => r.id === scheduleId);
+    showToast(`⏰ '${schedule?.title || '일정'}' 알림이 10분 뒤로 미뤄졌습니다.`);
+    setActiveNotification(null);
+  };
+
+  const handleCompleteNotificationSchedule = (scheduleId: string) => {
+    const schedule = records.find(r => r.id === scheduleId);
+    if (schedule) {
+      // completed 플래그는 최상위가 아니라 attrs 내부에 위치한다 (UniversalRecord 구조)
+      handleUpdateSchedule(scheduleId, { attrs: { ...schedule.attrs, completed: true } });
+      logActivity('DONE_SCHED', schedule.title, schedule.title);
+      showToast(`✓ 일정 '${schedule.title}' 완료 처리됨`);
+    }
+    setActiveNotification(null);
+  };
+
   const [activeTab, setActiveTab] = useState<'all' | 'calendar' | 'inventory' | 'category' | 'settings'>('all');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
@@ -393,41 +443,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const offset = s.attrs.notifyOffset ?? appSettings.defaultNotifyOffset ?? 0;
           const triggerTime = new Date(scheduleTime.getTime() - offset * 60000);
           const diffSeconds = differenceInSeconds(now, triggerTime);
-          if (offset >= 0 && diffSeconds >= 0 && diffSeconds <= 300 && !notified.has(s.id)) {
+
+          // Check if snoozed
+          const snoozeUntil = snoozedSchedules[s.id];
+          const isSnoozed = snoozeUntil && Date.now() < snoozeUntil;
+
+          if (offset >= 0 && diffSeconds >= 0 && diffSeconds <= 300 && !isSnoozed && !notified.has(s.id)) {
             if (appSettings.enableNotifications !== false) {
               const title = '일정 알림';
-              const body = `${s.title} (${s.attrs.time})`;
+              const body = `${s.title}`;
+              const fullBody = `${s.title} (${s.attrs.time})`;
 
-              if (appSettings.notificationType === 'browser') {
-                if (typeof window !== 'undefined') {
-                  if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
-                    (window as any).ipcRenderer.send('send-notification', { title, body });
-                  } else if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification(title, { body });
-                  } else if ('Notification' in window && Notification.permission === 'denied') {
-                    // Do not fall back to backend notification if permission is explicitly denied in browser!
-                  } else {
-                    fetch('/api/notify', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        title,
-                        body,
-                        type: 'browser'
-                      })
-                    });
-                  }
+              const isElectron = (typeof window !== 'undefined') && (
+                (window as any).__IS_ELECTRON__ ||
+                (typeof (window as any).process !== 'undefined' && (window as any).process.versions && !!(window as any).process.versions.electron) ||
+                (!!window.navigator && !!window.navigator.userAgent && window.navigator.userAgent.toLowerCase().indexOf(' electron/') > -1)
+              );
+
+              // ① 인앱 글래스모피즘 카드는 알림 타입과 무관하게 항상 표시 — 제시각 알림의 기본 UI
+              setActiveNotification({
+                id: s.id,
+                title,
+                body,
+                time: s.attrs.time || '',
+                date: s.attrs.date || ''
+              });
+
+              // ② 데스크톱(Electron) 앱이면 창을 앞으로 가져와 카드가 확실히 보이도록 한다
+              if (isElectron && (window as any).ipcRenderer) {
+                (window as any).ipcRenderer.send('focus-window');
+              }
+
+              // ③ 'browser'(OS 배너) 설정이면 OS 레벨 배너도 함께 발송 (앱이 백그라운드일 때 대비)
+              if (appSettings.notificationType === 'browser' && typeof window !== 'undefined') {
+                if (isElectron && (window as any).ipcRenderer) {
+                  (window as any).ipcRenderer.send('send-notification', { title, body: fullBody });
+                } else if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification(title, { body: fullBody });
+                } else {
+                  fetch('/api/notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, body: fullBody, type: 'browser' })
+                  }).catch(() => {});
                 }
-              } else {
-                fetch('/api/notify', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    title,
-                    body,
-                    type: 'system'
-                  })
-                });
               }
             }
             newNotified.add(s.id);
@@ -441,7 +500,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     checkNotifications(); 
     const interval = setInterval(() => checkNotifications(), 10000); 
     return () => clearInterval(interval);
-  }, [records, notified]);
+  }, [records, notified, snoozedSchedules, appSettings]);
 
   /**
    * 커맨드 바의 자연어 입력을 처리한다 (Enter 입력 시 동작).
@@ -1074,7 +1133,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
-      showCompleted, setShowCompleted, exportToCsv, printToPdf
+      showCompleted, setShowCompleted, exportToCsv, printToPdf,
+      activeNotification, setActiveNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
     }}>
       {children}
     </AppContext.Provider>

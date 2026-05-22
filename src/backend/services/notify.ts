@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { NextResponse } from 'next/server';
 
 /**
@@ -9,13 +9,23 @@ import { NextResponse } from 'next/server';
 export async function notifyHandler(request: Request): Promise<NextResponse> {
   try {
     const { title, body, type } = await request.json();
-    const safeTitle = String(title).replace(/"/g, '\\"');
-    const safeBody = String(body).replace(/"/g, '\\"');
     
     if (type === 'browser') {
-      exec(`osascript -e 'display notification "${safeBody}" with title "${safeTitle}"'`);
+      execFile('osascript', [
+        '-e', 'on run argv',
+        '-e', 'display notification (item 2 of argv) with title (item 1 of argv)',
+        '-e', 'end run',
+        String(title),
+        String(body)
+      ]);
     } else {
-      exec(`osascript -e 'display alert "${safeTitle}" message "${safeBody}" giving up after 10'`);
+      execFile('osascript', [
+        '-e', 'on run argv',
+        '-e', 'display alert (item 1 of argv) message (item 2 of argv) giving up after 10',
+        '-e', 'end run',
+        String(title),
+        String(body)
+      ]);
     }
     
     return NextResponse.json({ success: true });

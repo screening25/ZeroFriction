@@ -8,6 +8,13 @@ ipcMain.on('send-notification', (event, { title, body }) => {
   }).show();
 });
 
+ipcMain.on('focus-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 let mainWindow;
 
 function createWindow() {

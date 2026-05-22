@@ -192,6 +192,51 @@ function CustomSelectCompact({ value, options, onChange }: CustomSelectCompactPr
  * 사용 가이드, AI 연동, 디스플레이/콘텐츠/알림 설정, 데이터 관리(백업·CSV·휴지통·초기화)를 제공한다.
  * 설정 변경은 updateSingleSetting을 통해 즉시 반영·영속화된다.
  */
+type VersionLog = { version: string; date: string; latest?: boolean; items: { b: string; t: string }[] };
+
+/** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
+const UPDATES_PER_PAGE = 2;
+const VERSION_LOGS: VersionLog[] = [
+  { version: "v0.5.1", date: "2026-05-22", latest: true, items: [
+    { b: "알림 제시각 표시 보장", t: ": 알림 타입·권한 상태와 무관하게 일정 시각이 되면 인앱 글래스모피즘 알림 카드가 항상 표시되도록 발송 로직을 통합했습니다." },
+    { b: "테스트 알림 미리보기 수정", t: ": '데스크톱 알림창' 설정에서 '테스트 실행' 시 실제와 동일한 인앱 알림 카드가 즉시 표시되도록 변경했습니다." },
+    { b: "중복 OS 다이얼로그 제거", t: ": '데스크톱 알림창' 타입에서 별도의 osascript 경고창을 띄우지 않고 인앱 카드로 일원화했습니다." },
+  ] },
+  { version: "v0.5.0", date: "2026-05-22", items: [
+    { b: "커스텀 인앱 알람 팝업", t: ": 일정 알림 시 화면 상단 중앙에 글래스모피즘 알림 카드를 슬라이드 애니메이션으로 표시하고, '완료' 및 '10분 후 알림(스누즈)' 동작을 제공합니다." },
+    { b: "Electron 알림 IPC 보강", t: ": 알람 발생 시 데스크톱 창을 자동으로 복원·포커스하도록 'focus-window' IPC 바인딩을 추가했습니다." },
+    { b: "macOS 알림 안정화", t: ": osascript 호출을 문자열 보간 대신 인자(argv) 기반 실행으로 변경해 따옴표/이스케이프 오류를 방지했습니다." },
+    { b: "업데이트 정보 페이지네이션", t: ": 설정의 업데이트 내역을 페이지 단위(2개씩)로 나눠 '이전/다음'으로 탐색할 수 있도록 개선했습니다." },
+  ] },
+  { version: "v0.4.4", date: "2026-05-22", items: [
+    { b: "일정/재고/메모 데이터 엑셀 및 PDF 내보내기 지원", t: ": 각 페이지(대시보드 일정/메모/재고 목록, 캘린더 페이지, 재고 페이지) 상단에 엑셀(CSV) 및 PDF 다운로드 버튼을 추가하였으며, 개별 메모 상세 보기 모달에서도 해당 메모만 즉시 엑셀/PDF로 내보낼 수 있도록 개선했습니다." },
+    { b: "Excel 한글 깨짐 방지", t: ": UTF-8 BOM을 자동으로 추가하여 다운로드한 CSV 파일을 엑셀에서 열 때 한글이 깨지지 않고 올바르게 출력되도록 구현했습니다." },
+    { b: "인쇄 전용 스타일 및 마크다운 렌더링 지원", t: ": PDF 저장 또는 인쇄 시 깔끔하게 스타일링된 출력 전용 문서를 동적으로 생성하며, 메모 내 표·리스트·코드 블록 등의 마크다운 서식을 원본 레이아웃 그대로 유지하여 인쇄합니다." },
+    { b: "엑셀 내보내기 버튼 표기·크기 개선", t: ": 버튼 텍스트를 'Excel'로 변경하고, 화면이 줄어들어도 버튼 크기가 변형되지 않도록 축소 방지 스타일(flexShrink)을 적용했습니다." },
+    { b: "반응형 레이아웃 세부 조절 및 축소 방지", t: ": 900px, 680px, 480px 단계별로 버튼 라벨·탭 텍스트를 숨기고 아이콘만 노출하며, 주요 카드들이 찌그러지지 않도록 레이아웃 고정 스타일을 적용했습니다." },
+    { b: "일정/재고 서브페이지 페이지네이션 탑재", t: ": 캘린더 당일 일정 목록 및 재고 서브페이지에 페이지네이션을 구현해 데이터가 많아도 모바일 화면을 넘치지 않게 개선했습니다." },
+  ] },
+  { version: "v0.4.3", date: "2026-05-22", items: [
+    { b: "일정 하루 종일 옵션 지원", t: ": 일정 생성/편집 시 '하루 종일' 토글을 지원하고, 활성화 시 시간 대신 '하루 종일' 배지를 노출하며 목록 최상단에 자동 정렬합니다." },
+    { b: "완료 일정 달력 표시 유지", t: ": 일정이 완료되어도 달력 셀 하단의 표시용 점들이 사라지지 않도록 보완했습니다." },
+    { b: "메모 마크다운 표·코드 블록 확장", t: ": 메모 보기창에서 마크다운 테이블(정렬 지원) 및 코드 블록이 올바르게 렌더링되도록 확장했습니다." },
+  ] },
+  { version: "v0.4.2", date: "2026-05-22", items: [
+    { b: "시간 선택기 미니멀화", t: ": 복잡한 숫자 그리드를 제거하고 상/하 화살표 스텝 방식으로 시간 선택 UI를 간소화했습니다." },
+    { b: "시간 입력 이벤트 전파 방지", t: ": 시간 선택기를 클릭해도 부모 등록/수정창이 닫히지 않도록 이벤트 차단을 강화했습니다." },
+    { b: "터미널 중복 기동 수정", t: ": 데스크톱 실행기 기동 시 열리던 빈 터미널 창이 노출되지 않도록 자동 실행 스크립트를 무소음 패치했습니다." },
+  ] },
+  { version: "v0.4.1", date: "2026-05-21", items: [
+    { b: "재고 삭제 UX 개선", t: ": 재고 상세 모달·리스트 삭제 시 모달 닫힘 연동 및 클릭 버블링 문제를 수정했습니다." },
+    { b: "기본 알림 시간 변경", t: ": 일정 등록 시 기본 알림을 10분 전에서 정각(0분)으로 일원화했습니다." },
+  ] },
+  { version: "v0.4.0", date: "2026-05-21", items: [
+    { b: "메모 읽기 전용 뷰/수정 모드 분리", t: ": 메모 카드를 클릭하면 읽기 모드로 열리고, 우측 상단 '수정'으로 편집 모드로 전환합니다." },
+    { b: "메모 리스트 디자인 통일", t: ": 메모 카드 높이를 150px로 통일하고 넘치는 내용을 보기 좋게 자릅니다." },
+    { b: "입력 폼 컴팩트화 및 안내문구 최적화", t: "." },
+  ] },
+];
+
 export default function SettingsSection() {
   const {
     theme,
@@ -205,7 +250,8 @@ export default function SettingsSection() {
     permanentDelete,
     emptyArchive,
     clearActivities,
-    exportToCsv
+    exportToCsv,
+    setActiveNotification
   } = useApp();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -215,6 +261,7 @@ export default function SettingsSection() {
   const [trashSearchQuery, setTrashSearchQuery] = useState('');
   const [trashFilterType, setTrashFilterType] = useState<'all' | 'event' | 'asset' | 'memo'>('all');
   const [expandedTrashId, setExpandedTrashId] = useState<string | null>(null);
+  const [updatePage, setUpdatePage] = useState(0);
 
   // Electron 창 리사이즈 비교용 — 직전 deviceSize 값을 추적
   const prevDeviceSizeRef = useRef(appSettings.deviceSize);
@@ -679,45 +726,39 @@ export default function SettingsSection() {
                 }
 
                 try {
-                  const title = 'Zero-Friction 알림 테스트';
-                  const body = localSettings.notificationType === 'browser'
-                    ? 'OS 표준 슬라이드 배너 알림이 정상 작동 중입니다!'
-                    : '시스템 다이얼로그 경고창이 정상 작동 중입니다!';
+                  const now = new Date();
+                  const isBrowser = localSettings.notificationType === 'browser';
 
-                  if (localSettings.notificationType === 'browser') {
-                    if (typeof window !== 'undefined') {
-                      if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
-                        (window as any).ipcRenderer.send('send-notification', { title, body });
-                        showToast('테스트 배너 알림을 발송했습니다.');
-                        return;
-                      } else if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification(title, { body });
-                        showToast('테스트 배너 알림을 발송했습니다.');
-                        return;
-                      } else if ('Notification' in window && Notification.permission === 'denied') {
-                        showToast('시스템 알림 권한이 거부되어 알림을 발송할 수 없습니다.');
-                        return;
-                      }
+                  if (isBrowser) {
+                    // OS 배너 알림 테스트 (기존 경로 유지)
+                    const title = 'Zero-Friction 알림 테스트';
+                    const body = 'OS 표준 슬라이드 배너 알림이 정상 작동 중입니다!';
+                    if (typeof window !== 'undefined' && (window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
+                      (window as any).ipcRenderer.send('send-notification', { title, body });
+                      showToast('테스트 배너 알림을 발송했습니다.');
+                    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                      new Notification(title, { body });
+                      showToast('테스트 배너 알림을 발송했습니다.');
+                    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+                      showToast('시스템 알림 권한이 거부되어 알림을 발송할 수 없습니다.');
+                    } else {
+                      const res = await fetch('/api/notify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, body, type: 'browser' })
+                      });
+                      showToast(res.ok ? '테스트 배너 알림이 발송되었습니다.' : '알림 발송에 실패했습니다.');
                     }
-                  }
-
-                  // Web/Local API fallback
-                  const res = await fetch('/api/notify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title,
-                      body,
-                      type: localSettings.notificationType || 'system'
-                    })
-                  });
-                  if (res.ok) {
-                    showToast(localSettings.notificationType === 'browser'
-                      ? '테스트 배너 알림이 발송되었습니다.'
-                      : '테스트 알림창이 발송되었습니다.'
-                    );
                   } else {
-                    showToast('알림 발송에 실패했습니다.');
+                    // 'system'(데스크톱 알림창) = 새 인앱 글래스모피즘 알림 카드를 즉시 미리보기
+                    setActiveNotification({
+                      id: '__test__',
+                      title: 'Zero-Friction 알림 테스트',
+                      body: '인앱 알림 카드가 정상적으로 표시됩니다!',
+                      time: format(now, 'HH:mm'),
+                      date: format(now, 'yyyy-MM-dd')
+                    });
+                    showToast('테스트 알림 카드를 표시했습니다.');
                   }
                 } catch (e) {
                   showToast('테스트 알림 오류 발생');
@@ -823,71 +864,47 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.4)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.1)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>
         <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '1px solid var(--panel-border)', textAlign: 'left' }}>
-          {/* v0.4.4 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.4 (2026-05-22)</span>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>일정/재고/메모 데이터 엑셀 및 PDF 내보내기 지원</strong>: 각 페이지(대시보드 일정/메모/재고 목록, 캘린더 페이지, 재고 페이지) 상단에 엑셀(CSV) 및 PDF 다운로드 버튼을 추가하였으며, 개별 메모 상세 보기 모달에서도 해당 메모만 즉시 개별적으로 엑셀/PDF로 내보낼 수 있도록 개선했습니다.</div>
-              <div>• <strong>Excel 한글 깨짐 방지</strong>: UTF-8 BOM(\uFEFF)을 자동으로 추가하여 다운로드한 CSV 파일을 엑셀에서 열 때 한글이 깨지지 않고 올바르게 출력되도록 구현했습니다.</div>
-              <div>• <strong>인쇄 전용 스타일 및 마크다운 렌더링 지원</strong>: PDF 저장 또는 인쇄 시, 깔끔하게 스타일링된 출력 전용 문서를 동적으로 생성하며, 메모 내 표(Table), 리스트, 코드 블록 등의 마크다운 서식을 원본 레이아웃 그대로 유지하여 인쇄합니다.</div>
-              <div>• <strong>엑셀 내보내기 버튼 영문 표기 및 크기 유지 개선</strong>: 엑셀 내보내기 버튼의 텍스트를 'Excel'로 영어 표기 변경하고, 화면 크기가 줄어들더라도 버튼의 크기가 변형되지 않도록 레이아웃 축소 방지 스타일(flexShrink)을 일괄 적용했습니다.</div>
-            </div>
-          </div>
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(VERSION_LOGS.length / UPDATES_PER_PAGE));
+            // 데이터 변동/경계 초과에도 안전하도록 현재 페이지를 항상 유효 범위로 보정
+            const safePage = Math.min(Math.max(updatePage, 0), totalPages - 1);
+            const startIdx = safePage * UPDATES_PER_PAGE;
+            const pageLogs = VERSION_LOGS.slice(startIdx, startIdx + UPDATES_PER_PAGE);
+            return (
+              <>
+                {pageLogs.map((log, i) => (
+                  <div key={log.version} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 800, color: log.latest ? 'var(--accent)' : 'var(--text-primary)' }}>{log.version} ({log.date})</span>
+                      {log.latest && (
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      {log.items.map((it, j) => (
+                        <div key={j}>• <strong>{it.b}</strong>{it.t}</div>
+                      ))}
+                    </div>
+                    {i < pageLogs.length - 1 && (
+                      <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.5rem 0 0.1rem 0' }} />
+                    )}
+                  </div>
+                ))}
 
-          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
-
-          {/* v0.4.3 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.3 (2026-05-22)</span>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>일정 하루 종일 옵션 지원</strong>: 일정 생성/편집 시 '하루 종일' 토글 스위치를 지원하고, 활성화 시 시간 대신 '하루 종일' 배지를 리스트에 노출하며 하루 종일 일정을 목록 최상단에 자동 정렬합니다.</div>
-              <div>• <strong>완료 일정 달력 표시 유지</strong>: 일정이 완료 상태로 변경되더라도 달력 날짜 셀 하단의 일정 표시용 작은 점들이 사라지지 않고 유지되도록 보완했습니다.</div>
-              <div>• <strong>메모 마크다운 표 및 코드 블록 확장</strong>: 메모 보기창에서 마크다운 테이블(정렬 지원) 및 백틱 3개(```) 기반 코드 블록이 올바르게 렌더링되도록 기능을 확장했습니다.</div>
-            </div>
-          </div>
-
-          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
-
-          {/* v0.4.2 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.2 (2026-05-22)</span>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>시간 선택기(CustomTimePicker) 미니멀화</strong>: 시간 선택 팝업에서 복잡한 그리드 형태의 숫자판을 제거하고, 상/하 화살표 단추(`▲`/`▼`)로 조작할 수 있는 직관적인 스텝 방식으로 디자인을 간소화하였습니다.</div>
-              <div>• <strong>시간 입력 이벤트 전파 방지</strong>: 시간 선택기를 클릭할 때 부모 일정 등록/수정창이 닫히지 않도록 이벤트 차단 처리를 강화했습니다.</div>
-              <div>• <strong>터미널 중복 기동 수정</strong>: macOS 데스크톱 실행기(`ZeroScheduler.app`) 기동 시 매번 열리던 빈 터미널 창을 노출하지 않도록 자동 실행 AppleScript를 무소음 형태로 패치했습니다.</div>
-            </div>
-          </div>
-
-          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
-
-          {/* v0.4.1 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.1 (2026-05-21)</span>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>재고 삭제 UX 개선</strong>: 재고 상세 모달 및 리스트에서 삭제 시 모달 닫힘 연동 및 클릭 이벤트 버블링 문제를 수정했습니다.</div>
-              <div>• <strong>일정 등록 시 기본 알림 시간 변경</strong>: 기본 알림의 초기 설정값을 기존 10분 전에서 정각(0분)으로 일원화했습니다.</div>
-            </div>
-          </div>
-
-          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
-
-          {/* v0.4.0 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.0 (2026-05-21)</span>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>메모 읽기 전용 뷰/수정 모드 분리</strong>: 메모 카드를 클릭하면 먼저 읽기 모드로 열리며, 우측 상단 "수정"을 눌러 편집 모드로 전환하도록 UX를 개편했습니다.</div>
-              <div>• <strong>메모 리스트 디자인 통일</strong>: 메모 카드의 높이를 150px 균일 사이즈로 통일하고 넘치는 내용을 보기 좋게 자르도록 수정했습니다.</div>
-              <div>• <strong>입력 폼 컴팩트화 및 안내문구 최적화</strong>.</div>
-            </div>
-          </div>
+                {/* 페이지 내비게이션 (이전/다음 + 인디케이터) */}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.8rem', marginTop: '0.4rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.7rem' }}>
+                  <button type="button" className="ghost-btn" onClick={() => setUpdatePage(prev => Math.max(0, prev - 1))} disabled={safePage <= 0} style={{ opacity: safePage <= 0 ? 0.3 : 1, padding: '0.2rem 0.6rem', fontSize: '0.72rem' }}>이전</button>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>{safePage + 1} / {totalPages}</span>
+                  <button type="button" className="ghost-btn" onClick={() => setUpdatePage(prev => Math.min(totalPages - 1, prev + 1))} disabled={safePage >= totalPages - 1} style={{ opacity: safePage >= totalPages - 1 ? 0.3 : 1, padding: '0.2rem 0.6rem', fontSize: '0.72rem' }}>다음</button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </details>
 

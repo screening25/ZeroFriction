@@ -953,7 +953,7 @@ export default function Home() {
               <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>데이터 인사이트</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
+            <div className="insight-grid">
               {/* Task Progress & Completion Rate Combined Indicator */}
               <div style={{
                 background: 'var(--insight-tile-bg)',
@@ -1556,7 +1556,7 @@ export default function Home() {
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>Excel</span>
+                <span className="btn-label-hide-md">Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -1579,7 +1579,7 @@ export default function Home() {
                 }}
               >
                 <Printer size={12} />
-                <span>PDF</span>
+                <span className="btn-label-hide-md">PDF</span>
               </button>
 
               {/* ⚙️ 일정 카테고리 기준 정보 설정 모달 버튼 */}
@@ -1597,11 +1597,12 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <Sliders size={12} />
-                <span>카테고리 설정</span>
+                <span className="btn-label-hide-md">카테고리 설정</span>
               </button>
 
               {/* ➕ 일정 등록 버튼! */}
@@ -1633,11 +1634,12 @@ export default function Home() {
                   fontWeight: 650,
                   border: '1px solid var(--accent-soft-border)',
                   background: 'var(--accent-soft-bg)',
-                  color: 'var(--accent)'
+                  color: 'var(--accent)',
+                  flexShrink: 0
                 }}
               >
                 <Plus size={12} />
-                <span>일정 등록</span>
+                <span className="btn-label-hide-sm">일정 등록</span>
               </button>
             </div>
           </div>
@@ -1896,7 +1898,7 @@ export default function Home() {
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>Excel</span>
+                <span className="btn-label-hide-md">Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -1919,7 +1921,7 @@ export default function Home() {
                 }}
               >
                 <Printer size={12} />
-                <span>PDF</span>
+                <span className="btn-label-hide-md">PDF</span>
               </button>
 
               {/* ⚙️ 기준 정보 관리 모달 버튼 */}
@@ -1937,11 +1939,12 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <Sliders size={12} />
-                <span>기준 정보 관리</span>
+                <span className="btn-label-hide-md">기준 정보 관리</span>
               </button>
 
               {/* ➕ 재고 등록 버튼! */}
@@ -1974,11 +1977,12 @@ export default function Home() {
                   fontWeight: 650,
                   border: '1px solid var(--accent-soft-border)',
                   background: 'var(--accent-soft-bg)',
-                  color: 'var(--accent)'
+                  color: 'var(--accent)',
+                  flexShrink: 0
                 }}
               >
                 <Plus size={12} />
-                <span>재고 등록</span>
+                <span className="btn-label-hide-sm">재고 등록</span>
               </button>
               <Package size={14} style={{ color: 'var(--text-tertiary)' }} />
             </div>
@@ -2246,11 +2250,11 @@ export default function Home() {
                           fontWeight: 600,
                           color: 'var(--text-primary)',
                           textAlign: 'left',
-                          maxWidth: '120px',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          display: 'inline-block'
+                          display: 'block',
+                          width: '100%'
                         }}
                         title={item.title}
                       >
@@ -2403,7 +2407,7 @@ export default function Home() {
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>Excel</span>
+                <span className="btn-label-hide-md">Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -2426,7 +2430,7 @@ export default function Home() {
                 }}
               >
                 <Printer size={12} />
-                <span>PDF</span>
+                <span className="btn-label-hide-md">PDF</span>
               </button>
 
               <button 
@@ -2437,10 +2441,11 @@ export default function Home() {
                   setIsMemoModalOpen(true);
                 }}
                 title="메모 추가"
+                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Plus size={16} />
               </button>
-              <FileText size={16} style={{ color: 'var(--text-tertiary)' }} />
+              <FileText size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
             </div>
           </div>
 

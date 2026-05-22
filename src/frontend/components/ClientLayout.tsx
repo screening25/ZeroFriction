@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -90,6 +90,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      const isElectron = (typeof window.process !== 'undefined' && window.process.versions && !!window.process.versions.electron) ||
+        (window.navigator && window.navigator.userAgent && window.navigator.userAgent.toLowerCase().indexOf(' electron/') > -1);
+      if (isElectron) {
+        (window as any).__IS_ELECTRON__ = true;
+        try {
+          if ((window as any).require) {
+            (window as any).ipcRenderer = (window as any).require('electron').ipcRenderer;
+          }
+        } catch (e) {
+          console.error("Failed to load Electron ipcRenderer:", e);
+        }
+      }
+    }
   }, []);
 
   // 전역 앱 상태/액션 (실제로 이 레이아웃에서 사용하는 값만 구독)
@@ -100,6 +114,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     isActivityDrawerOpen, setIsActivityDrawerOpen,
     nlpInput, setNlpInput, loading, handleNlpSubmit,
     activeTab, setActiveTab,
+    activeNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
   } = useApp();
 
   // 커맨드 팔레트(⌘K) 열림 상태
@@ -163,11 +178,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         gap: '0.6rem'
       }}>
         {/* Top Row: Brand Title + Quick Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="app-title" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.015em', userSelect: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', width: '100%' }}>
+          <div className="app-title" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.015em', userSelect: 'none', flexShrink: 0 }}>
             Zero-Friction
           </div>
-          <div className="header-actions" style={{ display: 'flex', gap: '0.4rem' }}>
+          <div className="header-actions" style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
             <button className="theme-toggle" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (⌘K)">
               <Command size={17} />
             </button>
@@ -386,6 +401,151 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       >
         {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
       </button>
+
+      {/* Custom Alarm Notification Card */}
+      <AnimatePresence>
+        {activeNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: '-50%', scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+            exit={{ opacity: 0, y: -30, x: '-50%', scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            style={{
+              position: 'fixed',
+              top: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '380px',
+              maxWidth: 'calc(100vw - 32px)',
+              background: 'var(--panel-bg)',
+              backdropFilter: 'var(--panel-blur)',
+              WebkitBackdropFilter: 'var(--panel-blur)',
+              border: '1px solid var(--panel-border)',
+              borderRadius: '20px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+              padding: '1.2rem',
+              zIndex: 99999,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'var(--accent-soft-bg)',
+                  border: '1px solid var(--accent-soft-border)',
+                }}>
+                  <Bell size={16} className="ringing-bell-icon" />
+                </div>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  {activeNotification.title || '알림'}
+                </span>
+              </div>
+              <button
+                onClick={handleDismissNotification}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, wordBreak: 'break-all' }}>
+                {activeNotification.body}
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                <Clock size={13} />
+                <span>
+                  {activeNotification.date} {activeNotification.time}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.2rem' }}>
+              <button
+                onClick={() => handleSnoozeNotification(activeNotification.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '12px',
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--surface-elevated)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--hover-bg)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--surface-elevated)';
+                }}
+              >
+                <Clock size={14} />
+                <span>10분 후 알림</span>
+              </button>
+              <button
+                onClick={() => handleCompleteNotificationSchedule(activeNotification.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'var(--accent)',
+                  color: '#FFFFFF',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px var(--accent-glow)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--accent-hover)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--accent)';
+                }}
+              >
+                <Check size={14} />
+                <span>완료</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Global Toast */}
       <AnimatePresence>

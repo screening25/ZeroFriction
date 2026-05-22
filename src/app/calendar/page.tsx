@@ -60,6 +60,21 @@ export default function CalendarPage() {
       return (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59');
     });
 
+  const [schedulePage, setSchedulePage] = React.useState(0);
+  const schedulesPerPage = appSettings?.maxEventsShown || 5;
+  const scheduleTotalPages = Math.ceil(selectedSchedules.length / schedulesPerPage);
+  const paginatedSchedules = selectedSchedules.slice(schedulePage * schedulesPerPage, (schedulePage + 1) * schedulesPerPage);
+
+  React.useEffect(() => {
+    setSchedulePage(0);
+  }, [selectedDateStr]);
+
+  React.useEffect(() => {
+    if (schedulePage >= scheduleTotalPages && scheduleTotalPages > 0) {
+      setSchedulePage(scheduleTotalPages - 1);
+    }
+  }, [selectedSchedules.length, scheduleTotalPages, schedulePage]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       
@@ -91,7 +106,7 @@ export default function CalendarPage() {
             }}
           >
             <FileSpreadsheet size={11} />
-            <span>Excel</span>
+            <span className="btn-label-hide-md">Excel</span>
           </button>
 
           {/* 🖨️ PDF 인쇄 버튼 */}
@@ -114,10 +129,10 @@ export default function CalendarPage() {
             }}
           >
             <Printer size={11} />
-            <span>PDF</span>
+            <span className="btn-label-hide-md">PDF</span>
           </button>
 
-          <div style={{ display: 'flex', gap: '0.2rem', background: 'var(--panel-bg)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+          <div style={{ display: 'flex', gap: '0.2rem', background: 'var(--panel-bg)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--panel-border)', flexShrink: 0 }}>
             {['monthly', 'weekly', 'daily'].map((mode) => (
               <button 
                 key={mode} 
@@ -219,7 +234,7 @@ export default function CalendarPage() {
             background: 'transparent'
           }}>등록된 일정이 존재하지 않습니다.</div>
         ) : (
-          selectedSchedules.map((s) => {
+          paginatedSchedules.map((s) => {
             return (
               <div key={s.id} className="card card-compact" onClick={() => setEditingSchedule(s)} style={{ padding: '0.5rem 0.65rem', borderRadius: '10px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
@@ -243,6 +258,46 @@ export default function CalendarPage() {
           })
         )}
       </div>
+
+      {scheduleTotalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.8rem', marginTop: '0.8rem', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button 
+            onClick={() => setSchedulePage(prev => Math.max(0, prev - 1))}
+            disabled={schedulePage === 0}
+            style={{ 
+              opacity: schedulePage === 0 ? 0.3 : 1, 
+              padding: '0.2rem 0.5rem', 
+              fontSize: '0.72rem',
+              borderRadius: '6px',
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: schedulePage === 0 ? 'default' : 'pointer'
+            }}
+          >
+            이전
+          </button>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {schedulePage + 1} / {scheduleTotalPages}
+          </span>
+          <button 
+            onClick={() => setSchedulePage(prev => Math.min(scheduleTotalPages - 1, prev + 1))}
+            disabled={schedulePage === scheduleTotalPages - 1}
+            style={{ 
+              opacity: schedulePage === scheduleTotalPages - 1 ? 0.3 : 1, 
+              padding: '0.2rem 0.5rem', 
+              fontSize: '0.72rem',
+              borderRadius: '6px',
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: schedulePage === scheduleTotalPages - 1 ? 'default' : 'pointer'
+            }}
+          >
+            다음
+          </button>
+        </div>
+      )}
 
       {/* Schedule Edit Modal */}
       <AnimatePresence>

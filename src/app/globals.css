@@ -1770,3 +1770,74 @@ input[type="date"] {
   position: relative;
 }
 
+/* 반응형 버튼 텍스트 조절 및 크기 변형 방지 */
+button, 
+.nav-link, 
+.segment-btn, 
+.kpi-tile,
+.header-actions {
+  flex-shrink: 0 !important;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .insight-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .insight-grid > div:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 680px) {
+  .btn-label-hide-md {
+    display: none !important;
+  }
+  .kpi-strip {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .insight-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .insight-grid > div:last-child {
+    grid-column: span 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-label-hide-sm {
+    display: none !important;
+  }
+  .nav-link span {
+    display: none !important;
+  }
+  .cal-cell {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.85rem !important;
+    aspect-ratio: 1 / 1 !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(15deg); }
+  20%, 40%, 60%, 80% { transform: rotate(-15deg); }
+}
+
+.ringing-bell-icon {
+  animation: bell-ring 2s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+
+

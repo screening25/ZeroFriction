@@ -6,8 +6,19 @@ import { useApp } from '@/frontend/context/AppContext';
 import { FileSpreadsheet, Printer } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { records, deleteInventoryItem, setEditingInventory, exportToCsv, printToPdf } = useApp();
+  const { records, deleteInventoryItem, setEditingInventory, exportToCsv, printToPdf, appSettings } = useApp();
   const inventory = records.filter(r => r.type === 'asset');
+
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const itemsPerPage = appSettings?.maxInventoryShown || 5;
+  const totalPages = Math.ceil(inventory.length / itemsPerPage);
+  const paginatedInventory = inventory.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+
+  React.useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [inventory.length, totalPages, currentPage]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -36,7 +47,7 @@ export default function InventoryPage() {
             }}
           >
             <FileSpreadsheet size={11} />
-            <span>Excel</span>
+            <span className="btn-label-hide-md">Excel</span>
           </button>
 
           {/* 🖨️ PDF 인쇄 버튼 */}
@@ -59,7 +70,7 @@ export default function InventoryPage() {
             }}
           >
             <Printer size={11} />
-            <span>PDF</span>
+            <span className="btn-label-hide-md">PDF</span>
           </button>
         </div>
       </div>
@@ -78,8 +89,8 @@ export default function InventoryPage() {
         }}>등록된 재고 항목이 없습니다.</div>
       ) : (
         <div className="card-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          {inventory.map((item, index) => {
-            const orderNum = `#${String(index + 1).padStart(2, '0')}`;
+          {paginatedInventory.map((item, index) => {
+            const orderNum = `#${String(currentPage * itemsPerPage + index + 1).padStart(2, '0')}`;
             const qtyNum = Number(item.attrs.qty) || 0;
             const isNegative = qtyNum < 0;
             return (
@@ -121,6 +132,46 @@ export default function InventoryPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.8rem', marginTop: '0.8rem', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+            disabled={currentPage === 0}
+            style={{ 
+              opacity: currentPage === 0 ? 0.3 : 1, 
+              padding: '0.2rem 0.5rem', 
+              fontSize: '0.72rem',
+              borderRadius: '6px',
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: currentPage === 0 ? 'default' : 'pointer'
+            }}
+          >
+            이전
+          </button>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {currentPage + 1} / {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+            disabled={currentPage === totalPages - 1}
+            style={{ 
+              opacity: currentPage === totalPages - 1 ? 0.3 : 1, 
+              padding: '0.2rem 0.5rem', 
+              fontSize: '0.72rem',
+              borderRadius: '6px',
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: currentPage === totalPages - 1 ? 'default' : 'pointer'
+            }}
+          >
+            다음
+          </button>
         </div>
       )}
       
