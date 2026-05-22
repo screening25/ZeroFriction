@@ -3039,7 +3039,7 @@ export default function Home() {
                   exit={{ scale: 0.95, opacity: 0 }}
                   transition={{ duration: 0.15 }}
                   style={{ 
-                    maxWidth: '1050px', 
+                    maxWidth: '480px', 
                     width: '95%'
                   }}
                 >
@@ -3050,281 +3050,169 @@ export default function Home() {
                   </div>
 
                   {/* 📋 복사 / 붙여넣기 파싱 영역 */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '0.5rem', 
-                    background: 'var(--bg-secondary)', 
-                    padding: '1rem', 
-                    borderRadius: '12px', 
-                    border: '1px dashed var(--panel-border)'
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.6rem',
+                    background: 'var(--surface-elevated)',
+                    padding: '0.9rem',
+                    borderRadius: '14px',
+                    border: '1px solid var(--surface-elevated-border)'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Excel / 마크다운 데이터 분석</span>
-                        <span className="badge">
-                          CSV / TSV / Markdown
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
-                        (순서: 코드 | 품목명 | 수량 | 구분 | 보관위치 | 담당자 | 메모)
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>Excel / 마크다운 분석</span>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-soft-bg)', border: '1px solid var(--accent-soft-border)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>
+                        CSV · TSV · MD
                       </span>
                     </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      <textarea
-                        placeholder="여기에 복사한 데이터를 붙여넣으세요. 구분 기호와 표 헤더를 지능적으로 자동 제외합니다.&#10;[예시]&#10;CLBX-5A-15689&#9;보유&#10;CLBX-5A-15690&#9;보유"
-                        value={pasteText}
-                        onChange={e => setPasteText(e.target.value)}
-                        className="input-sm"
-                        style={{ 
-                          height: '95px', 
-                          resize: 'vertical', 
-                          fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
-                          lineHeight: '1.45'
-                        }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-tertiary)', fontSize: '0.7rem' }}>
-                          <span style={{ fontSize: '0.9rem' }}>💡</span>
-                          <span>시리얼이 감지되면 품목코드와 시리얼 번호가 자동 분류되어 개별 등록됩니다.</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => parsePasteData(pasteText)}
-                          className="ghost-btn"
-                          style={{ 
-                            height: '32px', 
-                            padding: '0 1.2rem', 
-                            fontSize: '0.75rem', 
-                            borderRadius: '8px', 
-                            fontWeight: 700,
-                            background: 'var(--accent)',
-                            color: '#ffffff',
-                            border: 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          분석 적용
-                        </button>
-                      </div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+                      순서: 코드 · 품목명 · 수량 · 구분 · 보관위치 · 담당자 · 메모
                     </div>
+
+                    <textarea
+                      placeholder="복사한 데이터를 붙여넣으세요. 구분 기호와 표 헤더는 자동 제외됩니다."
+                      value={pasteText}
+                      onChange={e => setPasteText(e.target.value)}
+                      className="input-sm"
+                      style={{
+                        height: '84px',
+                        resize: 'vertical',
+                        fontFamily: 'var(--font-mono, SFMono-Regular, Consolas, Monaco, monospace)',
+                        fontSize: '0.74rem',
+                        lineHeight: '1.45',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '10px',
+                        padding: '0.6rem'
+                      }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-tertiary)', fontSize: '0.66rem', lineHeight: 1.4 }}>
+                      <span>💡</span>
+                      <span>시리얼 감지 시 품목코드·시리얼이 자동 분류되어 개별 등록됩니다.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => parsePasteData(pasteText)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        fontSize: '0.8rem',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        background: 'var(--accent)',
+                        color: '#ffffff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+                    >
+                      분석 적용
+                    </button>
                   </div>
 
-                  {/* 📊 동적 편집 그리드 테이블 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        등록 대기 목록
-                      </div>
-                      <span className="badge">
-                        {bulkRows.length}개 품목
+                  {/* 📊 등록 대기 목록 헤더 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>등록 대기 목록</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--hover-bg)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>
+                        {bulkRows.length}개
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setBulkRows([])}
-                      className="ghost-btn danger"
-                      style={{ 
-                        fontSize: '0.7rem', 
-                        padding: '0.25rem 0.6rem', 
+                      disabled={bulkRows.length === 0}
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '0.25rem 0.6rem',
                         borderRadius: '8px',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        border: '1px solid var(--danger-soft-border)',
                         background: 'transparent',
                         color: 'var(--danger)',
-                        fontWeight: 600,
-                        opacity: bulkRows.length > 0 ? 1 : 0.5,
-                        cursor: bulkRows.length > 0 ? 'pointer' : 'not-allowed'
+                        fontWeight: 700,
+                        opacity: bulkRows.length > 0 ? 1 : 0.4,
+                        cursor: bulkRows.length > 0 ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.15s ease'
                       }}
-                      disabled={bulkRows.length === 0}
                     >
                       전체 비우기
                     </button>
                   </div>
 
-                  <div style={{ 
-                    overflowX: 'auto', 
-                    maxHeight: '280px', 
-                    border: '1px solid var(--panel-border)', 
-                    borderRadius: '16px', 
-                    background: 'var(--bg-secondary)',
-                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                    scrollbarWidth: 'thin'
-                  }}>
-                    <table style={{ minWidth: '1150px', width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                      <thead>
-                        <tr style={{ background: 'var(--hover-bg)', borderBottom: '1px solid var(--panel-border)' }}>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '110px', color: 'var(--text-secondary)', fontWeight: 700 }}>코드</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '160px', color: 'var(--text-secondary)', fontWeight: 700 }}>품목명 <span style={{ color: 'var(--danger)' }}>*</span></th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '150px', color: 'var(--text-secondary)', fontWeight: 700 }}>시리얼 번호</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '80px', color: 'var(--text-secondary)', fontWeight: 700 }}>수량</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '115px', color: 'var(--text-secondary)', fontWeight: 700 }}>구분</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '120px', color: 'var(--text-secondary)', fontWeight: 700 }}>보관위치</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '110px', color: 'var(--text-secondary)', fontWeight: 700 }}>담당자</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '160px', color: 'var(--text-secondary)', fontWeight: 700 }}>메모</th>
-                          <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '50px', color: 'var(--text-secondary)', fontWeight: 700 }}>삭제</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bulkRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={9} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                                <span style={{ fontSize: '1.5rem' }}>📦</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>대기 중인 품목이 없습니다.</span>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>데이터를 위 영역에 붙여넣거나 아래 '행 추가' 버튼을 눌러 목록을 만드세요.</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          bulkRows.map((row, idx) => (
-                            <tr key={idx} style={{ 
-                              borderBottom: '1px solid var(--panel-border)', 
-                              background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                              transition: 'background-color 0.15s ease'
-                            }}>
-                              
-                              {/* 코드 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <input
-                                  type="text"
-                                  className="input-sm"
-                                  style={{ width: '100%' }}
-                                  value={row.code}
-                                  placeholder="코드"
-                                  onChange={e => updateRow(idx, 'code', e.target.value)}
-                                />
-                              </td>
+                  {/* 📦 카드형 편집 리스트 (좁은 위젯 폭에 맞춘 세로 레이아웃) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
+                    {bulkRows.length === 0 ? (
+                      <div style={{
+                        padding: '2.5rem 1rem',
+                        textAlign: 'center',
+                        border: '1px dashed var(--panel-border)',
+                        borderRadius: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}>
+                        <span style={{ fontSize: '1.5rem' }}>📦</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>대기 중인 품목이 없습니다.</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>위 영역에 붙여넣거나 '새 행 추가'를 누르세요.</span>
+                      </div>
+                    ) : (
+                      bulkRows.map((row, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem',
+                          padding: '0.8rem',
+                          background: 'var(--surface-elevated)',
+                          border: '1px solid var(--surface-elevated-border)',
+                          borderRadius: '14px'
+                        }}>
+                          {/* 헤더: 번호 + 품목명(필수) + 삭제 */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-tertiary)', flexShrink: 0 }}>#{String(idx + 1).padStart(2, '0')}</span>
+                            <input
+                              type="text"
+                              className="input-sm"
+                              style={{ flex: 1, minWidth: 0, fontWeight: 600, border: !row.title.trim() ? '1.5px solid var(--danger)' : undefined }}
+                              value={row.title}
+                              placeholder="품목명 (필수)"
+                              onChange={e => updateRow(idx, 'title', e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => deleteRow(idx)}
+                              style={{ flexShrink: 0, padding: '0.35rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
+                              title="삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
 
-                              {/* 품목명 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <input
-                                  type="text"
-                                  className="input-sm"
-                                  style={{ 
-                                    width: '100%',
-                                    border: !row.title.trim() ? '1.5px solid var(--danger)' : undefined
-                                  }}
-                                  value={row.title}
-                                  placeholder="품목명 필수"
-                                  onChange={e => updateRow(idx, 'title', e.target.value)}
-                                />
-                              </td>
+                          {/* 2열 그리드: 코드 · 시리얼 · 수량 · 구분 · 보관위치 · 담당자 */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                            <input type="text" className="input-sm" value={row.code} placeholder="코드" onChange={e => updateRow(idx, 'code', e.target.value)} />
+                            <input type="text" className="input-sm" value={row.serial || ''} placeholder="시리얼" onChange={e => updateRow(idx, 'serial', e.target.value)} />
+                            <input type="number" className="input-sm" value={row.qty} min="1" placeholder="수량" onChange={e => updateRow(idx, 'qty', Math.max(1, parseInt(e.target.value, 10) || 1))} />
+                            <select className="input-sm" style={{ color: row.flow === 'IN' ? 'var(--success)' : 'var(--danger)', fontWeight: 700, cursor: 'pointer' }} value={row.flow} onChange={e => updateRow(idx, 'flow', e.target.value as 'IN' | 'OUT')}>
+                              <option value="IN">입고 (+)</option>
+                              <option value="OUT">출고 (-)</option>
+                            </select>
+                            <select className="input-sm" style={{ cursor: 'pointer' }} value={row.loc} onChange={e => updateRow(idx, 'loc', e.target.value)}>
+                              {locations.map(loc => (<option key={loc} value={loc}>{loc}</option>))}
+                            </select>
+                            <select className="input-sm" style={{ cursor: 'pointer' }} value={row.mgr} onChange={e => updateRow(idx, 'mgr', e.target.value)}>
+                              {managers.map(mgr => (<option key={mgr} value={mgr}>{mgr}</option>))}
+                            </select>
+                          </div>
 
-                              {/* 시리얼 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <input
-                                  type="text"
-                                  className="input-sm"
-                                  style={{ width: '100%' }}
-                                  value={row.serial || ''}
-                                  placeholder="일련번호"
-                                  onChange={e => updateRow(idx, 'serial', e.target.value)}
-                                />
-                              </td>
-
-                              {/* 수량 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <input
-                                  type="number"
-                                  className="input-sm"
-                                  style={{ width: '100%' }}
-                                  value={row.qty}
-                                  min="1"
-                                  onChange={e => updateRow(idx, 'qty', Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                />
-                              </td>
-
-                              {/* 구분 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <select
-                                  className="input-sm"
-                                  style={{ 
-                                    color: row.flow === 'IN' ? 'var(--success)' : 'var(--danger)',
-                                    fontWeight: 700,
-                                    width: '100%',
-                                    cursor: 'pointer'
-                                  }}
-                                  value={row.flow}
-                                  onChange={e => updateRow(idx, 'flow', e.target.value as 'IN' | 'OUT')}
-                                >
-                                  <option value="IN" style={{ color: 'var(--success)', fontWeight: 600 }}>입고 (+)</option>
-                                  <option value="OUT" style={{ color: 'var(--danger)', fontWeight: 600 }}>출고 (-)</option>
-                                </select>
-                              </td>
-
-                              {/* 보관위치 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <select
-                                  className="input-sm"
-                                  style={{ 
-                                    width: '100%',
-                                    cursor: 'pointer'
-                                  }}
-                                  value={row.loc}
-                                  onChange={e => updateRow(idx, 'loc', e.target.value)}
-                                >
-                                  {locations.map(loc => (
-                                    <option key={loc} value={loc}>{loc}</option>
-                                  ))}
-                                </select>
-                              </td>
-
-                              {/* 담당자 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <select
-                                  className="input-sm"
-                                  style={{ 
-                                    width: '100%',
-                                    cursor: 'pointer'
-                                  }}
-                                  value={row.mgr}
-                                  onChange={e => updateRow(idx, 'mgr', e.target.value)}
-                                >
-                                  {managers.map(mgr => (
-                                    <option key={mgr} value={mgr}>{mgr}</option>
-                                  ))}
-                                </select>
-                              </td>
-
-                              {/* 메모 */}
-                              <td style={{ padding: '0.35rem 0.5rem' }}>
-                                <input
-                                  type="text"
-                                  className="input-sm"
-                                  style={{ width: '100%' }}
-                                  value={row.memo}
-                                  placeholder="비고/메모 사항"
-                                  onChange={e => updateRow(idx, 'memo', e.target.value)}
-                                />
-                              </td>
-
-                              {/* 삭제 */}
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'center' }}>
-                                <button
-                                  type="button"
-                                  className="ghost-btn danger"
-                                  style={{ 
-                                    padding: '0.4rem', 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'var(--danger)',
-                                    cursor: 'pointer'
-                                  }}
-                                  onClick={() => deleteRow(idx)}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </td>
-
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          {/* 메모 */}
+                          <input type="text" className="input-sm" style={{ width: '100%' }} value={row.memo} placeholder="비고 / 메모" onChange={e => updateRow(idx, 'memo', e.target.value)} />
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   {/* 행 추가 버튼 */}
@@ -3342,8 +3230,18 @@ export default function Home() {
                       fontWeight: 700,
                       borderRadius: '8px',
                       border: '1px solid var(--panel-border)',
-                      background: 'var(--bg-secondary)',
-                      cursor: 'pointer'
+                      background: 'var(--panel-bg)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--accent-soft-bg)';
+                      e.currentTarget.style.color = 'var(--accent)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--panel-bg)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
                     }}
                   >
                     <Plus size={13} />
@@ -3376,15 +3274,18 @@ export default function Home() {
                           display: 'flex', 
                           flexDirection: 'column', 
                           gap: '0.7rem', 
-                          padding: '1rem',
-                          background: 'var(--bg-secondary)',
-                          borderRadius: '12px',
+                          padding: '1.2rem',
+                          background: 'var(--panel-bg)',
+                          backdropFilter: 'var(--panel-blur)',
+                          WebkitBackdropFilter: 'var(--panel-blur)',
+                          borderRadius: '16px',
                           border: '1px solid var(--panel-border)',
+                          boxShadow: '0 4px 12px var(--shadow-color)',
                           marginTop: '0.2rem'
                         }}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>메모 제목</span>
+                        <div className="form-group">
+                          <label className="form-label">메모 제목</label>
                           <input
                             type="text"
                             className="input-sm"
@@ -3394,8 +3295,8 @@ export default function Home() {
                           />
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>메모 내용 (자동 생성됨, 수정 가능)</span>
+                        <div className="form-group">
+                          <label className="form-label">메모 내용 (자동 생성됨, 수정 가능)</label>
                           <textarea
                             className="input-sm"
                             style={{ 
