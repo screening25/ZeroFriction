@@ -1805,9 +1805,9 @@ export default function Home() {
                       </div>
 
                       {/* 색상 선택 */}
-                      <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700 }}>카테고리 색상 지정</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', padding: '0.2rem 0' }}>
+                      <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>카테고리 색상 지정</div>
+                        <div className="premium-color-dot-container">
                           {[
                             '#007AFF', // Blue
                             '#34C759', // Green
@@ -1820,30 +1820,34 @@ export default function Home() {
                             '#8E8E93', // Gray
                           ].map(color => {
                             const isSelected = selectedCategoryColor.toUpperCase() === color.toUpperCase();
+                            const rgb = hexToRgb(color);
+                            const isBright = rgb ? (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000 > 180 : false;
                             return (
                               <button
                                 key={color}
                                 type="button"
                                 onClick={() => setSelectedCategoryColor(color)}
+                                className="premium-color-dot"
                                 style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '50%',
                                   backgroundColor: color,
-                                  border: isSelected ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                  cursor: 'pointer',
-                                  padding: 0,
-                                  boxShadow: isSelected ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
-                                  transform: isSelected ? 'scale(1.15)' : 'none',
-                                  transition: 'all 0.15s ease',
+                                  boxShadow: isSelected 
+                                    ? `0 0 0 2.5px var(--bg-color), 0 0 0 5px ${color}, 0 4px 10px rgba(0,0,0,0.15)`
+                                    : undefined,
+                                  transform: isSelected ? 'scale(1.1)' : undefined,
                                 }}
                                 title={color}
-                              />
+                              >
+                                {isSelected && (
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isBright ? '#000000' : '#FFFFFF'} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                              </button>
                             );
                           })}
                           
                           {/* 커스텀 팔레트 (color input) */}
-                          <div style={{ position: 'relative', display: 'inline-block', width: '20px', height: '20px' }}>
+                          <div style={{ position: 'relative', display: 'inline-block', width: '26px', height: '26px' }}>
                             <input
                               type="color"
                               value={
@@ -1866,30 +1870,42 @@ export default function Home() {
                               }}
                               title="직접 지정"
                             />
-                            <div
-                              style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                background: ![
-                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                ].includes(selectedCategoryColor.toUpperCase()) ? selectedCategoryColor : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
-                                border: ![
-                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                ].includes(selectedCategoryColor.toUpperCase()) ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                boxShadow: ![
-                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                ].includes(selectedCategoryColor.toUpperCase()) ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
-                                transform: ![
-                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                ].includes(selectedCategoryColor.toUpperCase()) ? 'scale(1.15)' : 'none',
-                                transition: 'all 0.15s ease',
-                                pointerEvents: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            />
+                            {(() => {
+                              const isCustomSelected = ![
+                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                              ].includes(selectedCategoryColor.toUpperCase());
+                              const rgb = isCustomSelected ? hexToRgb(selectedCategoryColor) : null;
+                              const isBright = rgb ? (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000 > 180 : false;
+                              
+                              return (
+                                <div
+                                  className="premium-color-dot"
+                                  style={{
+                                    width: '26px',
+                                    height: '26px',
+                                    background: isCustomSelected 
+                                      ? selectedCategoryColor 
+                                      : 'conic-gradient(from 0deg, #ff3b30, #ff9500, #ffcc00, #34c759, #007aff, #5856d6, #ff2d55, #ff3b30)',
+                                    boxShadow: isCustomSelected 
+                                      ? `0 0 0 2.5px var(--bg-color), 0 0 0 5px ${selectedCategoryColor}, 0 4px 10px rgba(0,0,0,0.15)`
+                                      : undefined,
+                                    transform: isCustomSelected ? 'scale(1.1)' : undefined,
+                                    pointerEvents: 'none',
+                                  }}
+                                >
+                                  {isCustomSelected ? (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isBright ? '#000000' : '#FFFFFF'} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  ) : (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>
+                                      <line x1="12" y1="5" x2="12" y2="19" />
+                                      <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -2036,7 +2052,7 @@ export default function Home() {
 
                                       {/* Preset Colors */}
                                       <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, marginTop: '0.25rem' }}>색상 프리셋 지정</div>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', padding: '0.2rem 0' }}>
+                                      <div className="premium-color-dot-container">
                                         {[
                                           '#007AFF', // Blue
                                           '#34C759', // Green
@@ -2049,6 +2065,8 @@ export default function Home() {
                                           '#8E8E93', // Gray
                                         ].map(color => {
                                           const isColorSelected = col.toUpperCase() === color.toUpperCase();
+                                          const rgb = hexToRgb(color);
+                                          const isBright = rgb ? (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000 > 180 : false;
                                           return (
                                             <button
                                               key={color}
@@ -2060,25 +2078,27 @@ export default function Home() {
                                                 handleSettingsChange(updated);
                                                 showToast(`'${cat}' 카테고리 색상 변경 완료`);
                                               }}
+                                              className="premium-color-dot"
                                               style={{
-                                                width: '20px',
-                                                height: '20px',
-                                                borderRadius: '50%',
                                                 backgroundColor: color,
-                                                border: isColorSelected ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                                cursor: 'pointer',
-                                                padding: 0,
-                                                boxShadow: isColorSelected ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
-                                                transform: isColorSelected ? 'scale(1.15)' : 'none',
-                                                transition: 'all 0.15s ease',
+                                                boxShadow: isColorSelected 
+                                                  ? `0 0 0 2.5px var(--input-bg), 0 0 0 5px ${color}, 0 4px 10px rgba(0,0,0,0.15)`
+                                                  : undefined,
+                                                transform: isColorSelected ? 'scale(1.1)' : undefined,
                                               }}
                                               title={color}
-                                            />
+                                            >
+                                              {isColorSelected && (
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isBright ? '#000000' : '#FFFFFF'} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                                  <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                              )}
+                                            </button>
                                           );
                                         })}
 
                                         {/* Custom Color Input */}
-                                        <div style={{ position: 'relative', display: 'inline-block', width: '20px', height: '20px' }}>
+                                        <div style={{ position: 'relative', display: 'inline-block', width: '26px', height: '26px' }}>
                                           <input
                                             type="color"
                                             value={col}
@@ -2102,29 +2122,42 @@ export default function Home() {
                                             }}
                                             title="직접 지정"
                                           />
-                                          <div
-                                            style={{
-                                              width: '20px',
-                                              height: '20px',
-                                              borderRadius: '50%',
-                                              background: ![
-                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                              ].includes(col.toUpperCase()) ? col : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
-                                              border: ![
-                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                              ].includes(col.toUpperCase()) ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                              boxShadow: ![
-                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                              ].includes(col.toUpperCase()) ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
-                                              transform: ![
-                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                              ].includes(col.toUpperCase()) ? 'scale(1.15)' : 'none',
-                                              transition: 'all 0.15s ease',
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              justifyContent: 'center',
-                                            }}
-                                          />
+                                          {(() => {
+                                            const isCustomSelected = ![
+                                              '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                            ].includes(col.toUpperCase());
+                                            const rgb = isCustomSelected ? hexToRgb(col) : null;
+                                            const isBright = rgb ? (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000 > 180 : false;
+                                            
+                                            return (
+                                              <div
+                                                className="premium-color-dot"
+                                                style={{
+                                                  width: '26px',
+                                                  height: '26px',
+                                                  background: isCustomSelected 
+                                                    ? col 
+                                                    : 'conic-gradient(from 0deg, #ff3b30, #ff9500, #ffcc00, #34c759, #007aff, #5856d6, #ff2d55, #ff3b30)',
+                                                  boxShadow: isCustomSelected 
+                                                    ? `0 0 0 2.5px var(--input-bg), 0 0 0 5px ${col}, 0 4px 10px rgba(0,0,0,0.15)`
+                                                    : undefined,
+                                                  transform: isCustomSelected ? 'scale(1.1)' : undefined,
+                                                  pointerEvents: 'none',
+                                                }}
+                                              >
+                                                {isCustomSelected ? (
+                                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isBright ? '#000000' : '#FFFFFF'} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                  </svg>
+                                                ) : (
+                                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                  </svg>
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       </div>
                                     </div>

@@ -1098,6 +1098,42 @@ textarea.input-sm {
 }
 .color-chip:hover { transform: scale(1.15); }
 
+/* Premium color selector dots */
+.premium-color-dot-container {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.3rem 0.1rem;
+}
+
+.premium-color-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: visible;
+}
+
+.premium-color-dot:hover {
+  transform: scale(1.18);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  z-index: 5;
+}
+
+.premium-color-dot:active {
+  transform: scale(0.92);
+}
+
+
 /* Data management buttons */
 .data-btn {
   display: flex;
