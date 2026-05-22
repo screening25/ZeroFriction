@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock } from 'lucide-react';
+import { Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { useApp } from '@/frontend/context/AppContext';
 
 interface CustomTimePickerProps {
   value: string; // "HH:MM" 24h format
@@ -8,46 +9,47 @@ interface CustomTimePickerProps {
 }
 
 export default function CustomTimePicker({ value, onChange }: CustomTimePickerProps) {
+  const { theme } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
+  const isDark = theme === 'dark';
+
   // Parse current value
   const parseTime = (timeStr: string) => {
     const parts = (timeStr || "12:00").split(':');
     let hour = parseInt(parts[0], 10);
-    const minute = parts[1] || "00";
+    let minute = parseInt(parts[1], 10);
+
+    if (isNaN(hour) || hour < 0 || hour > 23) hour = 12;
+    if (isNaN(minute) || minute < 0 || minute > 59) minute = 0;
     
-    const isPM = hour >= 12;
-    if (hour > 12) hour -= 12;
-    if (hour === 0) hour = 12;
-    
-    return {
-      isPM,
-      hourStr: String(hour),
-      minuteStr: minute
-    };
+    return { hour, minute };
   };
 
-  const { isPM, hourStr, minuteStr } = parseTime(value);
+  const { hour, minute } = parseTime(value);
 
-  // Update coords when opening or resizing — 화면 밖으로 나가지 않도록 클램프 + 위/아래 플립
+  const hourStr = String(hour).padStart(2, '0');
+  const minuteStr = String(minute).padStart(2, '0');
+
+  // Update coords when opening or resizing
   const updateCoords = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const margin = 8;
-      const popWidth = Math.min(280, window.innerWidth - margin * 2);
-      const estHeight = 330; // 시간 피커 예상 높이
+      const popWidth = 190; // Extremely compact width for just the steppers
+      const estHeight = 140; // compact height
 
-      // 좌우 클램프
-      let left = rect.left + window.scrollX;
+      // Center aligns relative to the button trigger
+      let left = rect.left + window.scrollX + (rect.width - popWidth) / 2;
       if (left + popWidth > window.innerWidth - margin) {
         left = window.innerWidth - popWidth - margin;
       }
       if (left < margin) left = margin;
 
-      // 아래 공간이 부족하면 위로 플립
+      // Flip above if not enough space below
       const spaceBelow = window.innerHeight - rect.bottom;
       let top: number;
       if (spaceBelow < estHeight && rect.top > estHeight) {
@@ -90,22 +92,51 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
     };
   }, [isOpen]);
 
-  const handleSelect = (newIsPM: boolean, newHourStr: string, newMinStr: string) => {
-    let h = parseInt(newHourStr, 10);
-    if (newIsPM) {
-      if (h < 12) h += 12;
-    } else {
-      if (h === 12) h = 0;
-    }
-    const hStr = String(h).padStart(2, '0');
-    onChange(`${hStr}:${newMinStr}`);
+  const handleSelect = (newHour: number, newMin: number) => {
+    const clampedHour = Math.max(0, Math.min(23, newHour));
+    const clampedMin = Math.max(0, Math.min(59, newMin));
+    const hStr = String(clampedHour).padStart(2, '0');
+    const mStr = String(clampedMin).padStart(2, '0');
+    onChange(`${hStr}:${mStr}`);
   };
 
-  const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
-  const minutes = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+  // Increment / Decrement handlers
+  const adjustHour = (amount: number) => {
+    let nextHour = hour + amount;
+    if (nextHour > 23) nextHour = 0;
+    if (nextHour < 0) nextHour = 23;
+    handleSelect(nextHour, minute);
+  };
+
+  const adjustMinute = (amount: number) => {
+    let nextMin = minute + amount;
+    if (nextMin > 59) nextMin = 0;
+    if (nextMin < 0) nextMin = 59;
+    handleSelect(hour, nextMin);
+  };
+
+  // Translucent colors for Apple look
+  const popoverBg = isDark ? 'rgba(28, 28, 30, 0.92)' : 'rgba(255, 255, 255, 0.92)';
+  const popoverBorder = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
+  const popoverShadow = isDark ? '0 10px 40px rgba(0, 0, 0, 0.4)' : '0 10px 40px rgba(0, 0, 0, 0.1)';
+  const selectionBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+  const boxBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)';
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
+      <style>{`
+        @keyframes iosPopoverFadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.96) translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+      `}</style>
+
       <button
         ref={triggerRef}
         type="button"
@@ -130,133 +161,207 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Clock size={13} style={{ color: 'var(--accent)' }} />
-          <span>{isPM ? '오후' : '오전'} {hourStr.padStart(2, '0')}:{minuteStr}</span>
+          <span>{hourStr}:{minuteStr}</span>
         </span>
       </button>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
         <div
           ref={popoverRef}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             zIndex: 99999,
             width: `${coords.width}px`,
-            backgroundColor: 'var(--input-bg)',
-            border: '1px solid var(--panel-border)',
-            borderRadius: '12px',
-            boxShadow: '0 8px 30px var(--shadow-color)',
-            padding: '0.8rem',
+            backgroundColor: popoverBg,
+            border: `1px solid ${popoverBorder}`,
+            borderRadius: '16px',
+            boxShadow: popoverShadow,
+            padding: '0.6rem 0.6rem 0.8rem 0.6rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.75rem',
-            animation: 'fadeIn 0.15s ease'
+            gap: '0.4rem',
+            animation: 'iosPopoverFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
-          {/* AM / PM Segmented Control */}
-          <div style={{ display: 'flex', background: 'var(--row-bg)', padding: '2px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingBottom: '0.2rem',
+            borderBottom: `1px solid ${selectionBorder}`,
+          }}>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: '600',
+              color: 'var(--text-secondary)',
+            }}>
+              시간 선택
+            </span>
             <button
               type="button"
-              onClick={() => handleSelect(false, hourStr, minuteStr)}
+              onClick={() => setIsOpen(false)}
               style={{
-                flex: 1,
-                padding: '0.3rem',
+                background: 'none',
                 border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
+                color: 'var(--accent)',
+                fontSize: '0.78rem',
+                fontWeight: '700',
                 cursor: 'pointer',
-                backgroundColor: !isPM ? 'var(--accent)' : 'transparent',
-                color: !isPM ? '#ffffff' : 'var(--text-secondary)',
-                transition: 'all 0.1s ease'
+                padding: '0.1rem 0.3rem',
+                marginRight: '-0.15rem',
+                transition: 'opacity 0.1s ease',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
             >
-              오전
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelect(true, hourStr, minuteStr)}
-              style={{
-                flex: 1,
-                padding: '0.3rem',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                backgroundColor: isPM ? 'var(--accent)' : 'transparent',
-                color: isPM ? '#ffffff' : 'var(--text-secondary)',
-                transition: 'all 0.1s ease'
-              }}
-            >
-              오후
+              완료
             </button>
           </div>
 
-          {/* Hour Selector (Grid) */}
-          <div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: '0.3rem', paddingLeft: '0.2rem' }}>시 (Hour)</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.25rem' }}>
-              {hours.map(h => {
-                const isSelected = hourStr === h;
-                return (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => handleSelect(isPM, h, minuteStr)}
-                    style={{
-                      padding: '0.3rem 0',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      backgroundColor: isSelected ? 'var(--accent-soft-bg)' : 'transparent',
-                      color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: isSelected ? 'var(--accent)' : 'transparent',
-                      transition: 'all 0.1s ease'
-                    }}
-                  >
-                    {h}
-                  </button>
-                );
-              })}
+          {/* Large Digital Display with Steppers */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '0.2rem 0',
+          }}>
+            {/* Hour Block */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+              <button
+                type="button"
+                onClick={() => adjustHour(1)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.8
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+              >
+                <ChevronUp size={15} />
+              </button>
+              <div
+                style={{
+                  width: '46px',
+                  height: '36px',
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: 'var(--text-primary)',
+                  backgroundColor: boxBg,
+                  border: `1px solid ${selectionBorder}`,
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                }}
+              >
+                {hourStr}
+              </div>
+              <button
+                type="button"
+                onClick={() => adjustHour(-1)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.8
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+              >
+                <ChevronDown size={15} />
+              </button>
             </div>
-          </div>
 
-          {/* Minute Selector (Grid) */}
-          <div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: '0.3rem', paddingLeft: '0.2rem' }}>분 (Minute)</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem' }}>
-              {minutes.map(m => {
-                const isSelected = minuteStr === m;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => handleSelect(isPM, hourStr, m)}
-                    style={{
-                      padding: '0.3rem 0',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      backgroundColor: isSelected ? 'var(--accent-soft-bg)' : 'transparent',
-                      color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: isSelected ? 'var(--accent)' : 'transparent',
-                      transition: 'all 0.1s ease'
-                    }}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
+            {/* Separator */}
+            <span style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: 'var(--text-secondary)',
+              marginTop: '2px'
+            }}>
+              :
+            </span>
+
+            {/* Minute Block */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+              <button
+                type="button"
+                onClick={() => adjustMinute(1)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.8
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+              >
+                <ChevronUp size={15} />
+              </button>
+              <div
+                style={{
+                  width: '46px',
+                  height: '36px',
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: 'var(--text-primary)',
+                  backgroundColor: boxBg,
+                  border: `1px solid ${selectionBorder}`,
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                }}
+              >
+                {minuteStr}
+              </div>
+              <button
+                type="button"
+                onClick={() => adjustMinute(-1)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.8
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+              >
+                <ChevronDown size={15} />
+              </button>
             </div>
           </div>
         </div>,
