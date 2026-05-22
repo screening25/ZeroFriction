@@ -835,7 +835,7 @@ export default function SettingsSection() {
               <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div>• <strong>일정/재고/메모 데이터 엑셀 및 PDF 내보내기 지원</strong>: 각 페이지(대시보드 일정/메모/재고 목록, 캘린더 페이지, 재고 페이지) 상단에 엑셀(CSV) 및 PDF 다운로드 버튼을 추가하여 보관 중인 데이터를 손쉽게 문서로 저장하고 인쇄할 수 있도록 기능을 확장했습니다.</div>
+              <div>• <strong>일정/재고/메모 데이터 엑셀 및 PDF 내보내기 지원</strong>: 각 페이지(대시보드 일정/메모/재고 목록, 캘린더 페이지, 재고 페이지) 상단에 엑셀(CSV) 및 PDF 다운로드 버튼을 추가하였으며, 개별 메모 상세 보기 모달에서도 해당 메모만 즉시 개별적으로 엑셀/PDF로 내보낼 수 있도록 개선했습니다.</div>
               <div>• <strong>Excel 한글 깨짐 방지</strong>: UTF-8 BOM(\uFEFF)을 자동으로 추가하여 다운로드한 CSV 파일을 엑셀에서 열 때 한글이 깨지지 않고 올바르게 출력되도록 구현했습니다.</div>
               <div>• <strong>인쇄 전용 스타일 및 마크다운 렌더링 지원</strong>: PDF 저장 또는 인쇄 시, 깔끔하게 스타일링된 출력 전용 문서를 동적으로 생성하며, 메모 내 표(Table), 리스트, 코드 블록 등의 마크다운 서식을 원본 레이아웃 그대로 유지하여 인쇄합니다.</div>
             </div>

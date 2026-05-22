@@ -2931,24 +2931,72 @@ export default function Home() {
                   {isMemoEditing ? '취소' : '닫기'}
                 </button>
                 <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>메모</div>
-                {/* 편집 모드: 저장 / 보기 모드: 수정 진입 */}
-                {isMemoEditing ? (
-                  <button
-                    className="memo-text-btn save-btn"
-                    onClick={submitMemo}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
-                  >
-                    저장
-                  </button>
-                ) : (
-                  <button
-                    className="memo-text-btn save-btn"
-                    onClick={() => setIsMemoEditing(true)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
-                  >
-                    수정
-                  </button>
-                )}
+                {/* 편집 모드: 저장 / 보기 모드: 수정 진입 + 엑셀 & PDF 내보내기 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  {!isMemoEditing && memoForm.id && (
+                    <>
+                      {/* 엑셀 내보내기 */}
+                      <button
+                        type="button"
+                        onClick={() => exportToCsv('memo', memoForm.id)}
+                        title="이 메모 엑셀로 내보내기"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.25rem',
+                          borderRadius: '6px',
+                          transition: 'background-color 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <FileSpreadsheet size={13} />
+                      </button>
+                      {/* PDF 내보내기 */}
+                      <button
+                        type="button"
+                        onClick={() => printToPdf('memo', memoForm.id)}
+                        title="이 메모 PDF로 저장/인쇄"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.25rem',
+                          borderRadius: '6px',
+                          transition: 'background-color 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Printer size={13} />
+                      </button>
+                    </>
+                  )}
+                  {isMemoEditing ? (
+                    <button
+                      className="memo-text-btn save-btn"
+                      onClick={submitMemo}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      저장
+                    </button>
+                  ) : (
+                    <button
+                      className="memo-text-btn save-btn"
+                      onClick={() => setIsMemoEditing(true)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      수정
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* 보기 모드: 읽기 전용 상세보기 / 편집 모드: 에디터 */}

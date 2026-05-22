@@ -76,8 +76,8 @@ interface AppContextProps {
   updateMemoContentDirectly: (id: string, newContent: string) => void;
   deleteMemo: (id: string) => void;
   deleteInventoryItem: (id: string) => void;
-  exportToCsv: (type: 'event' | 'asset' | 'memo') => void;
-  printToPdf: (type: 'event' | 'asset' | 'memo') => void;
+  exportToCsv: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
+  printToPdf: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -745,10 +745,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * Excel 한글 깨짐 방지를 위해 BOM(﻿)을 선두에 추가한다.
    * @param type 'event'(일정), 'asset'(재고), 'memo'(메모)
    */
-  const exportToCsv = (type: 'event' | 'asset' | 'memo') => {
-    const filtered = records
-      .filter(r => r.type === type)
-      .sort((a, b) => {
+  const exportToCsv = (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => {
+    let filtered = records.filter(r => r.type === type);
+
+    if (specificRecordId) {
+      filtered = filtered.filter(r => r.id === specificRecordId);
+    } else {
+      filtered = filtered.sort((a, b) => {
         if (type === 'event') {
           const dateA = a.attrs.date || '';
           const dateB = b.attrs.date || '';
@@ -773,6 +776,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return 0;
       });
+    }
 
     let csvContent = "";
     
@@ -816,10 +820,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     link.setAttribute("href", url);
     
     let filename = `zero_`;
-    if (type === 'event') filename += 'schedule';
-    else if (type === 'asset') filename += 'inventory';
-    else filename += 'memo';
-    filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+    if (specificRecordId && filtered.length > 0) {
+      const safeTitle = (filtered[0].title || 'memo').trim().replace(/[^a-zA-Z0-9가-힣_-]/g, '_').substring(0, 30);
+      filename += `${safeTitle}_`;
+    } else {
+      if (type === 'event') filename += 'schedule_';
+      else if (type === 'asset') filename += 'inventory_';
+      else filename += 'memo_';
+    }
+    filename += `${new Date().toISOString().split('T')[0]}.csv`;
 
     link.setAttribute("download", filename);
     document.body.appendChild(link);
@@ -830,17 +839,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (type === 'asset') displayName = '재고';
     else if (type === 'memo') displayName = '메모';
 
-    showToast(`${displayName} CSV 내보내기 완료`);
+    if (specificRecordId && filtered.length > 0) {
+      showToast(`"${filtered[0].title || displayName}" CSV 내보내기 완료`);
+    } else {
+      showToast(`${displayName} CSV 내보내기 완료`);
+    }
   };
 
   /**
    * 데이터를 PDF 인쇄 창(Save as PDF)으로 내보낸다.
    * @param type 'event'(일정), 'asset'(재고), 'memo'(메모)
    */
-  const printToPdf = (type: 'event' | 'asset' | 'memo') => {
-    const filtered = records
-      .filter(r => r.type === type)
-      .sort((a, b) => {
+  const printToPdf = (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => {
+    let filtered = records.filter(r => r.type === type);
+
+    if (specificRecordId) {
+      filtered = filtered.filter(r => r.id === specificRecordId);
+    } else {
+      filtered = filtered.sort((a, b) => {
         if (type === 'event') {
           const dateA = a.attrs.date || '';
           const dateB = b.attrs.date || '';
@@ -865,12 +881,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return 0;
       });
+    }
 
     let titleText = '';
     let bodyContent = '';
 
     if (type === 'event') {
-      titleText = '일정 리스트';
+      titleText = specificRecordId && filtered.length > 0 ? `일정 상세: ${filtered[0].title || ''}` : '일정 리스트';
       bodyContent = `
         <table>
           <thead>
@@ -900,7 +917,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         </table>
       `;
     } else if (type === 'asset') {
-      titleText = '재고 리스트';
+      titleText = specificRecordId && filtered.length > 0 ? `재고 상세: ${filtered[0].title || ''}` : '재고 리스트';
       bodyContent = `
         <table>
           <thead>
@@ -932,7 +949,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         </table>
       `;
     } else if (type === 'memo') {
-      titleText = '메모 리스트';
+      titleText = specificRecordId && filtered.length > 0 ? `메모 상세: ${filtered[0].title || ''}` : '메모 리스트';
       bodyContent = `
         <div class="memo-list">
           ${filtered.map(r => `
