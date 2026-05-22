@@ -204,7 +204,7 @@ export default function QuickInputPage() {
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="일정, 메모, 재고를 자연어로 등록하세요..."
+            placeholder="일정, 메모, 재고를 자연스러운 문장으로 입력해보세요..."
             className="quick-input-field"
           />
           {value.trim() && (
