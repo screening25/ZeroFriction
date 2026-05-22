@@ -20,24 +20,47 @@ import Markdown from '@/frontend/components/Markdown';
 const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
 
 /**
- * 카테고리별 색상 팔레트(단색/소프트 배경/테두리)를 한곳에서 관리한다.
- * NOTE: 기존에 동일 분기가 3개 함수(switch)로 흩어져 있던 것을 단일 테이블로 통합(DRY)했다.
- *       반환 값은 기존과 100% 동일하다.
+ * 16진수 색상(hex)을 RGB 객체로 변환한다.
  */
-const CATEGORY_COLORS: Record<string, { solid: string; soft: string; border: string }> = {
-  '업무': { solid: '#007AFF', soft: 'rgba(0, 122, 255, 0.12)', border: 'rgba(0, 122, 255, 0.25)' },
-  '회의': { solid: '#FF9500', soft: 'rgba(255, 149, 0, 0.12)', border: 'rgba(255, 149, 0, 0.25)' },
-  '개인': { solid: '#34C759', soft: 'rgba(52, 199, 89, 0.12)', border: 'rgba(52, 199, 89, 0.25)' },
+const hexToRgb = (hex: string) => {
+  const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+  const fullHex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 };
-// 정의되지 않은 카테고리는 보라색 계열을 기본값으로 사용
-const CATEGORY_DEFAULT = { solid: '#AF52DE', soft: 'rgba(175, 82, 222, 0.12)', border: 'rgba(175, 82, 222, 0.25)' };
 
-/** 카테고리 단색(주로 텍스트/아이콘 색)을 반환한다. */
-const getCategoryColor = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).solid;
-/** 카테고리 소프트 배경색(연한 틴트 배경)을 반환한다. */
-const getCategorySoftBg = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).soft;
-/** 카테고리 테두리색을 반환한다. */
-const getCategoryBorder = (cat: string) => (CATEGORY_COLORS[cat] ?? CATEGORY_DEFAULT).border;
+/**
+ * 특정 카테고리의 색상 값(단색, 소프트배경, 테두리)을 구한다.
+ */
+const getCategoryColorStyles = (cat: string, customColors?: Record<string, string>) => {
+  let solid = customColors?.[cat];
+  if (!solid) {
+    const staticDefaults: Record<string, string> = {
+      '업무': '#007AFF',
+      '회의': '#FF9500',
+      '개인': '#34C759',
+      '일반': '#AF52DE',
+    };
+    solid = staticDefaults[cat] || '#AF52DE';
+  }
+  const rgb = hexToRgb(solid);
+  if (rgb) {
+    return {
+      solid,
+      soft: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`,
+      border: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`
+    };
+  }
+  return {
+    solid,
+    soft: 'rgba(175, 82, 222, 0.12)',
+    border: 'rgba(175, 82, 222, 0.25)'
+  };
+};
 
 /**
  * 메모 카드의 색상 테마(배경색 + 테두리)를 반환한다.
@@ -106,6 +129,12 @@ export default function Home() {
     searchQuery, searchType, setSearchResult,
     exportToCsv, printToPdf
   } = useApp();
+
+  const getCategoryColor = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).solid;
+  const getCategorySoftBg = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).soft;
+  const getCategoryBorder = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).border;
+
+  const [selectedCategoryColor, setSelectedCategoryColor] = useState('#AF52DE');
 
 
 
@@ -255,19 +284,35 @@ export default function Home() {
   const [isScheduleMasterSettingsOpen, setIsScheduleMasterSettingsOpen] = useState(false);
   const [newSchedCatInput, setNewSchedCatInput] = useState('');
 
-  const addMasterScheduleCategory = (cat: string) => {
+  const addMasterScheduleCategory = (cat: string, color: string) => {
     if (!cat.trim()) return;
     const current = appSettings.scheduleCategories || ['업무', '회의', '개인', '일반'];
     if (current.includes(cat.trim())) return;
-    const updated = { ...appSettings, scheduleCategories: [...current, cat.trim()] };
+    
+    const colors = { ...(appSettings.categoryColors || {}) };
+    colors[cat.trim()] = color;
+    
+    const updated = { 
+      ...appSettings, 
+      scheduleCategories: [...current, cat.trim()],
+      categoryColors: colors
+    };
     handleSettingsChange(updated);
     setNewSchedCatInput('');
+    setSelectedCategoryColor('#AF52DE');
     showToast(`일정 카테고리 '${cat.trim()}' 추가 완료`);
   };
 
   const deleteMasterScheduleCategory = (cat: string) => {
     const current = appSettings.scheduleCategories || ['업무', '회의', '개인', '일반'];
-    const updated = { ...appSettings, scheduleCategories: current.filter(x => x !== cat) };
+    const colors = { ...(appSettings.categoryColors || {}) };
+    delete colors[cat];
+    
+    const updated = { 
+      ...appSettings, 
+      scheduleCategories: current.filter(x => x !== cat),
+      categoryColors: colors
+    };
     handleSettingsChange(updated);
     showToast(`일정 카테고리 '${cat}' 삭제 완료`);
   };
@@ -1307,7 +1352,19 @@ export default function Home() {
                               {s.title}
                             </span>
                             {s.category && (
-                              <span className="badge" style={{ fontSize: '0.55rem', padding: '0.05rem 0.3rem', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
+                              <span 
+                                className="badge" 
+                                style={{ 
+                                  fontSize: '0.55rem', 
+                                  padding: '0.05rem 0.3rem', 
+                                  borderRadius: '4px', 
+                                  fontWeight: 600, 
+                                  flexShrink: 0,
+                                  background: getCategorySoftBg(s.category),
+                                  color: getCategoryColor(s.category),
+                                  border: `1px solid ${getCategoryBorder(s.category)}`
+                                }}
+                              >
                                 {s.category}
                               </span>
                             )}
@@ -1738,29 +1795,137 @@ export default function Home() {
                         />
                         <button
                           type="button"
-                          onClick={() => addMasterScheduleCategory(newSchedCatInput)}
+                          onClick={() => addMasterScheduleCategory(newSchedCatInput, selectedCategoryColor)}
                           className="ghost-btn"
                           style={{ padding: '0.25rem 0.65rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                         >
                           추가
                         </button>
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
-                        {(appSettings.scheduleCategories || ['업무', '회의', '개인', '일반']).map(cat => (
-                          <span
-                            key={cat}
-                            className="badge"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.15rem 0.45rem', fontSize: '0.68rem', borderRadius: '6px' }}
-                          >
-                            {cat}
+
+                      {/* 색상 선택 */}
+                      <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700 }}>카테고리 색상 지정</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', padding: '0.2rem 0' }}>
+                          {[
+                            '#007AFF', // Blue
+                            '#34C759', // Green
+                            '#AF52DE', // Purple
+                            '#FF9500', // Orange
+                            '#FF2D55', // Pink
+                            '#5AC8FA', // Teal
+                            '#FFCC00', // Yellow
+                            '#5856D6', // Indigo
+                            '#8E8E93', // Gray
+                          ].map(color => {
+                            const isSelected = selectedCategoryColor.toUpperCase() === color.toUpperCase();
+                            return (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => setSelectedCategoryColor(color)}
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  backgroundColor: color,
+                                  border: isSelected ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  boxShadow: isSelected ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
+                                  transform: isSelected ? 'scale(1.15)' : 'none',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                title={color}
+                              />
+                            );
+                          })}
+                          
+                          {/* 커스텀 팔레트 (color input) */}
+                          <div style={{ position: 'relative', display: 'inline-block', width: '20px', height: '20px' }}>
+                            <input
+                              type="color"
+                              value={
+                                [
+                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                ].includes(selectedCategoryColor.toUpperCase()) ? '#AF52DE' : selectedCategoryColor
+                              }
+                              onChange={(e) => {
+                                setSelectedCategoryColor(e.target.value);
+                              }}
+                              style={{
+                                opacity: 0,
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                cursor: 'pointer',
+                                zIndex: 2
+                              }}
+                              title="직접 지정"
+                            />
+                            <div
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: ![
+                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                ].includes(selectedCategoryColor.toUpperCase()) ? selectedCategoryColor : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
+                                border: ![
+                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                ].includes(selectedCategoryColor.toUpperCase()) ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                boxShadow: ![
+                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                ].includes(selectedCategoryColor.toUpperCase()) ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
+                                transform: ![
+                                  '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                ].includes(selectedCategoryColor.toUpperCase()) ? 'scale(1.15)' : 'none',
+                                transition: 'all 0.15s ease',
+                                pointerEvents: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.8rem' }}>
+                        {(appSettings.scheduleCategories || ['업무', '회의', '개인', '일반']).map(cat => {
+                          const col = getCategoryColor(cat);
+                          const bg = getCategorySoftBg(cat);
+                          const border = getCategoryBorder(cat);
+                          return (
                             <span
-                              onClick={() => deleteMasterScheduleCategory(cat)}
-                              style={{ cursor: 'pointer', fontWeight: 800, color: 'var(--danger)', marginLeft: '0.25rem' }}
+                              key={cat}
+                              className="badge"
+                              style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.3rem', 
+                                padding: '0.2rem 0.5rem', 
+                                fontSize: '0.7rem', 
+                                borderRadius: '6px',
+                                background: bg,
+                                color: col,
+                                border: `1px solid ${border}`,
+                                fontWeight: 600
+                              }}
                             >
-                              ×
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: col }} />
+                              {cat}
+                              <span
+                                onClick={() => deleteMasterScheduleCategory(cat)}
+                                style={{ cursor: 'pointer', fontWeight: 800, color: col, opacity: 0.6, marginLeft: '0.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '12px', height: '12px' }}
+                              >
+                                ×
+                              </span>
                             </span>
-                          </span>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1794,9 +1959,15 @@ export default function Home() {
                       padding: '0.25rem 0.6rem',
                       borderRadius: '8px',
                       // Apple-style translucent Cupertino Tint selection!
-                      border: isSelected ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
-                      background: isSelected ? 'var(--accent-soft-bg)' : 'var(--panel-bg)',
-                      color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                      border: isSelected 
+                        ? `1px solid ${cat === '전체' ? 'var(--accent-soft-border)' : getCategoryBorder(cat)}` 
+                        : '1px solid var(--panel-border)',
+                      background: isSelected 
+                        ? (cat === '전체' ? 'var(--accent-soft-bg)' : getCategorySoftBg(cat)) 
+                        : 'var(--panel-bg)',
+                      color: isSelected 
+                        ? (cat === '전체' ? 'var(--accent)' : getCategoryColor(cat)) 
+                        : 'var(--text-secondary)',
                       cursor: 'pointer',
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                       whiteSpace: 'nowrap'
@@ -1874,7 +2045,24 @@ export default function Home() {
                   {/* Col 4: Category badge (aligned right) */}
                   <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     {s.category && (
-                      <span className="badge" style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600, maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.category}</span>
+                      <span 
+                        className="badge" 
+                        style={{ 
+                          fontSize: '0.55rem', 
+                          padding: '0.1rem 0.35rem', 
+                          borderRadius: '4px', 
+                          fontWeight: 600, 
+                          maxWidth: '50px', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap',
+                          background: getCategorySoftBg(s.category),
+                          color: getCategoryColor(s.category),
+                          border: `1px solid ${getCategoryBorder(s.category)}`
+                        }}
+                      >
+                        {s.category}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -2656,9 +2844,9 @@ export default function Home() {
                           padding: '0.15rem 0.45rem',
                           borderRadius: '8px',
                           // Apple-style translucent Cupertino Tint selection!
-                          border: isSelected ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
-                          background: isSelected ? 'var(--accent-soft-bg)' : 'var(--surface-color)',
-                          color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                          border: isSelected ? `1px solid ${getCategoryBorder(cat)}` : '1px solid var(--panel-border)',
+                          background: isSelected ? getCategorySoftBg(cat) : 'var(--surface-color)',
+                          color: isSelected ? getCategoryColor(cat) : 'var(--text-secondary)',
                           cursor: 'pointer',
                           transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                         }}

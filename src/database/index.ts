@@ -82,6 +82,7 @@ export interface AppSettings {
   categories?: string[];
   managers?: string[];
   scheduleCategories?: string[];
+  categoryColors?: Record<string, string>;
   notificationType?: 'system' | 'browser';
   enableNotifications?: boolean;
 }
@@ -103,6 +104,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   categories: ['재고', 'IT 장비', '촬영 장비', '사무 용품', '기타'],
   managers: ['윤상영', '김철수', '이영희', '박민수'],
   scheduleCategories: ['업무', '회의', '개인', '일반'],
+  categoryColors: {
+    '업무': '#007AFF',
+    '회의': '#FF9500',
+    '개인': '#34C759',
+    '일반': '#AF52DE'
+  },
   notificationType: 'system',
   enableNotifications: true
 };
