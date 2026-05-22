@@ -3263,7 +3263,7 @@ export default function Home() {
                         checked={createMemo} 
                         onChange={e => setCreateMemo(e.target.checked)} 
                       />
-                      <span>이 일괄 처리에 대한 변동 사항 메모 생성 및 상호 연동</span>
+                      <span>이 일괄 처리 내역을 변동 사항 메모로 자동 생성하고 연동</span>
                     </label>
 
                     {createMemo && (
