@@ -819,6 +819,53 @@ export default function SettingsSection() {
         </div>
       </details>
 
+      {/* 업데이트 정보 (Version & Changelog) */}
+      <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.2)</span>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
+        </summary>
+        <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '1px solid var(--panel-border)', textAlign: 'left' }}>
+          {/* v0.4.2 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.2 (2026-05-22)</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div>• <strong>시간 선택기(CustomTimePicker) 미니멀화</strong>: 시간 선택 팝업에서 복잡한 그리드 형태의 숫자판을 제거하고, 상/하 화살표 단추(`▲`/`▼`)로 조작할 수 있는 직관적인 스텝 방식으로 디자인을 간소화하였습니다.</div>
+              <div>• <strong>시간 입력 이벤트 전파 방지</strong>: 시간 선택기를 클릭할 때 부모 일정 등록/수정창이 닫히지 않도록 이벤트 차단 처리를 강화했습니다.</div>
+              <div>• <strong>터미널 중복 기동 수정</strong>: macOS 데스크톱 실행기(`ZeroScheduler.app`) 기동 시 매번 열리던 빈 터미널 창을 노출하지 않도록 자동 실행 AppleScript를 무소음 형태로 패치했습니다.</div>
+            </div>
+          </div>
+
+          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
+
+          {/* v0.4.1 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.1 (2026-05-21)</span>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div>• <strong>재고 삭제 UX 개선</strong>: 재고 상세 모달 및 리스트에서 삭제 시 모달 닫힘 연동 및 클릭 이벤트 버블링 문제를 수정했습니다.</div>
+              <div>• <strong>일정 등록 시 기본 알림 시간 변경</strong>: 기본 알림의 초기 설정값을 기존 10분 전에서 정각(0분)으로 일원화했습니다.</div>
+            </div>
+          </div>
+
+          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
+
+          {/* v0.4.0 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.0 (2026-05-21)</span>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div>• <strong>메모 읽기 전용 뷰/수정 모드 분리</strong>: 메모 카드를 클릭하면 먼저 읽기 모드로 열리며, 우측 상단 "수정"을 눌러 편집 모드로 전환하도록 UX를 개편했습니다.</div>
+              <div>• <strong>메모 리스트 디자인 통일</strong>: 메모 카드의 높이를 150px 균일 사이즈로 통일하고 넘치는 내용을 보기 좋게 자르도록 수정했습니다.</div>
+              <div>• <strong>입력 폼 컴팩트화 및 안내문구 최적화</strong>.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
 
       {/* Soft Delete Trash Modal (Instant overlay within Settings!) */}
       <AnimatePresence>
