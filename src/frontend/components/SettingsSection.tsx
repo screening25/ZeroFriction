@@ -198,9 +198,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
   { version: "v0.5.2", date: "2026-05-22", latest: true, items: [
-    { b: "macOS 상단 바(트레이) 아이콘 연동", t: ": macOS 상단 메뉴 바에 Zero-Friction 시스템 트레이 아이콘을 등록했습니다. 아이콘 클릭 시 메인 창이 즉시 열리거나 숨겨집니다." },
-    { b: "백그라운드 실행 지원 (창 닫기 동작 변경)", t: ": 메인 창의 빨간색 닫기(X) 버튼을 클릭했을 때 앱이 완전히 종료되지 않고 백그라운드에 숨김 처리되어 상단 바를 통해 상시 실행 상태를 유지합니다." },
-    { b: "안전한 앱 종료 제공", t: ": 상단 바 트레이 아이콘 메뉴에서 '종료' 버튼을 클릭하거나, 키보드 단축키(Cmd+Q)를 통해 앱을 안전하게 완전히 종료할 수 있습니다." }
+    { b: "macOS 상단 바(트레이) 퀵 액션 추가", t: ": macOS 상단 메뉴 바 트레이 아이콘에 '새 일정 등록', '새 재고 등록', '새 메모 작성' 메뉴를 추가하여 신속한 데이터 등록 창을 즉시 호출할 수 있습니다." },
+    { b: "트레이 아이콘 시인성 개선", t: ": 더 크고 선명한 굵은 캘린더 체크마크 아이콘 디자인(trayTemplate.png)으로 변경하여 macOS 상단 바에서의 시인성을 대폭 강화했습니다." },
+    { b: "시간 입력 UI 깨짐 및 레이아웃 교정", t: ": 일정 등록 시 시간 입력 인풋이 찌그러지거나 잘리던 레이아웃 버그를 수정하고, '하루 종일' 토글과 38px 높이를 완벽하게 조화시켰습니다." },
+    { b: "백그라운드 실행 지원 및 안전한 앱 종료", t: ": 창을 닫아도 백그라운드에 유지되며, 상단 바 메뉴의 '종료' 또는 Cmd+Q를 통해 완전히 안전하게 종료됩니다." }
   ] },
   { version: "v0.5.1", date: "2026-05-22", items: [
     { b: "알림 제시각 표시 보장", t: ": 알림 타입·권한 상태와 무관하게 일정 시각이 되면 인앱 글래스모피즘 알림 카드가 항상 표시되도록 발송 로직을 통합했습니다." },
@@ -871,7 +872,7 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.1)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.2)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>

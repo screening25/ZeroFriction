@@ -337,11 +337,11 @@ export default function CalendarPage() {
                   </div>
                   {editingSchedule.attrs.allDay ? (
                     <div style={{
-                      height: '32px',
+                      height: '38px',
                       display: 'flex',
                       alignItems: 'center',
                       padding: '0 0.65rem',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       border: '1px solid var(--panel-border)',
                       background: 'var(--hover-bg)',
                       color: 'var(--text-tertiary)',

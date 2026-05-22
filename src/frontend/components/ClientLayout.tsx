@@ -106,6 +106,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  // Listen to IPC 'tray-action' events and dispatch them to the window
+  useEffect(() => {
+    if (!mounted) return;
+    const ipc = (window as any).ipcRenderer;
+    if (ipc) {
+      const handler = (event: any, action: string) => {
+        window.dispatchEvent(new CustomEvent('tray-action', { detail: action }));
+      };
+      ipc.on('tray-action', handler);
+      return () => {
+        ipc.removeListener('tray-action', handler);
+      };
+    }
+  }, [mounted]);
+
   // 전역 앱 상태/액션 (실제로 이 레이아웃에서 사용하는 값만 구독)
   const {
     theme, toggleTheme,

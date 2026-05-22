@@ -185,6 +185,62 @@ export default function Home() {
     };
   }, [records, setEditingSchedule, setEditingInventory, setIsMemoModalOpen, showToast]);
 
+  // Listen to tray menu action events sent from Electron process (via ClientLayout)
+  useEffect(() => {
+    const handleTrayAction = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const action = customEvent.detail;
+      if (!action) return;
+
+      if (action === 'new-schedule') {
+        setActiveTab('calendar');
+        setEditingSchedule({
+          id: '',
+          title: '',
+          type: 'event',
+          category: '일반',
+          attrs: {
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            time: '12:00',
+            allDay: false,
+            memo: '',
+            completed: false,
+            notifyOffset: appSettings.defaultNotifyOffset ?? 0
+          },
+          updatedAt: new Date().toISOString()
+        });
+      } else if (action === 'new-inventory') {
+        setActiveTab('inventory');
+        setEditingInventory({
+          id: '',
+          title: '',
+          type: 'asset',
+          category: '재고',
+          attrs: {
+            code: '',
+            qty: 1,
+            flow: 'IN',
+            loc: '',
+            mgr: '',
+            serial: '',
+            memo: ''
+          },
+          updatedAt: new Date().toISOString()
+        });
+      } else if (action === 'new-memo') {
+        setActiveTab('memo' as any);
+        setMemoForm({ title: '', content: '', pinned: false, color: '' });
+        setIsMemoEditing(true);
+        setIsMemoModalOpen(true);
+      }
+    };
+
+    window.addEventListener('tray-action', handleTrayAction);
+    return () => {
+      window.removeEventListener('tray-action', handleTrayAction);
+    };
+  }, [selectedDate, appSettings, setActiveTab, setEditingSchedule, setEditingInventory, setMemoForm, setIsMemoEditing, setIsMemoModalOpen]);
+
   // Input states for custom category creation inside modals
   const [customScheduleCategory, setCustomScheduleCategory] = useState<string>('');
   const [customInventoryCategory, setCustomInventoryCategory] = useState<string>('');
@@ -2634,11 +2690,11 @@ export default function Home() {
                   </div>
                   {editingSchedule.attrs.allDay ? (
                     <div style={{
-                      height: '32px',
+                      height: '38px',
                       display: 'flex',
                       alignItems: 'center',
                       padding: '0 0.65rem',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       border: '1px solid var(--panel-border)',
                       background: 'var(--hover-bg)',
                       color: 'var(--text-tertiary)',

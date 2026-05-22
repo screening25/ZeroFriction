@@ -222,6 +222,8 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
           placeholder="HH:MM"
           className="input-sm"
           style={{
+            display: 'block',
+            boxSizing: 'border-box',
             width: '100%',
             height: '38px',
             padding: '0 0.75rem 0 2rem',

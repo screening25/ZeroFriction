@@ -58,8 +58,43 @@ function createTray() {
       label: '열기',
       click: () => {
         if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '새 일정 등록',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('tray-action', 'new-schedule');
+        }
+      }
+    },
+    {
+      label: '새 재고 등록',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('tray-action', 'new-inventory');
+        }
+      }
+    },
+    {
+      label: '새 메모 작성',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('tray-action', 'new-memo');
         }
       }
     },
@@ -80,6 +115,7 @@ function createTray() {
       if (mainWindow.isVisible()) {
         mainWindow.hide();
       } else {
+        if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.show();
         mainWindow.focus();
       }
