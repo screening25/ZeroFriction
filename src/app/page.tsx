@@ -1551,11 +1551,12 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>엑셀</span>
+                <span>Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -1573,7 +1574,8 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <Printer size={12} />
@@ -1889,11 +1891,12 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>엑셀</span>
+                <span>Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -1911,7 +1914,8 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <Printer size={12} />
@@ -2394,11 +2398,12 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <FileSpreadsheet size={12} />
-                <span>엑셀</span>
+                <span>Excel</span>
               </button>
 
               {/* 🖨️ PDF 인쇄 버튼 */}
@@ -2416,7 +2421,8 @@ export default function Home() {
                   fontWeight: 650, 
                   border: '1px solid var(--panel-border)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0
                 }}
               >
                 <Printer size={12} />
@@ -2939,7 +2945,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => exportToCsv('memo', memoForm.id)}
-                        title="이 메모 엑셀로 내보내기"
+                        title="이 메모 Excel로 내보내기"
                         style={{
                           background: 'transparent',
                           border: 'none',
@@ -2949,7 +2955,8 @@ export default function Home() {
                           alignItems: 'center',
                           padding: '0.25rem',
                           borderRadius: '6px',
-                          transition: 'background-color 0.15s ease'
+                          transition: 'background-color 0.15s ease',
+                          flexShrink: 0
                         }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -2970,7 +2977,8 @@ export default function Home() {
                           alignItems: 'center',
                           padding: '0.25rem',
                           borderRadius: '6px',
-                          transition: 'background-color 0.15s ease'
+                          transition: 'background-color 0.15s ease',
+                          flexShrink: 0
                         }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}

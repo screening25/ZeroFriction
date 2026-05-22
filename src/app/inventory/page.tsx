@@ -31,11 +31,12 @@ export default function InventoryPage() {
               border: '1px solid var(--panel-border)',
               background: 'var(--bg-secondary)',
               color: 'var(--text-secondary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flexShrink: 0
             }}
           >
             <FileSpreadsheet size={11} />
-            <span>엑셀</span>
+            <span>Excel</span>
           </button>
 
           {/* 🖨️ PDF 인쇄 버튼 */}
@@ -53,7 +54,8 @@ export default function InventoryPage() {
               border: '1px solid var(--panel-border)',
               background: 'var(--bg-secondary)',
               color: 'var(--text-secondary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flexShrink: 0
             }}
           >
             <Printer size={11} />
