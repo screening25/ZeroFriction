@@ -411,7 +411,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logActivity = (type: ActivityType, title: string, snippet: string) => {
-    const newAct: ActivityLog = { id: Date.now().toString(), type, title, snippet, timestamp: Date.now() };
+    const newAct: ActivityLog = { id: `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, type, title, snippet, timestamp: Date.now() };
     setActivities(prev => {
       const updated = [newAct, ...prev].slice(0, 50);
       persistActivities(updated);

@@ -632,7 +632,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Global Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: 20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 20, x: '-50%' }} className="toast">{toast}</motion.div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20, x: '-50%' }} 
+            animate={{ opacity: 1, y: 0, x: '-50%' }} 
+            exit={{ opacity: 0, y: 20, x: '-50%' }} 
+            className="toast"
+            style={{ pointerEvents: 'none' }}
+          >
+            {toast}
+          </motion.div>
         )}
       </AnimatePresence>
 

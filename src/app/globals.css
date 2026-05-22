@@ -407,15 +407,14 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
   bottom: 0.6rem;
   display: flex;
   gap: 0.3rem;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.35;
+  pointer-events: auto;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateY(2px);
+  transform: translateY(0);
+  z-index: 10;
 }
 .card:hover .card-hover-actions {
   opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
 }
 .ghost-btn {
   background: var(--panel-border);
@@ -474,7 +473,6 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 }
 .inv-card:hover .card-hover-actions {
   opacity: 1;
-  pointer-events: auto;
 }
 .inv-name {
   font-size: 0.95rem;
@@ -1240,6 +1238,7 @@ textarea.input-sm {
   white-space: pre-wrap;
   line-height: 1.4;
   border: 1px solid rgba(255,255,255,0.08);
+  pointer-events: none;
 }
 
 /* ===== HIGH-END SEGMENTED TABS (Apple / Linear style) ===== */

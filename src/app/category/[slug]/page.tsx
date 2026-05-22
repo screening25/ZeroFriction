@@ -62,8 +62,8 @@ export default function CategoryPage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-                <div className="card-hover-actions">
-                  <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={() => handleDelete(item.id, item.type)}>삭제</button>
+                <div className="card-hover-actions" onClick={(e) => e.stopPropagation()}>
+                  <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.type); }}>삭제</button>
                 </div>
               </div>
             );

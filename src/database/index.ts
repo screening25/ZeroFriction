@@ -131,7 +131,36 @@ const ARCHIVE_KEY = 'archived_records';
 export function getRecords(): UniversalRecord[] {
   if (typeof window === 'undefined') return [];
   const raw = localStorage.getItem(REC_KEY);
-  return raw ? JSON.parse(raw) : [];
+  if (!raw) return [];
+  try {
+    const list: UniversalRecord[] = JSON.parse(raw);
+    let changed = false;
+    const seenIds = new Set<string>();
+    const repaired = list.map(item => {
+      if (!item.id) {
+        item.id = `${item.type || 'item'}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        changed = true;
+      }
+      if (seenIds.has(item.id)) {
+        const baseId = item.id;
+        let newId = `${baseId}_${Math.random().toString(36).substring(2, 6)}`;
+        while (seenIds.has(newId)) {
+          newId = `${baseId}_${Math.random().toString(36).substring(2, 6)}`;
+        }
+        item.id = newId;
+        changed = true;
+      }
+      seenIds.add(item.id);
+      return item;
+    });
+    if (changed) {
+      saveRecords(repaired);
+    }
+    return repaired;
+  } catch (e) {
+    console.error("Failed to parse records", e);
+    return [];
+  }
 }
 
 export function saveRecords(records: UniversalRecord[]): void {
@@ -177,7 +206,7 @@ export function purgeArchive(): void {
 
 export function addRecord(rec: Omit<UniversalRecord, 'id' | 'updatedAt'>): UniversalRecord {
   const records = getRecords();
-  const id = `${rec.type}_${Date.now()}`;
+  const id = `${rec.type}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   const updatedAt = new Date().toISOString();
   const category = rec.category || "일반";
   

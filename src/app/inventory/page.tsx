@@ -15,6 +15,7 @@ interface BulkRow {
   loc: string;
   mgr: string;
   memo: string;
+  serial?: string;
 }
 
 export default function InventoryPage() {
@@ -35,6 +36,15 @@ export default function InventoryPage() {
   const [currentPage, setCurrentPage] = React.useState(0);
   const itemsPerPage = appSettings?.maxInventoryShown || 5;
   const totalPages = Math.ceil(inventory.length / itemsPerPage);
+
+  React.useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
+    } else if (totalPages === 0) {
+      setCurrentPage(0);
+    }
+  }, [totalPages, currentPage]);
+
   const paginatedInventory = inventory.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
   // Bulk Modal States
@@ -84,7 +94,68 @@ export default function InventoryPage() {
     setMemoContent(markdown);
   }, [bulkRows, createMemo, isMemoCustom, memoTitle]);
 
-  // Parse clipboard TSV/CSV data
+  const isSerialPattern = (val: string): boolean => {
+    const cleanVal = val.trim();
+    if (!cleanVal) return false;
+    
+    // Pattern 1: Alphanumeric parts separated by hyphens or underscores
+    const parts = cleanVal.split(/[-_]/);
+    if (parts.length >= 3) {
+      const lastPart = parts[parts.length - 1];
+      const isNumericLast = /^\d+$/.test(lastPart);
+      const hasLettersAndDigits = /[a-zA-Z]/.test(cleanVal) && /\d/.test(cleanVal);
+      if (isNumericLast || hasLettersAndDigits) {
+        return true;
+      }
+    }
+    
+    // Pattern 2: Typical barcode/serial containing a hyphen/underscore and alphanumeric + ending digits
+    if (/^[A-Z0-9]+[-_][0-9]+$/i.test(cleanVal)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Merge rows helper to group duplicates and net their quantities
+  const mergeRows = (rows: BulkRow[]): BulkRow[] => {
+    const mergedList: BulkRow[] = [];
+    rows.forEach(row => {
+      // If the row has a serial number, keep it as a distinct entry.
+      if (row.serial) {
+        mergedList.push({ ...row });
+        return;
+      }
+
+      // Find an existing row with the same title that does not have a serial number.
+      const existing = mergedList.find(r => r.title.trim() === row.title.trim() && !r.serial);
+      if (!existing) {
+        mergedList.push({ ...row });
+      } else {
+        const existingNet = existing.flow === 'IN' ? existing.qty : -existing.qty;
+        const currentNet = row.flow === 'IN' ? row.qty : -row.qty;
+        const totalNet = existingNet + currentNet;
+
+        existing.qty = Math.abs(totalNet);
+        existing.flow = totalNet >= 0 ? 'IN' : 'OUT';
+
+        if (!existing.code && row.code) {
+          existing.code = row.code.trim();
+        }
+        if (row.loc && row.loc !== locations[0]) {
+          existing.loc = row.loc.trim();
+        }
+        if (row.mgr && row.mgr !== managers[0]) {
+          existing.mgr = row.mgr.trim();
+        }
+        const memos = [existing.memo, row.memo].map(m => m.trim()).filter(Boolean);
+        existing.memo = memos.join('; ');
+      }
+    });
+    return mergedList;
+  };
+
+  // Parse clipboard TSV/CSV/Markdown data
   const parsePasteData = (text: string) => {
     if (!text.trim()) {
       showToast('분석할 텍스트를 입력해 주세요.');
@@ -94,42 +165,111 @@ export default function InventoryPage() {
     const parsed: BulkRow[] = [];
     
     lines.forEach(line => {
-      if (!line.trim()) return;
+      const trimmed = line.trim();
+      if (!trimmed) return;
 
-      const cols = line.split(/\t|,/);
-      if (cols.length === 0) return;
-
-      const firstCol = cols[0]?.trim().toLowerCase();
-      if (firstCol === '코드' || firstCol === 'code' || firstCol === '품목코드') {
-        return; // Skip header row
+      // Skip Markdown separator lines like | --- | --- |
+      if (/^[|\s\-:]+$/.test(trimmed)) {
+        return;
       }
 
-      const code = cols[0]?.trim() || '';
-      const title = cols[1]?.trim() || '';
-      const qtyStr = cols[2]?.trim() || '1';
-      const qty = parseInt(qtyStr, 10) || 1;
-      const flowText = cols[3]?.trim() || '입고';
+      let cols: string[] = [];
+      if (trimmed.includes('|')) {
+        // Parse as Markdown table row
+        cols = trimmed.split('|').map(s => s.trim());
+        // Remove empty first/last elements if it had leading/trailing pipes
+        if (cols.length > 0 && cols[0] === '') cols.shift();
+        if (cols.length > 0 && cols[cols.length - 1] === '') cols.pop();
+      } else {
+        // Parse as standard TSV / CSV
+        cols = trimmed.split(/\t|,/).map(s => s.trim());
+      }
+
+      if (cols.length === 0) return;
+
+      // Skip header row or total lines
+      const rawFirst = (cols[0] || '').replace(/\*/g, '').trim();
+      const firstColLower = rawFirst.toLowerCase().replace(/\s+/g, '');
+      
+      const isHeaderOrTotal = 
+        !rawFirst ||
+        [
+          '코드', 'code', '품목코드', '구분', '품명', '품목명', '수량',
+          '기기번호', '기기번호', '시리얼', '시리얼번호', '일련번호', '일련번호', 'serial', 'serialnumber', 'serialno',
+          's/n', 'sn', '기기명', '모델', '모델명', 'model', 'modelname', '기기', '번호', '비고', '상태'
+        ].includes(firstColLower) ||
+        firstColLower.includes('total') ||
+        firstColLower.includes('합계') ||
+        firstColLower.includes('grand');
+
+      if (isHeaderOrTotal) {
+        return;
+      }
+
+      let code = cols[0] || '';
+      let title = cols[1] || '';
+      let serial = '';
+      let memo = cols[6] || '';
+      
+      const isSerial = isSerialPattern(code);
+      if (isSerial) {
+        serial = code.trim();
+        const parts = serial.split(/[-_]/);
+        const prefix = parts.slice(0, parts.length - 1).join('-');
+        code = prefix;
+
+        const secColClean = (cols[1] || '').trim();
+        const secColLower = secColClean.toLowerCase().replace(/\s+/g, '');
+        const isStatusOrInfo = 
+          !secColClean ||
+          [
+            '보유', '출고', '입고', '사용중', '폐기', '수리중', '대여중', '정상', '고장', '불량', '미개봉',
+            'in', 'out', 'active', 'inactive', 'lost', 'broken', 'damaged', 'stored', 'available', 'status',
+            '동고fc', '안산fc', '충원고등학교', '경기모션fc', 'leofc', '동명대학교', '전북현대u18', '보물섬남해u15', '비즈니스팀', 'champasakavenir', '보물섬남해u18', '경기모션fc', '보물섬남해u15', '보물섬남해u18', '동고fc',
+            '비고'
+          ].includes(secColLower) ||
+          secColClean.includes('데모') ||
+          secColClean.includes('입고') ||
+          secColClean.includes('출고');
+
+        if (isStatusOrInfo) {
+          title = prefix;
+          // Combine second column status with third column comments (if any)
+          const extraInfo = cols[2] ? cols[2].trim() : '';
+          const statusMemo = secColClean + (extraInfo ? ` (${extraInfo})` : '');
+          memo = memo ? `${statusMemo}; ${memo}` : statusMemo;
+        } else {
+          title = secColClean;
+        }
+      }
+
+      const qtyStr = cols[2] || '1';
+      const qty = isSerial ? 1 : (parseInt(qtyStr, 10) || 1);
+      const flowText = cols[3] || '입고';
       const flow = (flowText.includes('출') || flowText.toLowerCase().includes('out')) ? 'OUT' : 'IN';
-      const loc = cols[4]?.trim() || locations[0];
-      const mgr = cols[5]?.trim() || managers[0];
-      const memo = cols[6]?.trim() || '';
+      const loc = cols[4] || locations[0];
+      const mgr = cols[5] || managers[0];
+
+      const validLoc = locations.includes(loc) ? loc : locations[0];
+      const validMgr = managers.includes(mgr) ? mgr : managers[0];
 
       if (title || code) {
         parsed.push({
-          code,
-          title: title || code,
+          code: code.trim(),
+          title: (title || code).trim(),
           qty,
           flow,
-          loc: locations.includes(loc) ? loc : locations[0],
-          mgr: managers.includes(mgr) ? mgr : managers[0],
-          memo
+          loc: validLoc,
+          mgr: validMgr,
+          memo: memo.trim(),
+          serial: serial.trim()
         });
       }
     });
 
     if (parsed.length > 0) {
-      setBulkRows(prev => [...prev, ...parsed]);
-      showToast(`${parsed.length}개의 품목 데이터가 파싱 및 추가되었습니다.`);
+      setBulkRows(prev => mergeRows([...prev, ...parsed]));
+      showToast(`${parsed.length}개의 품목 데이터가 파싱 및 병합 추가되었습니다.`);
       setPasteText('');
     } else {
       showToast('올바른 품목 데이터를 추출하지 못했습니다. 형식을 확인해 주세요.');
@@ -155,19 +295,13 @@ export default function InventoryPage() {
     setBulkRows(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const updateRow = (idx: number, field: keyof BulkRow, value: any) => {
-    setBulkRows(prev => {
-      const next = [...prev];
-      next[idx] = {
-        ...next[idx],
-        [field]: value
-      };
-      return next;
-    });
+  const updateRow = (idx: number, field: keyof BulkRow, val: any) => {
+    setBulkRows(prev => prev.map((row, i) => i === idx ? { ...row, [field]: val } : row));
   };
 
   const submitBulkInventory = () => {
-    const validRows = bulkRows.filter(r => r.title.trim() !== '' || r.code.trim() !== '');
+    // Filter and merge duplicates on submit
+    const validRows = mergeRows(bulkRows.filter(r => r.title.trim() !== '' || r.code.trim() !== ''));
     if (validRows.length === 0) {
       showToast('등록할 품목 데이터가 없습니다.');
       return;
@@ -212,7 +346,7 @@ export default function InventoryPage() {
         flow: row.flow || 'IN',
         loc: row.loc || existingAsset?.attrs?.loc || locations[0],
         mgr: row.mgr || existingAsset?.attrs?.mgr || managers[0],
-        serial: existingAsset?.attrs?.serial || '',
+        serial: row.serial?.trim() || existingAsset?.attrs?.serial || '',
         memo: row.memo.trim() || existingAsset?.attrs?.memo || '',
         linkedIds: newLinkedIds
       };
@@ -411,7 +545,7 @@ export default function InventoryPage() {
                 <div className="inv-qty" style={{ fontSize: '0.9rem', fontWeight: 700, flexShrink: 0, paddingRight: '0.5rem', color: isNegative ? 'var(--danger)' : 'var(--success)' }}>
                   {qtyNum >= 0 ? '+' : ''}{qtyNum}개
                 </div>
-                <div className="card-hover-actions">
+                <div className="card-hover-actions" onClick={(e) => e.stopPropagation()}>
                   <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
                 </div>
               </div>
@@ -471,90 +605,158 @@ export default function InventoryPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              style={{ maxWidth: '850px', width: '95%', gap: '0.8rem' }}
+              style={{ 
+                maxWidth: '1050px', 
+                width: '95%'
+              }}
             >
               <div className="ios-modal-header">
                 <button className="ios-text-btn" onClick={() => setIsBulkModalOpen(false)}>취소</button>
                 <div className="ios-modal-title">재고 일괄 등록</div>
-                <button className="ios-text-btn bold" onClick={submitBulkInventory}>등록 완료</button>
+                <button className="ios-text-btn bold" onClick={submitBulkInventory}>저장</button>
               </div>
 
               {/* 📋 복사 / 붙여넣기 파싱 영역 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', background: 'var(--hover-bg)', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--panel-border)' }}>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem', 
+                background: 'var(--bg-secondary)', 
+                padding: '1rem', 
+                borderRadius: '12px', 
+                border: '1px dashed var(--panel-border)'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    Excel / 스프레드시트 데이터 붙여넣기
-                  </label>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Excel / 마크다운 데이터 분석</span>
+                    <span className="badge">
+                      CSV / TSV / Markdown
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
                     (순서: 코드 | 품목명 | 수량 | 구분 | 보관위치 | 담당자 | 메모)
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <textarea
-                    placeholder="여기에 복사한 행 데이터를 붙여넣으세요. 탭 또는 쉼표(,) 구분자를 자동 분석합니다.&#10;예시:&#10;A001&#9;아이패드 PRO&#9;10&#9;입고&#9;A창고&#9;윤상영&#9;프로모션 지급용"
+                    placeholder="여기에 복사한 데이터를 붙여넣으세요. 구분 기호와 표 헤더를 지능적으로 자동 제외합니다.&#10;[예시]&#10;CLBX-5A-15689&#9;보유&#10;CLBX-5A-15690&#9;보유"
                     value={pasteText}
                     onChange={e => setPasteText(e.target.value)}
                     className="input-sm"
-                    style={{ height: '70px', resize: 'vertical', fontSize: '0.75rem', flex: 1, fontFamily: 'monospace' }}
+                    style={{ 
+                      height: '95px', 
+                      resize: 'vertical', 
+                      fontFamily: 'SFMono-Regular, Consolas, Monaco, monospace',
+                      lineHeight: '1.45'
+                    }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => parsePasteData(pasteText)}
-                    className="ghost-btn"
-                    style={{ height: '70px', padding: '0 0.8rem', fontSize: '0.75rem', borderRadius: '10px', flexShrink: 0, fontWeight: 700 }}
-                  >
-                    분석 적용
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-tertiary)', fontSize: '0.7rem' }}>
+                      <span style={{ fontSize: '0.9rem' }}>💡</span>
+                      <span>시리얼이 감지되면 품목코드와 시리얼 번호가 자동 분류되어 개별 등록됩니다.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => parsePasteData(pasteText)}
+                      className="ghost-btn"
+                      style={{ 
+                        height: '32px', 
+                        padding: '0 1.2rem', 
+                        fontSize: '0.75rem', 
+                        borderRadius: '8px', 
+                        fontWeight: 700,
+                        background: 'var(--accent)',
+                        color: '#ffffff',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      분석 적용
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* 📊 동적 편집 그리드 테이블 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  등록 대기 품목 ({bulkRows.length}개)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    등록 대기 목록
+                  </div>
+                  <span className="badge">
+                    {bulkRows.length}개 품목
+                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setBulkRows([])}
                   className="ghost-btn danger"
-                  style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', opacity: bulkRows.length > 0 ? 1 : 0.5 }}
+                  style={{ 
+                    fontSize: '0.7rem', 
+                    padding: '0.25rem 0.6rem', 
+                    borderRadius: '8px',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    background: 'transparent',
+                    color: 'var(--danger)',
+                    fontWeight: 600,
+                    opacity: bulkRows.length > 0 ? 1 : 0.5,
+                    cursor: bulkRows.length > 0 ? 'pointer' : 'not-allowed'
+                  }}
                   disabled={bulkRows.length === 0}
                 >
-                  전체 삭제
+                  전체 비우기
                 </button>
               </div>
 
-              <div style={{ overflowX: 'auto', maxHeight: '260px', border: '1px solid var(--panel-border)', borderRadius: '10px', background: 'rgba(255,255,255,0.01)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+              <div style={{ 
+                overflowX: 'auto', 
+                maxHeight: '280px', 
+                border: '1px solid var(--panel-border)', 
+                borderRadius: '16px', 
+                background: 'var(--bg-secondary)',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+                scrollbarWidth: 'thin'
+              }}>
+                <table style={{ minWidth: '1150px', width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--panel-border)' }}>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', width: '90px' }}>코드</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', minWidth: '130px' }}>품목명 <span style={{ color: 'var(--danger)' }}>*</span></th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', width: '70px' }}>수량</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', width: '90px' }}>구분</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', minWidth: '100px' }}>보관위치</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', minWidth: '95px' }}>담당자</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', minWidth: '120px' }}>메모</th>
-                      <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center', width: '40px' }}>삭제</th>
+                    <tr style={{ background: 'var(--hover-bg)', borderBottom: '1px solid var(--panel-border)' }}>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '110px', color: 'var(--text-secondary)', fontWeight: 700 }}>코드</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '160px', color: 'var(--text-secondary)', fontWeight: 700 }}>품목명 <span style={{ color: 'var(--danger)' }}>*</span></th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '150px', color: 'var(--text-secondary)', fontWeight: 700 }}>시리얼 번호</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '80px', color: 'var(--text-secondary)', fontWeight: 700 }}>수량</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', width: '115px', color: 'var(--text-secondary)', fontWeight: 700 }}>구분</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '120px', color: 'var(--text-secondary)', fontWeight: 700 }}>보관위치</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '110px', color: 'var(--text-secondary)', fontWeight: 700 }}>담당자</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', minWidth: '160px', color: 'var(--text-secondary)', fontWeight: 700 }}>메모</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '50px', color: 'var(--text-secondary)', fontWeight: 700 }}>삭제</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bulkRows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                          대기 중인 품목이 없습니다. 데이터를 붙여넣거나 아래 '행 추가' 버튼을 눌러 목록을 구성하세요.
+                        <td colSpan={9} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>📦</span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>대기 중인 품목이 없습니다.</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>데이터를 위 영역에 붙여넣거나 아래 '행 추가' 버튼을 눌러 목록을 만드세요.</span>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       bulkRows.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--panel-border)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                        <tr key={idx} style={{ 
+                          borderBottom: '1px solid var(--panel-border)', 
+                          background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                          transition: 'background-color 0.15s ease'
+                        }}>
                           
                           {/* 코드 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <input
                               type="text"
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.4rem', borderRadius: '6px' }}
+                              style={{ width: '100%' }}
                               value={row.code}
                               placeholder="코드"
                               onChange={e => updateRow(idx, 'code', e.target.value)}
@@ -562,53 +764,70 @@ export default function InventoryPage() {
                           </td>
 
                           {/* 품목명 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <input
                               type="text"
                               className="input-sm"
                               style={{ 
-                                height: '30px', 
-                                fontSize: '0.75rem', 
-                                padding: '0 0.4rem', 
-                                borderRadius: '6px',
-                                border: !row.title.trim() ? '1px solid var(--danger)' : '1px solid var(--panel-border)'
+                                width: '100%',
+                                border: !row.title.trim() ? '1.5px solid var(--danger)' : undefined
                               }}
                               value={row.title}
-                              placeholder="품목명 입력"
+                              placeholder="품목명 필수"
                               onChange={e => updateRow(idx, 'title', e.target.value)}
                             />
                           </td>
 
+                          {/* 시리얼 */}
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
+                            <input
+                              type="text"
+                              className="input-sm"
+                              style={{ width: '100%' }}
+                              value={row.serial || ''}
+                              placeholder="일련번호"
+                              onChange={e => updateRow(idx, 'serial', e.target.value)}
+                            />
+                          </td>
+
                           {/* 수량 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <input
                               type="number"
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.4rem', borderRadius: '6px' }}
+                              style={{ width: '100%' }}
                               value={row.qty}
                               min="1"
                               onChange={e => updateRow(idx, 'qty', Math.max(1, parseInt(e.target.value, 10) || 1))}
                             />
                           </td>
 
-                          {/* 구분 (입/출고) */}
-                          <td style={{ padding: '0.2rem' }}>
+                          {/* 구분 */}
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <select
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.2rem', borderRadius: '6px', background: 'var(--input-bg)' }}
+                              style={{ 
+                                color: row.flow === 'IN' ? 'var(--success)' : 'var(--danger)',
+                                fontWeight: 700,
+                                width: '100%',
+                                cursor: 'pointer'
+                              }}
                               value={row.flow}
                               onChange={e => updateRow(idx, 'flow', e.target.value as 'IN' | 'OUT')}
                             >
-                              <option value="IN">입고 (+)</option>
-                              <option value="OUT">출고 (-)</option>
+                              <option value="IN" style={{ color: 'var(--success)', fontWeight: 600 }}>입고 (+)</option>
+                              <option value="OUT" style={{ color: 'var(--danger)', fontWeight: 600 }}>출고 (-)</option>
                             </select>
                           </td>
 
                           {/* 보관위치 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <select
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.2rem', borderRadius: '6px', background: 'var(--input-bg)' }}
+                              style={{ 
+                                width: '100%',
+                                cursor: 'pointer'
+                              }}
                               value={row.loc}
                               onChange={e => updateRow(idx, 'loc', e.target.value)}
                             >
@@ -619,10 +838,13 @@ export default function InventoryPage() {
                           </td>
 
                           {/* 담당자 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <select
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.2rem', borderRadius: '6px', background: 'var(--input-bg)' }}
+                              style={{ 
+                                width: '100%',
+                                cursor: 'pointer'
+                              }}
                               value={row.mgr}
                               onChange={e => updateRow(idx, 'mgr', e.target.value)}
                             >
@@ -633,26 +855,35 @@ export default function InventoryPage() {
                           </td>
 
                           {/* 메모 */}
-                          <td style={{ padding: '0.2rem' }}>
+                          <td style={{ padding: '0.35rem 0.5rem' }}>
                             <input
                               type="text"
                               className="input-sm"
-                              style={{ height: '30px', fontSize: '0.75rem', padding: '0 0.4rem', borderRadius: '6px' }}
+                              style={{ width: '100%' }}
                               value={row.memo}
-                              placeholder="메모"
+                              placeholder="비고/메모 사항"
                               onChange={e => updateRow(idx, 'memo', e.target.value)}
                             />
                           </td>
 
-                          {/* 삭제 액션 */}
-                          <td style={{ padding: '0.2rem', textAlign: 'center' }}>
+                          {/* 삭제 */}
+                          <td style={{ padding: '0.35rem 0.5rem', textAlign: 'center' }}>
                             <button
                               type="button"
                               className="ghost-btn danger"
-                              style={{ padding: '0.3rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ 
+                                padding: '0.4rem', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--danger)',
+                                cursor: 'pointer'
+                              }}
                               onClick={() => deleteRow(idx)}
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={13} />
                             </button>
                           </td>
 
@@ -671,35 +902,56 @@ export default function InventoryPage() {
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: '0.25rem', 
-                  fontSize: '0.72rem', 
-                  padding: '0.25rem 0.5rem',
+                  gap: '0.3rem', 
+                  fontSize: '0.75rem', 
+                  padding: '0.4rem 0.8rem',
                   alignSelf: 'flex-start',
-                  fontWeight: 650
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  cursor: 'pointer'
                 }}
               >
-                <Plus size={11} />
-                <span>행 추가</span>
+                <Plus size={13} />
+                <span>새 행 추가</span>
               </button>
 
               {/* 🔗 통합 메모 작성 연동 */}
-              <div style={{ borderTop: '1px solid var(--panel-border)', marginTop: '0.4rem', paddingTop: '0.8rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={createMemo}
-                    onChange={e => setCreateMemo(e.target.checked)}
-                    style={{ cursor: 'pointer' }}
+              <div style={{ 
+                borderTop: '1px solid var(--panel-border)', 
+                marginTop: '0.4rem', 
+                paddingTop: '0.8rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem'
+              }}>
+                <label className="custom-checkbox" style={{ alignSelf: 'flex-start' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={createMemo} 
+                    onChange={e => setCreateMemo(e.target.checked)} 
                   />
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    이 일괄 처리에 대한 변동 사항 메모 생성 및 상호 연동
-                  </span>
+                  <span>이 일괄 처리에 대한 변동 사항 메모 생성 및 상호 연동</span>
                 </label>
 
                 {createMemo && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem', paddingLeft: '1.2rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>메모 제목</span>
+                  <motion.div 
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '0.7rem', 
+                      padding: '1rem',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: '12px',
+                      border: '1px solid var(--panel-border)',
+                      marginTop: '0.2rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>메모 제목</span>
                       <input
                         type="text"
                         className="input-sm"
@@ -709,11 +961,15 @@ export default function InventoryPage() {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>메모 내용 (자동 생성됨, 수정 가능)</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>메모 내용 (자동 생성됨, 수정 가능)</span>
                       <textarea
                         className="input-sm"
-                        style={{ minHeight: '110px', fontSize: '0.75rem', fontFamily: 'monospace', resize: 'vertical' }}
+                        style={{ 
+                          minHeight: '100px', 
+                          fontFamily: 'monospace', 
+                          resize: 'vertical'
+                        }}
                         value={memoContent}
                         onChange={e => {
                           setMemoContent(e.target.value);
@@ -722,7 +978,7 @@ export default function InventoryPage() {
                         placeholder="이곳에 일괄 재고 변동 내역의 추가 메모 사항을 남기세요."
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </motion.div>
