@@ -823,17 +823,29 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.3)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.4)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>
         <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '1px solid var(--panel-border)', textAlign: 'left' }}>
-          {/* v0.4.3 */}
+          {/* v0.4.4 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.3 (2026-05-22)</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.4 (2026-05-22)</span>
               <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
             </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div>• <strong>일정/재고/메모 데이터 엑셀 및 PDF 내보내기 지원</strong>: 각 페이지(대시보드 일정/메모/재고 목록, 캘린더 페이지, 재고 페이지) 상단에 엑셀(CSV) 및 PDF 다운로드 버튼을 추가하여 보관 중인 데이터를 손쉽게 문서로 저장하고 인쇄할 수 있도록 기능을 확장했습니다.</div>
+              <div>• <strong>Excel 한글 깨짐 방지</strong>: UTF-8 BOM(\uFEFF)을 자동으로 추가하여 다운로드한 CSV 파일을 엑셀에서 열 때 한글이 깨지지 않고 올바르게 출력되도록 구현했습니다.</div>
+              <div>• <strong>인쇄 전용 스타일 및 마크다운 렌더링 지원</strong>: PDF 저장 또는 인쇄 시, 깔끔하게 스타일링된 출력 전용 문서를 동적으로 생성하며, 메모 내 표(Table), 리스트, 코드 블록 등의 마크다운 서식을 원본 레이아웃 그대로 유지하여 인쇄합니다.</div>
+            </div>
+          </div>
+
+          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
+
+          {/* v0.4.3 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.3 (2026-05-22)</span>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <div>• <strong>일정 하루 종일 옵션 지원</strong>: 일정 생성/편집 시 '하루 종일' 토글 스위치를 지원하고, 활성화 시 시간 대신 '하루 종일' 배지를 리스트에 노출하며 하루 종일 일정을 목록 최상단에 자동 정렬합니다.</div>
               <div>• <strong>완료 일정 달력 표시 유지</strong>: 일정이 완료 상태로 변경되더라도 달력 날짜 셀 하단의 일정 표시용 작은 점들이 사라지지 않고 유지되도록 보완했습니다.</div>
