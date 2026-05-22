@@ -3,9 +3,10 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
 import { useApp } from '@/frontend/context/AppContext';
+import { FileSpreadsheet, Printer } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { records, deleteInventoryItem, setEditingInventory } = useApp();
+  const { records, deleteInventoryItem, setEditingInventory, exportToCsv, printToPdf } = useApp();
   const inventory = records.filter(r => r.type === 'asset');
 
   return (
@@ -13,6 +14,52 @@ export default function InventoryPage() {
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>재고 대장 관리</div>
+        
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          {/* 📊 엑셀 내보내기 버튼 */}
+          <button 
+            onClick={() => exportToCsv('asset')}
+            title="재고 엑셀 다운로드"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '6px', 
+              fontSize: '0.72rem', 
+              fontWeight: 650, 
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer'
+            }}
+          >
+            <FileSpreadsheet size={11} />
+            <span>엑셀</span>
+          </button>
+
+          {/* 🖨️ PDF 인쇄 버튼 */}
+          <button 
+            onClick={() => printToPdf('asset')}
+            title="재고 PDF 인쇄"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '6px', 
+              fontSize: '0.72rem', 
+              fontWeight: 650, 
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer'
+            }}
+          >
+            <Printer size={11} />
+            <span>PDF</span>
+          </button>
+        </div>
       </div>
 
       {inventory.length === 0 ? (

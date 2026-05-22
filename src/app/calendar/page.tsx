@@ -3,7 +3,7 @@
 import React from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Calendar, FileSpreadsheet, Printer } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026 } from '@/database';
 import CustomSelect from '@/frontend/components/CustomSelect';
@@ -20,7 +20,8 @@ export default function CalendarPage() {
     calendarMode, setCalendarMode,
     editingSchedule, setEditingSchedule,
     toggleComplete, handleDeleteSchedule, handleUpdateSchedule,
-    appSettings
+    appSettings,
+    exportToCsv, printToPdf
   } = useApp();
 
   const schedules = records.filter(r => r.type === 'event');
@@ -68,26 +69,73 @@ export default function CalendarPage() {
           <Calendar size={14} />
           <span>캘린더 뷰어</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.2rem', background: 'var(--panel-bg)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-          {['monthly', 'weekly', 'daily'].map((mode) => (
-            <button 
-              key={mode} 
-              onClick={() => setCalendarMode(mode as any)}
-              style={{
-                background: calendarMode === mode ? 'var(--hover-bg)' : 'transparent',
-                border: 'none',
-                color: calendarMode === mode ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                padding: '0.25rem 0.5rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              {mode === 'monthly' ? '월간' : mode === 'weekly' ? '주간' : '일간'}
-            </button>
-          ))}
+        
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          {/* 📊 엑셀 내보내기 버튼 */}
+          <button 
+            onClick={() => exportToCsv('event')}
+            title="일정 엑셀 다운로드"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '6px', 
+              fontSize: '0.72rem', 
+              fontWeight: 650, 
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer'
+            }}
+          >
+            <FileSpreadsheet size={11} />
+            <span>엑셀</span>
+          </button>
+
+          {/* 🖨️ PDF 인쇄 버튼 */}
+          <button 
+            onClick={() => printToPdf('event')}
+            title="일정 PDF 인쇄"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '6px', 
+              fontSize: '0.72rem', 
+              fontWeight: 650, 
+              border: '1px solid var(--panel-border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer'
+            }}
+          >
+            <Printer size={11} />
+            <span>PDF</span>
+          </button>
+
+          <div style={{ display: 'flex', gap: '0.2rem', background: 'var(--panel-bg)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+            {['monthly', 'weekly', 'daily'].map((mode) => (
+              <button 
+                key={mode} 
+                onClick={() => setCalendarMode(mode as any)}
+                style={{
+                  background: calendarMode === mode ? 'var(--hover-bg)' : 'transparent',
+                  border: 'none',
+                  color: calendarMode === mode ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {mode === 'monthly' ? '월간' : mode === 'weekly' ? '주간' : '일간'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       

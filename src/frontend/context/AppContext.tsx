@@ -76,10 +76,168 @@ interface AppContextProps {
   updateMemoContentDirectly: (id: string, newContent: string) => void;
   deleteMemo: (id: string) => void;
   deleteInventoryItem: (id: string) => void;
-  exportToCsv: (type: 'event' | 'asset') => void;
+  exportToCsv: (type: 'event' | 'asset' | 'memo') => void;
+  printToPdf: (type: 'event' | 'asset' | 'memo') => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
+
+function renderMarkdownToHtml(md: string): string {
+  if (!md) return '';
+  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  let html = '';
+  let inList = false;
+  let isOrdered = false;
+  let inCode = false;
+  let codeContent = '';
+  let codeLang = '';
+
+  const flushList = () => {
+    if (inList) {
+      html += isOrdered ? '</ol>\n' : '</ul>\n';
+      inList = false;
+    }
+  };
+
+  const parseInline = (text: string): string => {
+    let escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    escaped = escaped.replace(/#([a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/g, '<span class="hashtag">#$1</span>');
+    escaped = escaped.replace(/@([a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/g, '<span class="mention">@$1</span>');
+    return escaped;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim().startsWith('```')) {
+      flushList();
+      if (inCode) {
+        html += `<pre class="code-block">${codeLang ? `<div class="code-lang" style="font-size: 11px; color: #868e96; margin-bottom: 4px; font-weight: bold;">${codeLang}</div>` : ''}<code>${codeContent}</code></pre>\n`;
+        inCode = false;
+        codeContent = '';
+        codeLang = '';
+      } else {
+        inCode = true;
+        codeLang = line.replace('```', '').trim();
+      }
+      continue;
+    }
+
+    if (inCode) {
+      codeContent += line + '\n';
+      continue;
+    }
+
+    if (line.trim().startsWith('|') && i + 1 < lines.length && lines[i+1].trim().includes('|') && /^[|:\-\s]+$/.test(lines[i+1].trim())) {
+      flushList();
+      const headers = line.split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+      const alignLine = lines[i+1];
+      const aligns = alignLine.split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(cell => {
+        if (cell.startsWith(':') && cell.endsWith(':')) return 'center';
+        if (cell.endsWith(':')) return 'right';
+        return 'left';
+      });
+
+      let tableHtml = '<table><thead><tr>';
+      headers.forEach((h, idx) => {
+        const align = aligns[idx] || 'left';
+        tableHtml += `<th style="text-align: ${align}">${parseInline(h)}</th>`;
+      });
+      tableHtml += '</tr></thead><tbody>';
+
+      i += 2;
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        const cells = lines[i].split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+        tableHtml += '<tr>';
+        for (let cIdx = 0; cIdx < headers.length; cIdx++) {
+          const align = aligns[cIdx] || 'left';
+          tableHtml += `<td style="text-align: ${align}">${parseInline(cells[cIdx] || '')}</td>`;
+        }
+        tableHtml += '</tr>';
+        i++;
+      }
+      tableHtml += '</tbody></table>\n';
+      html += tableHtml;
+      i--;
+      continue;
+    }
+
+    if (line.trim() === '---') {
+      flushList();
+      html += '<hr />\n';
+      continue;
+    }
+
+    if (line.startsWith('# ')) {
+      flushList();
+      html += `<h1>${parseInline(line.slice(2))}</h1>\n`;
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      flushList();
+      html += `<h2>${parseInline(line.slice(3))}</h2>\n`;
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      flushList();
+      html += `<h3>${parseInline(line.slice(4))}</h3>\n`;
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*)([-*])\s+(.+)$/);
+    if (bulletMatch) {
+      const content = bulletMatch[3];
+      if (!inList || isOrdered) {
+        flushList();
+        inList = true;
+        isOrdered = false;
+        html += '<ul>\n';
+      }
+      html += `<li>${parseInline(content)}</li>\n`;
+      continue;
+    }
+
+    const numMatch = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
+    if (numMatch) {
+      const content = numMatch[3];
+      if (!inList || !isOrdered) {
+        flushList();
+        inList = true;
+        isOrdered = true;
+        html += '<ol>\n';
+      }
+      html += `<li>${parseInline(content)}</li>\n`;
+      continue;
+    }
+
+    if (line.trim().startsWith('>')) {
+      flushList();
+      html += `<blockquote>${parseInline(line.trim().slice(1).trim())}</blockquote>\n`;
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flushList();
+      continue;
+    }
+
+    flushList();
+    html += `<p>${parseInline(line)}</p>\n`;
+  }
+
+  flushList();
+  return html;
+}
 
 /**
  * 앱 전역 상태/액션을 제공하는 Context Provider.
@@ -583,12 +741,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * 일정 또는 재고 데이터를 CSV 파일로 내보낸다.
+   * 일정, 재고, 메모 데이터를 CSV 파일로 내보낸다.
    * Excel 한글 깨짐 방지를 위해 BOM(﻿)을 선두에 추가한다.
-   * @param type 'event'(일정) 또는 'asset'(재고)
+   * @param type 'event'(일정), 'asset'(재고), 'memo'(메모)
    */
-  const exportToCsv = (type: 'event' | 'asset') => {
-    const filtered = records.filter(r => r.type === type);
+  const exportToCsv = (type: 'event' | 'asset' | 'memo') => {
+    const filtered = records
+      .filter(r => r.type === type)
+      .sort((a, b) => {
+        if (type === 'event') {
+          const dateA = a.attrs.date || '';
+          const dateB = b.attrs.date || '';
+          if (dateA !== dateB) return dateA.localeCompare(dateB);
+          const timeA = a.attrs.allDay ? '00:00' : (a.attrs.time || '23:59');
+          const timeB = b.attrs.allDay ? '00:00' : (b.attrs.time || '23:59');
+          return timeA.localeCompare(timeB);
+        }
+        if (type === 'asset') {
+          const catA = a.category || '';
+          const catB = b.category || '';
+          if (catA !== catB) return catA.localeCompare(catB);
+          return (a.title || '').localeCompare(b.title || '');
+        }
+        if (type === 'memo') {
+          const pinnedA = a.attrs.pinned ? 1 : 0;
+          const pinnedB = b.attrs.pinned ? 1 : 0;
+          if (pinnedA !== pinnedB) return pinnedB - pinnedA; // Pinned first
+          const dateA = a.attrs.effectiveDate || '';
+          const dateB = b.attrs.effectiveDate || '';
+          return dateB.localeCompare(dateA); // Newest first
+        }
+        return 0;
+      });
+
     let csvContent = "";
     
     if (type === 'event') {
@@ -601,7 +786,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const done = r.attrs.completed ? "완료" : "미완료";
         csvContent += `일정,${title},${cat},${date},${time},${done}\n`;
       });
-    } else {
+    } else if (type === 'asset') {
       csvContent += "구분,품명,카테고리,수량,상태,위치,담당자\n";
       filtered.forEach(r => {
         const title = `"${(r.title || '').replace(/"/g, '""')}"`;
@@ -612,6 +797,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const mgr = `"${(r.attrs.manager || '').replace(/"/g, '""')}"`;
         csvContent += `재고,${title},${cat},${qty},${flow},${loc},${mgr}\n`;
       });
+    } else if (type === 'memo') {
+      csvContent += "구분,제목,카테고리,내용,고정여부,작성일자\n";
+      filtered.forEach(r => {
+        const title = `"${(r.title || '').replace(/"/g, '""')}"`;
+        const cat = `"${(r.category || '').replace(/"/g, '""')}"`;
+        const content = `"${(r.attrs.content || '').replace(/"/g, '""')}"`;
+        const pinned = r.attrs.pinned ? "고정" : "일반";
+        const date = r.attrs.effectiveDate || '';
+        csvContent += `메모,${title},${cat},${content},${pinned},${date}\n`;
+      });
     }
 
     const bom = "\uFEFF"; // BOM for Excel encoding
@@ -619,11 +814,235 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `zero_${type === 'event' ? 'schedule' : 'inventory'}_${new Date().toISOString().split('T')[0]}.csv`);
+    
+    let filename = `zero_`;
+    if (type === 'event') filename += 'schedule';
+    else if (type === 'asset') filename += 'inventory';
+    else filename += 'memo';
+    filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`${type === 'event' ? '일정' : '재고'} CSV 내보내기 완료`);
+    
+    let displayName = '일정';
+    if (type === 'asset') displayName = '재고';
+    else if (type === 'memo') displayName = '메모';
+
+    showToast(`${displayName} CSV 내보내기 완료`);
+  };
+
+  /**
+   * 데이터를 PDF 인쇄 창(Save as PDF)으로 내보낸다.
+   * @param type 'event'(일정), 'asset'(재고), 'memo'(메모)
+   */
+  const printToPdf = (type: 'event' | 'asset' | 'memo') => {
+    const filtered = records
+      .filter(r => r.type === type)
+      .sort((a, b) => {
+        if (type === 'event') {
+          const dateA = a.attrs.date || '';
+          const dateB = b.attrs.date || '';
+          if (dateA !== dateB) return dateA.localeCompare(dateB);
+          const timeA = a.attrs.allDay ? '00:00' : (a.attrs.time || '23:59');
+          const timeB = b.attrs.allDay ? '00:00' : (b.attrs.time || '23:59');
+          return timeA.localeCompare(timeB);
+        }
+        if (type === 'asset') {
+          const catA = a.category || '';
+          const catB = b.category || '';
+          if (catA !== catB) return catA.localeCompare(catB);
+          return (a.title || '').localeCompare(b.title || '');
+        }
+        if (type === 'memo') {
+          const pinnedA = a.attrs.pinned ? 1 : 0;
+          const pinnedB = b.attrs.pinned ? 1 : 0;
+          if (pinnedA !== pinnedB) return pinnedB - pinnedA; // Pinned first
+          const dateA = a.attrs.effectiveDate || '';
+          const dateB = b.attrs.effectiveDate || '';
+          return dateB.localeCompare(dateA); // Newest first
+        }
+        return 0;
+      });
+
+    let titleText = '';
+    let bodyContent = '';
+
+    if (type === 'event') {
+      titleText = '일정 리스트';
+      bodyContent = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 15%;">날짜</th>
+              <th style="width: 15%;">시간</th>
+              <th>제목</th>
+              <th style="width: 20%;">카테고리</th>
+              <th style="width: 15%;">완료 여부</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(r => `
+              <tr>
+                <td>${r.attrs.date || ''}</td>
+                <td>${r.attrs.allDay ? '하루 종일' : (r.attrs.time || '')}</td>
+                <td style="font-weight: 500;">${r.title || ''}</td>
+                <td>${r.category || '일반'}</td>
+                <td>
+                  <span class="badge ${r.attrs.completed ? 'badge-completed' : 'badge-pending'}">
+                    ${r.attrs.completed ? '완료' : '미완료'}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (type === 'asset') {
+      titleText = '재고 리스트';
+      bodyContent = `
+        <table>
+          <thead>
+            <tr>
+              <th>품명</th>
+              <th style="width: 15%;">카테고리</th>
+              <th style="width: 10%;">수량</th>
+              <th style="width: 10%;">상태</th>
+              <th style="width: 20%;">위치</th>
+              <th style="width: 15%;">담당자</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(r => `
+              <tr>
+                <td style="font-weight: 500;">${r.title || ''}</td>
+                <td>${r.category || ''}</td>
+                <td>${r.attrs.qty || 0}</td>
+                <td>
+                  <span class="badge ${r.attrs.flow === 'OUT' ? 'badge-out' : 'badge-in'}">
+                    ${r.attrs.flow === 'OUT' ? '출고' : '입고'}
+                  </span>
+                </td>
+                <td>${r.attrs.location || ''}</td>
+                <td>${r.attrs.manager || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (type === 'memo') {
+      titleText = '메모 리스트';
+      bodyContent = `
+        <div class="memo-list">
+          ${filtered.map(r => `
+            <div class="memo-card">
+              <div class="memo-header">
+                <div class="memo-title-wrapper">
+                  ${r.attrs.pinned ? '<span class="memo-badge-pinned">고정</span>' : ''}
+                  <h3 class="memo-title">${r.title || '제목 없음'}</h3>
+                </div>
+                <div>
+                  <span class="memo-category">${r.category || '메모'}</span>
+                  <span class="memo-date" style="margin-left: 8px;">${r.attrs.effectiveDate || ''}</span>
+                </div>
+              </div>
+              <div class="memo-content">
+                ${renderMarkdownToHtml(r.attrs.content || '')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${titleText}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #333; padding: 20px; line-height: 1.6; }
+          h1 { font-size: 24px; color: #111; margin-bottom: 5px; border-bottom: 2px solid #0070f3; padding-bottom: 10px; }
+          .meta { font-size: 12px; color: #666; margin-bottom: 20px; text-align: right; }
+          
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 13px; }
+          th { background-color: #f7f7f7; font-weight: bold; color: #555; }
+          tr:nth-child(even) { background-color: #fafafa; }
+          
+          .badge { display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; }
+          .badge-completed { background-color: #e6fffa; color: #00875a; border: 1px solid #b2f5ea; }
+          .badge-pending { background-color: #fffaf0; color: #dd6b20; border: 1px solid #fde8d0; }
+          .badge-in { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+          .badge-out { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+          
+          .memo-card { border: 1px solid #e1e4e8; border-radius: 8px; padding: 16px; margin-bottom: 20px; page-break-inside: avoid; background-color: #fff; }
+          .memo-header { display: flex; justify-content: space-between; border-bottom: 1px solid #f1f2f4; padding-bottom: 8px; margin-bottom: 12px; }
+          .memo-title-wrapper { display: flex; align-items: center; gap: 8px; }
+          .memo-title { font-size: 16px; font-weight: bold; color: #111; margin: 0; }
+          .memo-badge-pinned { background-color: #ffe8cc; color: #d9480f; padding: 2px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: 1px solid #ffd8a8; }
+          .memo-date { font-size: 12px; color: #868e96; }
+          .memo-category { font-size: 12px; color: #0070f3; font-weight: bold; }
+          
+          .memo-content { font-size: 13px; color: #444; }
+          .memo-content p { margin: 0 0 10px 0; }
+          .memo-content p:last-child { margin-bottom: 0; }
+          .memo-content h1 { font-size: 18px; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+          .memo-content h2 { font-size: 16px; margin-top: 14px; margin-bottom: 6px; }
+          .memo-content h3 { font-size: 14px; margin-top: 12px; margin-bottom: 5px; }
+          .memo-content ul, .memo-content ol { padding-left: 20px; margin: 0 0 10px 0; }
+          .memo-content li { margin-bottom: 4px; }
+          .memo-content code { font-family: ui-monospace, monospace; background-color: #f1f3f5; padding: 2px 4px; border-radius: 4px; font-size: 90%; }
+          .memo-content pre { font-family: ui-monospace, monospace; background-color: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef; overflow-x: auto; margin: 10px 0; }
+          .memo-content pre code { background-color: transparent; padding: 0; border-radius: 0; font-size: 100%; }
+          .memo-content blockquote { border-left: 4px solid #0070f3; padding-left: 12px; color: #666; margin: 10px 0; font-style: italic; }
+          .memo-content table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+          .memo-content th, .memo-content td { border: 1px solid #dee2e6; padding: 8px 10px; text-align: left; font-size: 12px; }
+          .memo-content th { background-color: #f1f3f5; }
+          .memo-content .hashtag { color: #0070f3; background-color: #ebf8ff; padding: 2px 4px; border-radius: 4px; font-size: 90%; font-weight: bold; }
+          .memo-content .mention { color: #0070f3; background-color: #ebf8ff; padding: 2px 4px; border-radius: 4px; font-size: 90%; font-weight: bold; }
+
+          @media print {
+            body { padding: 0; }
+            .memo-card { border-color: #ccc; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${titleText}</h1>
+        <div class="meta">출력 일시: ${new Date().toLocaleString('ko-KR')}</div>
+        ${bodyContent}
+      </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    } else {
+      showToast('PDF 인쇄 창을 열지 못했습니다.');
+    }
   };
 
   return (
@@ -638,7 +1057,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
-      showCompleted, setShowCompleted, exportToCsv
+      showCompleted, setShowCompleted, exportToCsv, printToPdf
     }}>
       {children}
     </AppContext.Provider>

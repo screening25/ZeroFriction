@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -103,7 +103,8 @@ export default function Home() {
     submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
     archive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
     activities,
-    searchQuery, searchType, setSearchResult
+    searchQuery, searchType, setSearchResult,
+    exportToCsv, printToPdf
   } = useApp();
 
 
@@ -1535,6 +1536,50 @@ export default function Home() {
             <div className="section-title" style={{ fontSize: '1.1rem' }}>{format(selectedDate, 'M월 d일')} 일정 리스트</div>
             
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 📊 엑셀 내보내기 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => exportToCsv('event')}
+                title="일정 엑셀 다운로드"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <FileSpreadsheet size={12} />
+                <span>엑셀</span>
+              </button>
+
+              {/* 🖨️ PDF 인쇄 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => printToPdf('event')}
+                title="일정 PDF 인쇄"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <Printer size={12} />
+                <span>PDF</span>
+              </button>
+
               {/* ⚙️ 일정 카테고리 기준 정보 설정 모달 버튼 */}
               <button 
                 className="btn-ghost" 
@@ -1829,6 +1874,50 @@ export default function Home() {
           <div className="section-header" style={{ marginBottom: '0.8rem' }}>
             <div className="section-title">재고 현황</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 📊 엑셀 내보내기 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => exportToCsv('asset')}
+                title="재고 엑셀 다운로드"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <FileSpreadsheet size={12} />
+                <span>엑셀</span>
+              </button>
+
+              {/* 🖨️ PDF 인쇄 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => printToPdf('asset')}
+                title="재고 PDF 인쇄"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <Printer size={12} />
+                <span>PDF</span>
+              </button>
+
               {/* ⚙️ 기준 정보 관리 모달 버튼 */}
               <button 
                 className="btn-ghost" 
@@ -2290,6 +2379,50 @@ export default function Home() {
           <div className="section-header">
             <div className="section-title">메모</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 📊 엑셀 내보내기 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => exportToCsv('memo')}
+                title="메모 엑셀 다운로드"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <FileSpreadsheet size={12} />
+                <span>엑셀</span>
+              </button>
+
+              {/* 🖨️ PDF 인쇄 버튼 */}
+              <button 
+                className="btn-ghost" 
+                onClick={() => printToPdf('memo')}
+                title="메모 PDF 인쇄"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.3rem', 
+                  padding: '0.25rem 0.55rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 650, 
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <Printer size={12} />
+                <span>PDF</span>
+              </button>
+
               <button 
                 className="btn-ghost" 
                 onClick={() => {
