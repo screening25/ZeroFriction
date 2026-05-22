@@ -197,7 +197,15 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.5.4", date: "2026-05-22", latest: true, items: [
+  { version: "v0.5.6", date: "2026-05-22", latest: true, items: [
+    { b: "재고 일괄 등록 및 조정 기능 추가", t: ": Excel/스프레드시트에서 복사한 데이터를 붙여넣거나 직접 행을 추가하여 여러 개의 재고를 한 번에 등록 및 처리할 수 있는 일괄 등록 모달을 제공합니다." },
+    { b: "통합 변동 사항 메모 생성 및 상호 연동", t: ": 일괄 처리 시 상세 조정 목록에 대한 마크다운 표가 담긴 통합 메모를 자동 생성하고, 재고와 메모를 linkedIds 기반으로 상호 연동하여 언제든 관계성을 확인할 수 있도록 구현했습니다." },
+    { b: "목록 뷰 연동 배지 시각화", t: ": 재고 목록 내 개별 카드에서 연동된 메모의 제목을 해시태그 형태의 배지(#메모제목)로 직관적으로 표시하도록 디자인했습니다." }
+  ] },
+  { version: "v0.5.5", date: "2026-05-22", items: [
+    { b: "일정 카테고리 색상 선택 UI 리디자인 및 프리미엄 도트 버튼 적용", t: ": 카테고리 생성 시 색상 선택 단추를 26px의 프리미엄 도트 형태로 리디자인하고, 선택 시 동일 톤의 아우라(Halo Ring)와 명도 대비가 고려된 SVG 체크마크로 시인성 및 클릭 조작 피드백을 강화했습니다." }
+  ] },
+  { version: "v0.5.4", date: "2026-05-22", items: [
     { b: "일정 카테고리별 커스텀 색상 지정 기능 추가", t: ": 일정 카테고리 추가 시, 9가지 기본 테마 색상 프리셋뿐만 아니라 색상 팔레트(Color Picker)를 통해 자유롭게 원하는 색상을 생성하고 매핑할 수 있는 기능을 추가했습니다." },
     { b: "개별 카테고리 색상 직접 변경 및 관리 UI 탑재", t: ": 설정의 일정 카테고리 목록을 직관적인 리스트 형태로 시각화하고, 각 카테고리 옆에 개별 9가지 프리셋 버튼 및 커스텀 컬러 피커를 제공하여 기존 카테고리의 색상도 즉시 개별 편집할 수 있도록 개선했습니다." },
     { b: "카테고리 색상 동적 렌더링 및 UI 통일", t: ": 생성한 커스텀 카테고리 색상이 메인 대시보드의 일정 카테고리 구성 비율 바(Chart), 캘린더 날짜별 일정 점(Dot), 일정 관리 리스트 및 카테고리 필터링 뱃지/버튼에 동적으로 반영되도록 개선했습니다." }
@@ -882,7 +890,7 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.4)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.6)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>
