@@ -51,7 +51,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         id: 'new-event', kind: 'action', title: '새 일정 작성', icon: <Calendar size={13} />,
         run: () => {
           setActiveTab('calendar');
-          setEditingSchedule({ id: '', title: '', type: 'event', category: '일반', attrs: { date: new Date().toISOString().split('T')[0], time: '12:00', memo: '', completed: false, notifyOffset: appSettings.defaultNotifyOffset ?? 0 }, updatedAt: new Date().toISOString() } as any);
+          setEditingSchedule({ id: '', title: '', type: 'event', category: '일반', attrs: { date: new Date().toISOString().split('T')[0], time: '12:00', allDay: false, memo: '', completed: false, notifyOffset: appSettings.defaultNotifyOffset ?? 0 }, updatedAt: new Date().toISOString() } as any);
           onClose();
         }
       },
@@ -78,7 +78,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       let meta = r.category || '';
       if (r.type === 'event') {
         icon = <Calendar size={13} />;
-        if (r.attrs.date) meta = `${r.attrs.date}${r.attrs.time ? ' ' + r.attrs.time : ''}`;
+        if (r.attrs.date) meta = `${r.attrs.date}${r.attrs.allDay ? ' 하루 종일' : r.attrs.time ? ' ' + r.attrs.time : ''}`;
       } else if (r.type === 'asset') {
         icon = <Package size={13} />;
         meta = `재고 ${r.attrs.qty ?? 0}개`;

@@ -230,7 +230,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let hasNew = false;
       
       schedules.forEach(s => {
-        if (!s.attrs.completed && s.attrs.time) {
+        if (!s.attrs.completed && !s.attrs.allDay && s.attrs.time) {
           const scheduleTime = parseISO(`${s.attrs.date}T${s.attrs.time}`);
           const offset = s.attrs.notifyOffset ?? appSettings.defaultNotifyOffset ?? 0;
           const triggerTime = new Date(scheduleTime.getTime() - offset * 60000);
@@ -597,7 +597,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const title = `"${(r.title || '').replace(/"/g, '""')}"`;
         const cat = `"${(r.category || '').replace(/"/g, '""')}"`;
         const date = r.attrs.date || '';
-        const time = r.attrs.time || '';
+        const time = r.attrs.allDay ? '하루 종일' : (r.attrs.time || '');
         const done = r.attrs.completed ? "완료" : "미완료";
         csvContent += `일정,${title},${cat},${date},${time},${done}\n`;
       });

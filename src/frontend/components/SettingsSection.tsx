@@ -1199,7 +1199,7 @@ export default function SettingsSection() {
                           >
                             {item.type === 'event' && (
                               <>
-                                <div><strong>일정 일시:</strong> {item.attrs.date} {item.attrs.time || ''}</div>
+                                <div><strong>일정 일시:</strong> {item.attrs.date} {item.attrs.allDay ? '하루 종일' : (item.attrs.time || '')}</div>
                                 <div><strong>카테고리:</strong> {item.category || '기본'}</div>
                                 {item.attrs.description && (
                                   <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '0.3rem', whiteSpace: 'pre-wrap' }}>

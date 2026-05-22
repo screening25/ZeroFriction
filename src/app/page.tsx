@@ -522,7 +522,13 @@ export default function Home() {
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   const selectedSchedules = schedules
     .filter(s => s.attrs.date === selectedDateStr)
-    .sort((a, b) => (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59'));
+    .sort((a, b) => {
+      const aAll = !!a.attrs.allDay;
+      const bAll = !!b.attrs.allDay;
+      if (aAll && !bAll) return -1;
+      if (!aAll && bAll) return 1;
+      return (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59');
+    });
 
   // Apply Schedule Local Category filter
   const displaySchedules = selectedScheduleCategory === '전체'
@@ -560,7 +566,13 @@ export default function Home() {
   const overdueSchedules = schedules.filter(s => s.attrs.date < todayStr && !s.attrs.completed);
   const todaySchedulesFull = schedules
     .filter(s => s.attrs.date === todayStr)
-    .sort((a, b) => (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59'));
+    .sort((a, b) => {
+      const aAll = !!a.attrs.allDay;
+      const bAll = !!b.attrs.allDay;
+      if (aAll && !bAll) return -1;
+      if (!aAll && bAll) return 1;
+      return (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59');
+    });
   const todaySchedules = todaySchedulesFull.slice(0, appSettings.maxEventsShown || 5);
   const recentMemos = memos.slice(0, appSettings.maxMemosShown || 3); // Show latest memos on Dashboard up to limit
   const lowStockItems = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0); // Critical items with negative stock (qty < 0)
@@ -1243,11 +1255,15 @@ export default function Home() {
                           </div>
 
                           {/* Time */}
-                          {s.attrs.time && (
+                          {s.attrs.allDay ? (
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600, flexShrink: 0, marginLeft: '0.5rem', background: 'var(--hover-bg)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                              하루 종일
+                            </span>
+                          ) : s.attrs.time ? (
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600, flexShrink: 0, marginLeft: '0.5rem' }}>
                               {s.attrs.time}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         
                         {/* Linked Badges (Single row below title) */}
@@ -1479,7 +1495,7 @@ export default function Home() {
               )}
               {days.map(day => {
                 const dayStr = format(day, 'yyyy-MM-dd');
-                const daySchedules = schedules.filter(s => s.attrs.date === dayStr && !s.attrs.completed);
+                const daySchedules = schedules.filter(s => s.attrs.date === dayStr);
                 const scheduleCount = daySchedules.length;
                 const dotCount = Math.min(scheduleCount, 3);
                 const isSun = day.getDay() === 0;
@@ -1552,6 +1568,7 @@ export default function Home() {
                   attrs: {
                     date: format(selectedDate, 'yyyy-MM-dd'),
                     time: '12:00',
+                    allDay: false,
                     memo: '',
                     completed: false,
                     notifyOffset: appSettings.defaultNotifyOffset ?? 0
@@ -1740,9 +1757,11 @@ export default function Home() {
 
                   {/* Col 3: Time (fixed width/aligned) */}
                   <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    {s.attrs.time && (
+                    {s.attrs.allDay ? (
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600, background: 'var(--hover-bg)', padding: '0.1rem 0.25rem', borderRadius: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>종일</span>
+                    ) : s.attrs.time ? (
                       <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>{s.attrs.time}</span>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Col 4: Category badge (aligned right) */}
@@ -2455,8 +2474,38 @@ export default function Home() {
                   <CustomDatePicker value={editingSchedule.attrs.date || ''} onChange={date => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">시간</span>
-                  <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="form-label">시간</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', transform: 'scale(0.85)', transformOrigin: 'right center' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>하루 종일</span>
+                      <button
+                        type="button"
+                        className={`ios-toggle ${editingSchedule.attrs.allDay ? 'on' : ''}`}
+                        aria-pressed={!!editingSchedule.attrs.allDay}
+                        onClick={() => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, allDay: !editingSchedule.attrs.allDay } })}
+                      >
+                        <span className="ios-toggle-knob" />
+                      </button>
+                    </div>
+                  </div>
+                  {editingSchedule.attrs.allDay ? (
+                    <div style={{
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--panel-border)',
+                      background: 'var(--hover-bg)',
+                      color: 'var(--text-tertiary)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600
+                    }}>
+                      하루 종일
+                    </div>
+                  ) : (
+                    <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
+                  )}
                 </div>
               </div>
               

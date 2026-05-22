@@ -50,8 +50,14 @@ export default function CalendarPage() {
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   const selectedSchedules = schedules
-    .filter(s => s.attrs.date === selectedDateStr && !s.attrs.completed)
-    .sort((a, b) => (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59'));
+    .filter(s => s.attrs.date === selectedDateStr)
+    .sort((a, b) => {
+      const aAll = !!a.attrs.allDay;
+      const bAll = !!b.attrs.allDay;
+      if (aAll && !bAll) return -1;
+      if (!aAll && bAll) return 1;
+      return (a.attrs.time || '23:59').localeCompare(b.attrs.time || '23:59');
+    });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -101,7 +107,7 @@ export default function CalendarPage() {
           )}
           {days.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            const hasSchedule = schedules.some(s => s.attrs.date === dayStr && !s.attrs.completed);
+            const hasSchedule = schedules.some(s => s.attrs.date === dayStr);
             const isSun = day.getDay() === 0;
             const isSat = day.getDay() === 6;
             const isHol = isHoliday(day);
@@ -175,7 +181,11 @@ export default function CalendarPage() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: '0.5rem' }}>
-                  {s.attrs.time && <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{s.attrs.time}</span>}
+                  {s.attrs.allDay ? (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', background: 'var(--hover-bg)', padding: '0.15rem 0.35rem', borderRadius: '4px' }}>하루 종일</span>
+                  ) : s.attrs.time ? (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{s.attrs.time}</span>
+                  ) : null}
                   {s.attrs.category && <span style={{ fontSize: '0.62rem', background: 'var(--hover-bg)', padding: '0.15rem 0.35rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>{s.attrs.category}</span>}
                 </div>
               </div>
@@ -206,8 +216,38 @@ export default function CalendarPage() {
                   <CustomDatePicker value={editingSchedule.attrs.date || ''} onChange={date => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, date }})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <span className="form-label">시간</span>
-                  <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="form-label">시간</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', transform: 'scale(0.85)', transformOrigin: 'right center' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>하루 종일</span>
+                      <button
+                        type="button"
+                        className={`ios-toggle ${editingSchedule.attrs.allDay ? 'on' : ''}`}
+                        aria-pressed={!!editingSchedule.attrs.allDay}
+                        onClick={() => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, allDay: !editingSchedule.attrs.allDay } })}
+                      >
+                        <span className="ios-toggle-knob" />
+                      </button>
+                    </div>
+                  </div>
+                  {editingSchedule.attrs.allDay ? (
+                    <div style={{
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--panel-border)',
+                      background: 'var(--hover-bg)',
+                      color: 'var(--text-tertiary)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600
+                    }}>
+                      하루 종일
+                    </div>
+                  ) : (
+                    <CustomTimePicker value={editingSchedule.attrs.time || '12:00'} onChange={time => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, time }})} />
+                  )}
                 </div>
               </div>
               
@@ -234,10 +274,17 @@ export default function CalendarPage() {
                 </div>
               </div>
               
-              <label className="custom-checkbox">
-                <input type="checkbox" checked={!!editingSchedule.attrs.completed} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, completed: e.target.checked }})} />
-                <span>완료 처리</span>
-              </label>
+              <div className="ios-toggle-row" style={{ marginTop: '0.4rem' }}>
+                <span className="ios-toggle-label">완료 처리</span>
+                <button
+                  type="button"
+                  className={`ios-toggle ${editingSchedule.attrs.completed ? 'on' : ''}`}
+                  aria-pressed={!!editingSchedule.attrs.completed}
+                  onClick={() => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, completed: !editingSchedule.attrs.completed } })}
+                >
+                  <span className="ios-toggle-knob" />
+                </button>
+              </div>
               
               <button className="ios-delete-btn" onClick={() => handleDeleteSchedule(editingSchedule.id)}>일정 삭제</button>
             </motion.div>
