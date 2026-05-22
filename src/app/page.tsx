@@ -283,6 +283,7 @@ export default function Home() {
 
   const [isScheduleMasterSettingsOpen, setIsScheduleMasterSettingsOpen] = useState(false);
   const [newSchedCatInput, setNewSchedCatInput] = useState('');
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
 
   const addMasterScheduleCategory = (cat: string, color: string) => {
     if (!cat.trim()) return;
@@ -1762,7 +1763,7 @@ export default function Home() {
           {/* ⚙️ 일정 카테고리 기준 정보 설정 모달 */}
           <AnimatePresence>
             {isScheduleMasterSettingsOpen && (
-              <div className="modal-overlay" onClick={() => setIsScheduleMasterSettingsOpen(false)}>
+              <div className="modal-overlay" onClick={() => { setIsScheduleMasterSettingsOpen(false); setEditingCategory(null); }}>
                 <motion.div 
                   initial={{ scale: 0.95, opacity: 0 }} 
                   animate={{ scale: 1, opacity: 1 }} 
@@ -1773,7 +1774,7 @@ export default function Home() {
                   style={{ maxWidth: '400px' }}
                 >
                   <div className="ios-modal-header">
-                    <button className="ios-text-btn" onClick={() => setIsScheduleMasterSettingsOpen(false)}>닫기</button>
+                    <button className="ios-text-btn" onClick={() => { setIsScheduleMasterSettingsOpen(false); setEditingCategory(null); }}>닫기</button>
                     <div className="ios-modal-title">일정 카테고리 설정</div>
                     <div style={{ width: '40px' }} />
                   </div>
@@ -1893,153 +1894,243 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
                         {(appSettings.scheduleCategories || ['업무', '회의', '개인', '일반']).map(cat => {
                           const col = getCategoryColor(cat);
                           const bg = getCategorySoftBg(cat);
                           const border = getCategoryBorder(cat);
+                          const isEditing = editingCategory === cat;
+
                           return (
                             <div
                               key={cat}
                               style={{
                                 display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '0.4rem 0.5rem',
+                                flexDirection: 'column',
                                 background: 'var(--input-bg)',
                                 border: '1px solid var(--panel-border)',
-                                borderRadius: '8px',
-                                gap: '0.5rem'
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                transition: 'all 0.2s ease',
+                                boxShadow: isEditing ? '0 4px 12px rgba(0,0,0,0.06)' : 'none',
+                                transform: isEditing ? 'translateY(-1px)' : 'none',
                               }}
                             >
-                              <span
-                                className="badge"
-                                style={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center', 
-                                  padding: '0.2rem 0.5rem', 
-                                  fontSize: '0.72rem', 
-                                  borderRadius: '6px',
-                                  background: bg,
-                                  color: col,
-                                  border: `1px solid ${border}`,
-                                  fontWeight: 600,
-                                  flexShrink: 0
+                              {/* Header Row */}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '0.55rem 0.75rem',
+                                  cursor: 'pointer',
                                 }}
+                                onClick={() => setEditingCategory(isEditing ? null : cat)}
                               >
-                                {cat}
-                              </span>
-
-                              {/* 개별 카테고리 색상 지정 UI (presets + custom) */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', overflowX: 'auto', padding: '2px 0', marginLeft: 'auto', marginRight: '0.25rem' }}>
-                                {[
-                                  '#007AFF', // Blue
-                                  '#34C759', // Green
-                                  '#AF52DE', // Purple
-                                  '#FF9500', // Orange
-                                  '#FF2D55', // Pink
-                                  '#5AC8FA', // Teal
-                                  '#FFCC00', // Yellow
-                                  '#5856D6', // Indigo
-                                  '#8E8E93', // Gray
-                                ].map(color => {
-                                  const isSelected = col.toUpperCase() === color.toUpperCase();
-                                  return (
-                                    <button
-                                      key={color}
-                                      type="button"
-                                      onClick={() => {
-                                        const colors = { ...(appSettings.categoryColors || {}) };
-                                        colors[cat] = color;
-                                        const updated = { ...appSettings, categoryColors: colors };
-                                        handleSettingsChange(updated);
-                                        showToast(`'${cat}' 카테고리 색상 변경 완료`);
-                                      }}
-                                      style={{
-                                        width: '13px',
-                                        height: '13px',
-                                        borderRadius: '50%',
-                                        backgroundColor: color,
-                                        border: isSelected ? '1.5px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        boxShadow: isSelected ? '0 0 3px rgba(0,0,0,0.2)' : 'none',
-                                        transform: isSelected ? 'scale(1.15)' : 'none',
-                                        transition: 'all 0.15s ease',
-                                        flexShrink: 0
-                                      }}
-                                      title={color}
-                                    />
-                                  );
-                                })}
-
-                                {/* 커스텀 색상 선택 (color input) */}
-                                <div style={{ position: 'relative', display: 'inline-block', width: '13px', height: '13px', flexShrink: 0 }}>
-                                  <input
-                                    type="color"
-                                    value={col}
-                                    onChange={(e) => {
-                                      const newColor = e.target.value;
-                                      const colors = { ...(appSettings.categoryColors || {}) };
-                                      colors[cat] = newColor;
-                                      const updated = { ...appSettings, categoryColors: colors };
-                                      handleSettingsChange(updated);
-                                      showToast(`'${cat}' 카테고리 색상 변경 완료`);
-                                    }}
-                                    style={{
-                                      opacity: 0,
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      cursor: 'pointer',
-                                      zIndex: 2
-                                    }}
-                                    title="직접 지정"
-                                  />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  {/* Color Dot indicator */}
                                   <div
                                     style={{
-                                      width: '13px',
-                                      height: '13px',
+                                      width: '10px',
+                                      height: '10px',
                                       borderRadius: '50%',
-                                      background: ![
-                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                      ].includes(col.toUpperCase()) ? col : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
-                                      border: ![
-                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                      ].includes(col.toUpperCase()) ? '1.5px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                                      boxShadow: ![
-                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                      ].includes(col.toUpperCase()) ? '0 0 3px rgba(0,0,0,0.2)' : 'none',
-                                      transform: ![
-                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
-                                      ].includes(col.toUpperCase()) ? 'scale(1.15)' : 'none',
-                                      transition: 'all 0.15s ease',
+                                      backgroundColor: col,
+                                      border: `1px solid ${border}`,
                                     }}
                                   />
+                                  <span
+                                    style={{
+                                      fontSize: '0.82rem',
+                                      fontWeight: 600,
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  >
+                                    {cat}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                                  {/* Edit Trigger Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingCategory(isEditing ? null : cat)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      color: isEditing ? 'var(--accent)' : 'var(--text-secondary)',
+                                      padding: '0.2rem 0.4rem',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.15rem'
+                                    }}
+                                  >
+                                    <span>색상 지정</span>
+                                    <ChevronDown
+                                      size={12}
+                                      style={{
+                                        transform: isEditing ? 'rotate(180deg)' : 'none',
+                                        transition: 'transform 0.2s ease',
+                                        color: isEditing ? 'var(--accent)' : 'var(--text-secondary)'
+                                      }}
+                                    />
+                                  </button>
+
+                                  {/* Delete Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteMasterScheduleCategory(cat)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '0.2rem',
+                                      color: '#FF3B30',
+                                      opacity: 0.8,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                    title={`${cat} 삭제`}
+                                  >
+                                    <X size={14} />
+                                  </button>
                                 </div>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => deleteMasterScheduleCategory(cat)}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '0.1rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#FF3B30',
-                                  opacity: 0.8,
-                                  flexShrink: 0
-                                }}
-                                title={`${cat} 삭제`}
-                              >
-                                <X size={14} />
-                              </button>
+                              {/* Expanded Editor Drawer */}
+                              <AnimatePresence initial={false}>
+                                {isEditing && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.18, ease: 'easeInOut' }}
+                                    style={{
+                                      borderTop: '1px solid var(--panel-border)',
+                                      background: 'var(--card-bg)',
+                                      padding: '0.75rem',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                      {/* Preview Label */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>미리보기</span>
+                                        <span
+                                          className="badge"
+                                          style={{ 
+                                            padding: '0.2rem 0.5rem', 
+                                            fontSize: '0.72rem', 
+                                            borderRadius: '6px',
+                                            background: bg,
+                                            color: col,
+                                            border: `1px solid ${border}`,
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {cat}
+                                        </span>
+                                      </div>
+
+                                      {/* Preset Colors */}
+                                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, marginTop: '0.25rem' }}>색상 프리셋 지정</div>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', padding: '0.2rem 0' }}>
+                                        {[
+                                          '#007AFF', // Blue
+                                          '#34C759', // Green
+                                          '#AF52DE', // Purple
+                                          '#FF9500', // Orange
+                                          '#FF2D55', // Pink
+                                          '#5AC8FA', // Teal
+                                          '#FFCC00', // Yellow
+                                          '#5856D6', // Indigo
+                                          '#8E8E93', // Gray
+                                        ].map(color => {
+                                          const isColorSelected = col.toUpperCase() === color.toUpperCase();
+                                          return (
+                                            <button
+                                              key={color}
+                                              type="button"
+                                              onClick={() => {
+                                                const colors = { ...(appSettings.categoryColors || {}) };
+                                                colors[cat] = color;
+                                                const updated = { ...appSettings, categoryColors: colors };
+                                                handleSettingsChange(updated);
+                                                showToast(`'${cat}' 카테고리 색상 변경 완료`);
+                                              }}
+                                              style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                backgroundColor: color,
+                                                border: isColorSelected ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                boxShadow: isColorSelected ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
+                                                transform: isColorSelected ? 'scale(1.15)' : 'none',
+                                                transition: 'all 0.15s ease',
+                                              }}
+                                              title={color}
+                                            />
+                                          );
+                                        })}
+
+                                        {/* Custom Color Input */}
+                                        <div style={{ position: 'relative', display: 'inline-block', width: '20px', height: '20px' }}>
+                                          <input
+                                            type="color"
+                                            value={col}
+                                            onChange={(e) => {
+                                              const newColor = e.target.value;
+                                              const colors = { ...(appSettings.categoryColors || {}) };
+                                              colors[cat] = newColor;
+                                              const updated = { ...appSettings, categoryColors: colors };
+                                              handleSettingsChange(updated);
+                                              showToast(`'${cat}' 카테고리 색상 변경 완료`);
+                                            }}
+                                            style={{
+                                              opacity: 0,
+                                              position: 'absolute',
+                                              top: 0,
+                                              left: 0,
+                                              width: '100%',
+                                              height: '100%',
+                                              cursor: 'pointer',
+                                              zIndex: 2
+                                            }}
+                                            title="직접 지정"
+                                          />
+                                          <div
+                                            style={{
+                                              width: '20px',
+                                              height: '20px',
+                                              borderRadius: '50%',
+                                              background: ![
+                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                              ].includes(col.toUpperCase()) ? col : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
+                                              border: ![
+                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                              ].includes(col.toUpperCase()) ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                              boxShadow: ![
+                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                              ].includes(col.toUpperCase()) ? '0 0 4px rgba(0,0,0,0.2)' : 'none',
+                                              transform: ![
+                                                '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                              ].includes(col.toUpperCase()) ? 'scale(1.15)' : 'none',
+                                              transition: 'all 0.15s ease',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           );
                         })}
