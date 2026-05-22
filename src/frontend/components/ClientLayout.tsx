@@ -258,7 +258,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             value={nlpInput}
             onChange={e => setNlpInput(e.target.value)}
             onKeyDown={handleNlpSubmit}
-            placeholder="일정, 메모, 재고 입력 (/ 로 빠르게 포커스)"
+            placeholder="일정, 메모, 재고 입력 (focus using /)"
             disabled={loading}
             style={{
               padding: '0.75rem 1rem',
