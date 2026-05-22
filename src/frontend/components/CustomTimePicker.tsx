@@ -11,7 +11,7 @@ interface CustomTimePickerProps {
 export default function CustomTimePicker({ value, onChange }: CustomTimePickerProps) {
   const { theme } = useApp();
   const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
@@ -33,6 +33,66 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
 
   const hourStr = String(hour).padStart(2, '0');
   const minuteStr = String(minute).padStart(2, '0');
+
+  // Local state for typed time
+  const [inputValue, setInputValue] = useState(value || "12:00");
+
+  useEffect(() => {
+    setInputValue(value || "12:00");
+  }, [value]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const filtered = val.replace(/[^0-9:]/g, '');
+    setInputValue(filtered);
+
+    // If it's a perfect match (HH:MM), propagate onChange immediately
+    if (/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(filtered)) {
+      onChange(filtered);
+    }
+  };
+
+  const handleInputBlur = () => {
+    let timeStr = inputValue.trim();
+    if (!timeStr) {
+      setInputValue(value);
+      return;
+    }
+
+    if (/^\d{4}$/.test(timeStr)) {
+      timeStr = timeStr.slice(0, 2) + ':' + timeStr.slice(2);
+    } else if (/^\d{3}$/.test(timeStr)) {
+      timeStr = '0' + timeStr.slice(0, 1) + ':' + timeStr.slice(1);
+    } else if (/^\d{1,2}$/.test(timeStr)) {
+      const h = parseInt(timeStr, 10);
+      if (h >= 0 && h <= 23) {
+        timeStr = String(h).padStart(2, '0') + ':00';
+      }
+    }
+
+    const parts = timeStr.split(':');
+    if (parts.length === 2) {
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (!isNaN(h) && h >= 0 && h <= 23 && !isNaN(m) && m >= 0 && m <= 59) {
+        const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        setInputValue(formatted);
+        onChange(formatted);
+        return;
+      }
+    }
+
+    setInputValue(value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleInputBlur();
+      setIsOpen(false);
+      triggerRef.current?.blur();
+    }
+  };
 
   // Update coords when opening or resizing
   const updateCoords = () => {
@@ -137,33 +197,45 @@ export default function CustomTimePicker({ value, onChange }: CustomTimePickerPr
         }
       `}</style>
 
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="input-sm"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%',
-          textAlign: 'left',
-          cursor: 'pointer',
-          height: '38px',
-          padding: '0 0.75rem',
-          fontSize: '0.85rem',
-          background: 'var(--input-bg)',
-          border: '1px solid var(--panel-border)',
-          borderRadius: '10px',
-          color: 'var(--text-primary)',
-          fontWeight: 500
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Clock size={13} style={{ color: 'var(--accent)' }} />
-          <span>{hourStr}:{minuteStr}</span>
-        </span>
-      </button>
+      <div style={{ position: 'relative', width: '100%' }}>
+        <Clock 
+          size={13} 
+          style={{ 
+            position: 'absolute', 
+            left: '0.75rem', 
+            top: '50%', 
+            transform: 'translateY(-50%)', 
+            color: 'var(--accent)', 
+            zIndex: 2, 
+            cursor: 'pointer' 
+          }} 
+          onClick={() => setIsOpen(!isOpen)}
+        />
+        <input
+          ref={triggerRef}
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsOpen(true)}
+          placeholder="HH:MM"
+          className="input-sm"
+          style={{
+            width: '100%',
+            height: '38px',
+            padding: '0 0.75rem 0 2rem',
+            fontSize: '0.85rem',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--panel-border)',
+            borderRadius: '10px',
+            color: 'var(--text-primary)',
+            fontWeight: 500,
+            cursor: 'text',
+            outline: 'none',
+          }}
+        />
+      </div>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
         <div

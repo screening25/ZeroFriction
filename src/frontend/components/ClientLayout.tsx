@@ -483,8 +483,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.2rem' }}>
+             {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
               <button
                 onClick={() => handleSnoozeNotification(activeNotification.id)}
                 style={{
@@ -492,13 +492,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
-                  padding: '0.6rem 0.8rem',
+                  gap: '0.3rem',
+                  padding: '0.6rem 0.4rem',
                   borderRadius: '12px',
                   border: '1px solid var(--panel-border)',
                   background: 'var(--surface-elevated)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
+                  fontSize: '0.8rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -510,8 +510,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   e.currentTarget.style.background = 'var(--surface-elevated)';
                 }}
               >
-                <Clock size={14} />
-                <span>10분 후 알림</span>
+                <Clock size={13} />
+                <span style={{ whiteSpace: 'nowrap' }}>10분 후 알림</span>
+              </button>
+              <button
+                onClick={handleDismissNotification}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.3rem',
+                  padding: '0.6rem 0.4rem',
+                  borderRadius: '12px',
+                  border: '1px solid var(--panel-border)',
+                  background: 'var(--surface-elevated)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--hover-bg)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--surface-elevated)';
+                }}
+              >
+                <span style={{ whiteSpace: 'nowrap' }}>확인</span>
               </button>
               <button
                 onClick={() => handleCompleteNotificationSchedule(activeNotification.id)}
@@ -520,13 +547,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
-                  padding: '0.6rem 0.8rem',
+                  gap: '0.3rem',
+                  padding: '0.6rem 0.4rem',
                   borderRadius: '12px',
                   border: 'none',
                   background: 'var(--accent)',
                   color: '#FFFFFF',
-                  fontSize: '0.82rem',
+                  fontSize: '0.8rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -539,8 +566,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   e.currentTarget.style.background = 'var(--accent)';
                 }}
               >
-                <Check size={14} />
-                <span>완료</span>
+                <Check size={13} />
+                <span style={{ whiteSpace: 'nowrap' }}>완료</span>
               </button>
             </div>
           </motion.div>
