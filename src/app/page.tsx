@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -1893,37 +1893,154 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.8rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
                         {(appSettings.scheduleCategories || ['업무', '회의', '개인', '일반']).map(cat => {
                           const col = getCategoryColor(cat);
                           const bg = getCategorySoftBg(cat);
                           const border = getCategoryBorder(cat);
                           return (
-                            <span
+                            <div
                               key={cat}
-                              className="badge"
-                              style={{ 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                gap: '0.3rem', 
-                                padding: '0.2rem 0.5rem', 
-                                fontSize: '0.7rem', 
-                                borderRadius: '6px',
-                                background: bg,
-                                color: col,
-                                border: `1px solid ${border}`,
-                                fontWeight: 600
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '0.4rem 0.5rem',
+                                background: 'var(--input-bg)',
+                                border: '1px solid var(--panel-border)',
+                                borderRadius: '8px',
+                                gap: '0.5rem'
                               }}
                             >
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: col }} />
-                              {cat}
                               <span
-                                onClick={() => deleteMasterScheduleCategory(cat)}
-                                style={{ cursor: 'pointer', fontWeight: 800, color: col, opacity: 0.6, marginLeft: '0.25rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '12px', height: '12px' }}
+                                className="badge"
+                                style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  padding: '0.2rem 0.5rem', 
+                                  fontSize: '0.72rem', 
+                                  borderRadius: '6px',
+                                  background: bg,
+                                  color: col,
+                                  border: `1px solid ${border}`,
+                                  fontWeight: 600,
+                                  flexShrink: 0
+                                }}
                               >
-                                ×
+                                {cat}
                               </span>
-                            </span>
+
+                              {/* 개별 카테고리 색상 지정 UI (presets + custom) */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', overflowX: 'auto', padding: '2px 0', marginLeft: 'auto', marginRight: '0.25rem' }}>
+                                {[
+                                  '#007AFF', // Blue
+                                  '#34C759', // Green
+                                  '#AF52DE', // Purple
+                                  '#FF9500', // Orange
+                                  '#FF2D55', // Pink
+                                  '#5AC8FA', // Teal
+                                  '#FFCC00', // Yellow
+                                  '#5856D6', // Indigo
+                                  '#8E8E93', // Gray
+                                ].map(color => {
+                                  const isSelected = col.toUpperCase() === color.toUpperCase();
+                                  return (
+                                    <button
+                                      key={color}
+                                      type="button"
+                                      onClick={() => {
+                                        const colors = { ...(appSettings.categoryColors || {}) };
+                                        colors[cat] = color;
+                                        const updated = { ...appSettings, categoryColors: colors };
+                                        handleSettingsChange(updated);
+                                        showToast(`'${cat}' 카테고리 색상 변경 완료`);
+                                      }}
+                                      style={{
+                                        width: '13px',
+                                        height: '13px',
+                                        borderRadius: '50%',
+                                        backgroundColor: color,
+                                        border: isSelected ? '1.5px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        boxShadow: isSelected ? '0 0 3px rgba(0,0,0,0.2)' : 'none',
+                                        transform: isSelected ? 'scale(1.15)' : 'none',
+                                        transition: 'all 0.15s ease',
+                                        flexShrink: 0
+                                      }}
+                                      title={color}
+                                    />
+                                  );
+                                })}
+
+                                {/* 커스텀 색상 선택 (color input) */}
+                                <div style={{ position: 'relative', display: 'inline-block', width: '13px', height: '13px', flexShrink: 0 }}>
+                                  <input
+                                    type="color"
+                                    value={col}
+                                    onChange={(e) => {
+                                      const newColor = e.target.value;
+                                      const colors = { ...(appSettings.categoryColors || {}) };
+                                      colors[cat] = newColor;
+                                      const updated = { ...appSettings, categoryColors: colors };
+                                      handleSettingsChange(updated);
+                                      showToast(`'${cat}' 카테고리 색상 변경 완료`);
+                                    }}
+                                    style={{
+                                      opacity: 0,
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      cursor: 'pointer',
+                                      zIndex: 2
+                                    }}
+                                    title="직접 지정"
+                                  />
+                                  <div
+                                    style={{
+                                      width: '13px',
+                                      height: '13px',
+                                      borderRadius: '50%',
+                                      background: ![
+                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                      ].includes(col.toUpperCase()) ? col : 'conic-gradient(from 0deg, red, yellow, green, blue, magenta, red)',
+                                      border: ![
+                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                      ].includes(col.toUpperCase()) ? '1.5px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                      boxShadow: ![
+                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                      ].includes(col.toUpperCase()) ? '0 0 3px rgba(0,0,0,0.2)' : 'none',
+                                      transform: ![
+                                        '#007AFF', '#34C759', '#AF52DE', '#FF9500', '#FF2D55', '#5AC8FA', '#FFCC00', '#5856D6', '#8E8E93'
+                                      ].includes(col.toUpperCase()) ? 'scale(1.15)' : 'none',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => deleteMasterScheduleCategory(cat)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '0.1rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#FF3B30',
+                                  opacity: 0.8,
+                                  flexShrink: 0
+                                }}
+                                title={`${cat} 삭제`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
