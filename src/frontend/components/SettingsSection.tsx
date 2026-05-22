@@ -823,17 +823,29 @@ export default function SettingsSection() {
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.2)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.4.3)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>
         <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '1px solid var(--panel-border)', textAlign: 'left' }}>
-          {/* v0.4.2 */}
+          {/* v0.4.3 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.2 (2026-05-22)</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent)' }}>v0.4.3 (2026-05-22)</span>
               <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'var(--hover-bg)', padding: '0.1rem 0.3rem', borderRadius: '4px', fontWeight: 700 }}>최신 버전</span>
             </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div>• <strong>일정 하루 종일 옵션 지원</strong>: 일정 생성/편집 시 '하루 종일' 토글 스위치를 지원하고, 활성화 시 시간 대신 '하루 종일' 배지를 리스트에 노출하며 하루 종일 일정을 목록 최상단에 자동 정렬합니다.</div>
+              <div>• <strong>완료 일정 달력 표시 유지</strong>: 일정이 완료 상태로 변경되더라도 달력 날짜 셀 하단의 일정 표시용 작은 점들이 사라지지 않고 유지되도록 보완했습니다.</div>
+              <div>• <strong>메모 마크다운 표 및 코드 블록 확장</strong>: 메모 보기창에서 마크다운 테이블(정렬 지원) 및 백틱 3개(```) 기반 코드 블록이 올바르게 렌더링되도록 기능을 확장했습니다.</div>
+            </div>
+          </div>
+
+          <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0.1rem 0' }} />
+
+          {/* v0.4.2 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>v0.4.2 (2026-05-22)</span>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <div>• <strong>시간 선택기(CustomTimePicker) 미니멀화</strong>: 시간 선택 팝업에서 복잡한 그리드 형태의 숫자판을 제거하고, 상/하 화살표 단추(`▲`/`▼`)로 조작할 수 있는 직관적인 스텝 방식으로 디자인을 간소화하였습니다.</div>
               <div>• <strong>시간 입력 이벤트 전파 방지</strong>: 시간 선택기를 클릭할 때 부모 일정 등록/수정창이 닫히지 않도록 이벤트 차단 처리를 강화했습니다.</div>
