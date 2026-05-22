@@ -6,7 +6,7 @@ import React from 'react';
  * 의존성 없는 경량 Markdown 렌더러.
  * 지원: 제목(#,##,###), 굵게(**), 기울임(*,_), 취소선(~~), 인라인 코드(`),
  *       링크([t](u)), 체크박스(- [ ] / - [x]), 불릿(-,*), 번호목록(1.),
- *       인용(>), 구분선(---), 단락/줄바꿈.
+ *       인용(>), 구분선(---), 단락/줄바꿈, 테이블(표), 펜스 코드 블록.
  * 카드 미리보기와 상세 보기 모두에서 재사용.
  */
 
@@ -118,6 +118,30 @@ function parseInline(text: string): React.ReactNode[] {
   return nodes;
 }
 
+// 테이블 셀 분리 및 정렬 파싱 헬퍼 함수
+function splitCells(line: string): string[] {
+  let clean = line.trim();
+  if (clean.startsWith('|')) clean = clean.slice(1);
+  if (clean.endsWith('|')) clean = clean.slice(0, -1);
+  return clean.split('|').map(s => s.trim());
+}
+
+function parseAlign(cell: string): 'left' | 'center' | 'right' | null {
+  const trimmed = cell.trim();
+  const starts = trimmed.startsWith(':');
+  const ends = trimmed.endsWith(':');
+  if (starts && ends) return 'center';
+  if (starts) return 'left';
+  if (ends) return 'right';
+  return null;
+}
+
+function isSeparatorLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return false;
+  return /^[|:\-\s]+$/.test(trimmed) && trimmed.replace(/[|:\s]/g, '').length > 0;
+}
+
 export default function Markdown({ 
   content, 
   compact = false,
@@ -147,20 +171,142 @@ export default function Markdown({
 
   const mb = compact ? '0.1rem' : '0.35rem';
 
-  lines.forEach((rawLine, lineIndex) => {
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
     const line = rawLine.trimEnd();
 
-    // 빈 줄
-    if (line.trim() === '') { flushList(); return; }
+    // 1. 빈 줄
+    if (line.trim() === '') {
+      flushList();
+      continue;
+    }
 
-    // 구분선
+    // 2. 펜스 코드 블록 (```)
+    if (line.startsWith('```')) {
+      flushList();
+      const lang = line.slice(3).trim();
+      const codeLines: string[] = [];
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith('```')) {
+        codeLines.push(lines[j]);
+        j++;
+      }
+      i = j; // 닫는 ``` 위치 혹은 끝으로 인덱스 이동
+
+      blocks.push(
+        <div key={nextKey()} style={{ margin: '0.5rem 0', position: 'relative' }}>
+          {lang && (
+            <span style={{ 
+              position: 'absolute', 
+              top: '0', 
+              right: '0.6rem', 
+              fontSize: '0.62rem', 
+              color: 'var(--text-tertiary)', 
+              background: 'var(--panel-border)', 
+              padding: '0.1rem 0.3rem', 
+              borderRadius: '0 0 4px 4px',
+              textTransform: 'uppercase',
+              fontWeight: 700
+            }}>
+              {lang}
+            </span>
+          )}
+          <pre style={{ 
+            background: 'var(--hover-bg)', 
+            border: '1px solid var(--panel-border)', 
+            borderRadius: '6px', 
+            padding: '0.6rem', 
+            overflowX: 'auto', 
+            fontSize: '0.72rem', 
+            fontFamily: 'ui-monospace, monospace',
+            lineHeight: '1.4',
+            margin: 0
+          }}>
+            <code style={{ color: 'var(--text-primary)', whiteSpace: 'pre' }}>
+              {codeLines.join('\n')}
+            </code>
+          </pre>
+        </div>
+      );
+      continue;
+    }
+
+    // 3. 테이블 (표) 감지
+    // 현재 줄에 '|'가 있고 다음 줄이 유효한 구분선일 때 테이블 시작
+    if (line.includes('|') && i + 1 < lines.length && isSeparatorLine(lines[i + 1])) {
+      flushList();
+      
+      const headers = splitCells(lines[i]);
+      const alignCells = splitCells(lines[i + 1]);
+      const alignments = alignCells.map(parseAlign);
+
+      const rows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim() !== '' && lines[j].includes('|') && !isSeparatorLine(lines[j])) {
+        rows.push(splitCells(lines[j]));
+        j++;
+      }
+      i = j - 1; // 테이블이 끝난 위치로 인덱스 이동
+
+      blocks.push(
+        <div key={nextKey()} style={{ overflowX: 'auto', margin: '0.5rem 0', maxWidth: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: compact ? '0.7rem' : '0.78rem', margin: '0.2rem 0' }}>
+            <thead>
+              <tr style={{ borderBottom: '1.5px solid var(--panel-border)', background: 'var(--hover-bg)' }}>
+                {headers.map((h, colIdx) => (
+                  <th 
+                    key={nextKey()} 
+                    style={{ 
+                      padding: '0.4rem 0.6rem', 
+                      fontWeight: 600, 
+                      textAlign: alignments[colIdx] || 'left',
+                      color: 'var(--text-primary)',
+                      borderBottom: '1.5px solid var(--panel-border)'
+                    }}
+                  >
+                    {parseInline(h)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => (
+                <tr 
+                  key={nextKey()} 
+                  style={{ 
+                    borderBottom: '1px solid var(--panel-border)',
+                    background: rowIdx % 2 === 1 ? 'var(--hover-bg)' : 'transparent' // 테마 변수를 활용한 미세한 홀수행 배경
+                  }}
+                >
+                  {headers.map((_, colIdx) => (
+                    <td 
+                      key={nextKey()} 
+                      style={{ 
+                        padding: '0.4rem 0.6rem', 
+                        textAlign: alignments[colIdx] || 'left',
+                        color: 'var(--text-secondary)'
+                      }}
+                    >
+                      {parseInline(row[colIdx] || '')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // 4. 구분선 (---)
     if (/^---+$/.test(line.trim())) {
       flushList();
       blocks.push(<hr key={nextKey()} style={{ border: 'none', borderTop: '1px solid var(--panel-border)', margin: '0.4rem 0' }} />);
-      return;
+      continue;
     }
 
-    // 체크박스
+    // 5. 체크박스
     const checkMatch = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.*)$/);
     if (checkMatch) {
       flushList();
@@ -171,7 +317,7 @@ export default function Markdown({
             onClick={(e) => {
               if (onCheckboxToggle) {
                 e.stopPropagation();
-                onCheckboxToggle(lineIndex, !checked);
+                onCheckboxToggle(i, !checked);
               }
             }}
             style={{
@@ -190,10 +336,10 @@ export default function Markdown({
           </span>
         </div>
       );
-      return;
+      continue;
     }
 
-    // 제목
+    // 6. 제목
     const hMatch = line.match(/^(#{1,3})\s+(.*)$/);
     if (hMatch) {
       flushList();
@@ -204,10 +350,10 @@ export default function Markdown({
           {parseInline(hMatch[2])}
         </div>
       );
-      return;
+      continue;
     }
 
-    // 인용
+    // 7. 인용
     if (line.startsWith('> ')) {
       flushList();
       blocks.push(
@@ -215,33 +361,33 @@ export default function Markdown({
           {parseInline(line.slice(2))}
         </div>
       );
-      return;
+      continue;
     }
 
-    // 번호 목록
+    // 8. 번호 목록
     const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
     if (olMatch) {
       if (!listBuffer || !listBuffer.ordered) { flushList(); listBuffer = { ordered: true, items: [] }; }
       listBuffer.items.push(<li key={nextKey()} style={{ fontSize: 'inherit' }}>{parseInline(olMatch[1])}</li>);
-      return;
+      continue;
     }
 
-    // 불릿 목록
+    // 9. 불릿 목록
     const ulMatch = line.match(/^\s*[-*]\s+(.*)$/);
     if (ulMatch) {
       if (!listBuffer || listBuffer.ordered) { flushList(); listBuffer = { ordered: false, items: [] }; }
       listBuffer.items.push(<li key={nextKey()} style={{ fontSize: 'inherit' }}>{parseInline(ulMatch[1])}</li>);
-      return;
+      continue;
     }
 
-    // 일반 단락
+    // 10. 일반 단락
     flushList();
     blocks.push(
       <div key={nextKey()} style={{ margin: `${mb} 0` }}>
         {parseInline(line)}
       </div>
     );
-  });
+  }
 
   flushList();
 
