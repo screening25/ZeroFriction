@@ -36,21 +36,39 @@ function createWindow() {
   });
 
   mainWindow.setAspectRatio(420 / 850);
-  mainWindow.loadURL('http://localhost:3005');
 
-  // 화면이 비어 보이는 현상 자동 복구
-  // (dev 서버 재컴파일/일시 중단, 렌더러 크래시·무응답 시 다시 로드)
-  const reloadApp = () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.loadURL('http://localhost:3005');
-    }
+  const APP_URL = 'http://localhost:3005';
+  let retryTimer = null;
+
+  // 서버에 연결되지 않을 때 하얀 화면 대신 안내 화면을 표시 (자동 재연결)
+  const showWaiting = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const html =
+      '<!doctype html><meta charset="utf-8">' +
+      '<body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#F2F2F7;color:#8e8e93;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-app-region:drag">' +
+      '<div style="font-size:14px;font-weight:600">서버에 연결하는 중…</div>' +
+      '<div style="font-size:12px;text-align:center">개발 서버가 켜져 있는지 확인하세요<br/>npm run dev (포트 3005)</div>' +
+      '</body>';
+    mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   };
-  mainWindow.webContents.on('did-fail-load', (_e, errorCode, _desc, _url, isMainFrame) => {
-    // -3(ERR_ABORTED)은 정상적인 내비게이션 취소이므로 무시
-    if (isMainFrame && errorCode !== -3) setTimeout(reloadApp, 1500);
+
+  const tryLoadApp = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(APP_URL);
+  };
+
+  tryLoadApp();
+
+  // 로드 실패(서버 미실행/재컴파일) → 안내 화면 후 2초 간격 재시도
+  mainWindow.webContents.on('did-fail-load', (_e, errorCode, _desc, validatedURL, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3) return;               // -3: 정상 내비게이션 취소
+    if (validatedURL && validatedURL.startsWith('data:')) return; // 안내 화면 자체는 무시
+    showWaiting();
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(tryLoadApp, 2000);
   });
-  mainWindow.webContents.on('render-process-gone', () => setTimeout(reloadApp, 500));
-  mainWindow.webContents.on('unresponsive', () => reloadApp());
+  // 렌더러 크래시·무응답 → 재로드
+  mainWindow.webContents.on('render-process-gone', () => setTimeout(tryLoadApp, 500));
+  mainWindow.webContents.on('unresponsive', () => tryLoadApp());
   
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
