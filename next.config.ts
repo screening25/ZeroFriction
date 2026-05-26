@@ -13,10 +13,6 @@ const nextConfig: NextConfig = {
   // Electron 위젯 모드에서는 Next.js 개발용 인디케이터(N 로고/dev tools)를 표시하지 않음
   devIndicators: false,
 
-  // 프로덕션 빌드(Vercel 등)가 기존 ESLint 에러로 중단되지 않도록 함.
-  // 타입 검사는 그대로 유지되며, 린트는 로컬/CI에서 `npm run lint`로 별도 수행한다.
-  eslint: { ignoreDuringBuilds: true },
-
   // 같은 Wi-Fi 안의 모바일 기기(Galaxy S25 Edge 등)에서 dev 서버 접근을 허용
   allowedDevOrigins: [
     'localhost:3005',
