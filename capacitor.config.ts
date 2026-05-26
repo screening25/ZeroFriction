@@ -23,8 +23,8 @@ const config: CapacitorConfig = {
   },
 
   android: {
-    // 상단 상태바와 컨텐츠가 겹치지 않도록
-    backgroundColor: '#000000',
+    // 앱 기본 배경색과 일치 — 웹뷰 로딩 중 검은 깜빡임 방지
+    backgroundColor: '#F2F2F7',
   },
 };
 
