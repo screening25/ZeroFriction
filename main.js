@@ -37,6 +37,20 @@ function createWindow() {
 
   mainWindow.setAspectRatio(420 / 850);
   mainWindow.loadURL('http://localhost:3005');
+
+  // 화면이 비어 보이는 현상 자동 복구
+  // (dev 서버 재컴파일/일시 중단, 렌더러 크래시·무응답 시 다시 로드)
+  const reloadApp = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadURL('http://localhost:3005');
+    }
+  };
+  mainWindow.webContents.on('did-fail-load', (_e, errorCode, _desc, _url, isMainFrame) => {
+    // -3(ERR_ABORTED)은 정상적인 내비게이션 취소이므로 무시
+    if (isMainFrame && errorCode !== -3) setTimeout(reloadApp, 1500);
+  });
+  mainWindow.webContents.on('render-process-gone', () => setTimeout(reloadApp, 500));
+  mainWindow.webContents.on('unresponsive', () => reloadApp());
   
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
