@@ -25,7 +25,6 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 420,
     height: 850,
-    show: false,
     titleBarStyle: 'hiddenInset',
     // 앱 기본 배경색과 일치 — 로딩/재컴파일로 웹뷰가 잠깐 비어도 검게 깜빡이지 않게 함
     backgroundColor: '#F2F2F7',
@@ -38,9 +37,6 @@ function createWindow() {
 
   mainWindow.setAspectRatio(420 / 850);
   mainWindow.loadURL('http://localhost:3005');
-
-  // 콘텐츠가 처음 그려진 뒤 창을 노출 → 최초 로딩 시 검은 화면 깜빡임 제거
-  mainWindow.once('ready-to-show', () => mainWindow.show());
   
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
