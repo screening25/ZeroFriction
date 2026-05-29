@@ -937,27 +937,27 @@ export default function SettingsSection() {
           window.location.reload();
         };
         return (
-          <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>앱 업데이트</span>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>최신 버전을 서버에서 불러옵니다</span>
-            </div>
-            <button
-              onClick={handleUpdate}
-              disabled={updating}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.35rem',
-                padding: '0.45rem 0.9rem', borderRadius: '10px',
-                border: 'none', background: 'var(--accent)', color: '#fff',
-                fontSize: '0.75rem', fontWeight: 700, cursor: updating ? 'not-allowed' : 'pointer',
-                opacity: updating ? 0.6 : 1, transition: 'opacity 0.2s',
-                flexShrink: 0
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              {updating ? '업데이트 중…' : '지금 업데이트'}
-            </button>
-          </div>
+          <button
+            onClick={handleUpdate}
+            disabled={updating}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              padding: '0.85rem',
+              borderRadius: '14px',
+              border: 'none',
+              background: updating ? 'var(--accent-soft-bg)' : 'var(--accent)',
+              color: updating ? 'var(--accent)' : '#fff',
+              fontSize: '0.85rem', fontWeight: 800,
+              cursor: updating ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: updating ? 'none' : '0 4px 14px var(--accent-glow)',
+              letterSpacing: '0.01em'
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: updating ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            {updating ? '업데이트 중…' : '최신 버전으로 업데이트'}
+          </button>
         );
       })()}
 
