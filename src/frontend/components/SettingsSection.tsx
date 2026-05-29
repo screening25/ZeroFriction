@@ -197,7 +197,22 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.5.10", date: "2026-05-22", latest: true, items: [
+  { version: "v0.6.2", date: "2026-05-29", latest: true, items: [
+    { b: "일정·재고·메모 복제(Duplicate) 기능 추가", t: ": 각 항목 카드 호버 시 나타나는 액션 버튼에 '복제' 버튼을 추가했습니다. 누르면 동일한 내용의 항목이 '(복사본)' 접미사와 함께 즉시 생성됩니다." },
+    { b: "설정 내 앱 업데이트 버튼 추가", t: ": 설정 탭 하단에 '지금 업데이트' 버튼을 추가했습니다. 버튼 하나로 Vercel 서버에서 최신 버전을 즉시 불러옵니다." },
+  ] },
+  { version: "v0.6.1", date: "2026-05-29", items: [
+    { b: "OS 배너 알림 지원 (Android/PWA)", t: ": 앱 실행 시 알림 권한을 요청하고, 일정 알림 발생 시 인앱 카드뿐 아니라 기기 OS 배너 알림도 함께 표시하도록 개선했습니다." },
+    { b: "헤더 앱 업데이트 버튼 추가", t: ": 상단 헤더에 새로고침 버튼을 추가하여 언제든지 최신 버전으로 즉시 업데이트할 수 있도록 했습니다." },
+    { b: "컴퓨터·폰 앱 데이터 실시간 동기화", t: ": Electron 데스크톱 앱이 로컬 서버 대신 Vercel 서버(Neon DB)를 바라보도록 변경하여, 폰 앱과 컴퓨터 앱 간 데이터가 자동으로 동기화됩니다." },
+  ] },
+  { version: "v0.6.0", date: "2026-05-29", items: [
+    { b: "Vercel 클라우드 배포 및 Neon PostgreSQL 연결", t: ": 앱을 Vercel에 배포하고 Neon 클라우드 DB를 연결하여 어디서든 접속 가능한 웹 서비스로 전환했습니다." },
+    { b: "Android APK 빌드 (Capacitor)", t: ": Capacitor를 활용해 Android 네이티브 앱(APK)을 빌드했습니다. 폰에 설치하면 일반 앱처럼 사용할 수 있습니다." },
+    { b: "카테고리 비율 툴팁 클리핑 버그 수정", t: ": 스크롤 시 카테고리 비율 호버 툴팁이 가려지는 문제를 position: fixed 방식으로 전환하여 완전히 해결했습니다." },
+    { b: "인사이트 타일 레이블 줄바꿈 수정", t: ": '업무 진행 및 달성', '재고 건전성' 레이블이 타일 폭에 따라 두 줄로 깨지던 문제를 수정했습니다." },
+  ] },
+  { version: "v0.5.10", date: "2026-05-22", items: [
     { b: "시리얼 번호 파싱 분류 고도화 및 중복 병합 방지", t: ": 기기 일련번호(예: CLBX-5A-15689)가 입력될 때 품목코드와 시리얼을 정확히 분리하고, 기기 상태 정보가 품목명으로 혼입되는 오류를 해결했습니다. 고유 시리얼을 가진 품목은 중복 합산되지 않고 개별 등록되며, 일괄 편집 그리드에 '시리얼' 필드를 추가했습니다." },
     { b: "삭제 처리 시 페이지 바운더리 자동 보정(Pagination Clamp)", t: ": 리스트에서 항목을 연속으로 바로 삭제하여 현재 페이지의 마지막 항목이 사라지는 경우, 유효한 마지막 페이지로 자동 이동하도록 반응형 페이징 보정 훅을 추가하여 빈 화면 노출 현상을 완전히 해결했습니다." }
   ] },
@@ -902,11 +917,43 @@ export default function SettingsSection() {
         </div>
       </details>
 
+      {/* 앱 업데이트 버튼 */}
+      {(() => {
+        const [updating, setUpdating] = useState(false);
+        const handleUpdate = () => {
+          setUpdating(true);
+          window.location.reload();
+        };
+        return (
+          <div className="settings-section" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>앱 업데이트</span>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>최신 버전을 서버에서 불러옵니다</span>
+            </div>
+            <button
+              onClick={handleUpdate}
+              disabled={updating}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                padding: '0.45rem 0.9rem', borderRadius: '10px',
+                border: 'none', background: 'var(--accent)', color: '#fff',
+                fontSize: '0.75rem', fontWeight: 700, cursor: updating ? 'not-allowed' : 'pointer',
+                opacity: updating ? 0.6 : 1, transition: 'opacity 0.2s',
+                flexShrink: 0
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              {updating ? '업데이트 중…' : '지금 업데이트'}
+            </button>
+          </div>
+        );
+      })()}
+
       {/* 업데이트 정보 (Version & Changelog) */}
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
         <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.5.6)</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>업데이트 정보 (v0.6.2)</span>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s ease' }} className="settings-chevron" />
         </summary>
