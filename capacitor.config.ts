@@ -17,8 +17,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
 
   server: {
-    // TODO: 배포한 Vercel 주소로 교체
-    url: 'https://YOUR-APP.vercel.app',
+    url: 'https://zero-friction-roan.vercel.app',
     cleartext: false,
   },
 
