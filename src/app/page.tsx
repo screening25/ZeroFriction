@@ -158,6 +158,7 @@ export default function Home() {
     handleUpdateSchedule,
     toggleComplete, handleDeleteSchedule,
     submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
+    handleDuplicateSchedule, handleDuplicateInventory, handleDuplicateMemo,
     archive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
     activities,
     searchQuery, searchType, setSearchResult,
@@ -2693,6 +2694,7 @@ export default function Home() {
                 )}
                 <div className="card-hover-actions">
                   <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setEditingSchedule(s); }}>수정</button>
+                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateSchedule(s.id); }}>복제</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(s.id); }}>삭제</button>
                 </div>
               </div>
@@ -3525,6 +3527,7 @@ export default function Home() {
 
                   <div className="card-hover-actions">
                     <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setEditingInventory(item); }}>수정</button>
+                    <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateInventory(item.id); }}>복제</button>
                     <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
                   </div>
                 </div>
@@ -3703,6 +3706,7 @@ export default function Home() {
 
                 <div className="card-hover-actions">
                   <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoEditing(true); setIsMemoModalOpen(true); }}>수정</button>
+                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateMemo(m.id); }}>복제</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }}>삭제</button>
                 </div>
               </div>

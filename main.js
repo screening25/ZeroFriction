@@ -37,7 +37,7 @@ function createWindow() {
 
   mainWindow.setAspectRatio(420 / 850);
 
-  const APP_URL = 'http://localhost:3005';
+  const APP_URL = 'https://zero-friction-roan.vercel.app';
   let retryTimer = null;
 
   // 서버에 연결되지 않을 때 하얀 화면 대신 안내 화면을 표시 (자동 재연결)

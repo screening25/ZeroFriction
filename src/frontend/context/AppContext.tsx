@@ -77,6 +77,9 @@ interface AppContextProps {
   updateMemoContentDirectly: (id: string, newContent: string) => void;
   deleteMemo: (id: string) => void;
   deleteInventoryItem: (id: string) => void;
+  handleDuplicateSchedule: (id: string) => void;
+  handleDuplicateInventory: (id: string) => void;
+  handleDuplicateMemo: (id: string) => void;
   exportToCsv: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
   printToPdf: (type: 'event' | 'asset' | 'memo', specificRecordId?: string) => void;
   activeNotification: {
@@ -739,6 +742,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (editingSchedule) setEditingSchedule(null);
   };
 
+  const handleDuplicateSchedule = (id: string) => {
+    const target = records.find(r => r.id === id);
+    if (!target) return;
+    addRecord({
+      title: `${target.title} (복사본)`,
+      type: target.type,
+      category: target.category,
+      attrs: { ...target.attrs, completed: false }
+    });
+    reloadRecords();
+    showToast(`'${target.title}' 복제 완료`);
+    logActivity('ADD_SCHED', '일정 복제', target.title);
+  };
+
+  const handleDuplicateInventory = (id: string) => {
+    const target = records.find(r => r.id === id);
+    if (!target) return;
+    addRecord({
+      title: `${target.title} (복사본)`,
+      type: target.type,
+      category: target.category,
+      attrs: { ...target.attrs }
+    });
+    reloadRecords();
+    showToast(`'${target.title}' 복제 완료`);
+    logActivity('ADD_INV', '재고 복제', target.title);
+  };
+
+  const handleDuplicateMemo = (id: string) => {
+    const target = records.find(r => r.id === id);
+    if (!target) return;
+    addRecord({
+      title: `${target.title} (복사본)`,
+      type: target.type,
+      category: target.category,
+      attrs: { ...target.attrs }
+    });
+    reloadRecords();
+    showToast(`'${target.title}' 복제 완료`);
+    logActivity('ADD_MEMO', '메모 복제', target.title);
+  };
+
   const submitMemo = () => {
     if (!memoForm.title || !memoForm.content) return;
     if (memoForm.id) {
@@ -1135,6 +1180,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeTab, setActiveTab, activeCategory, setActiveCategory,
       reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, executeNlpCommand, handleUpdateSchedule,
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
+      handleDuplicateSchedule, handleDuplicateInventory, handleDuplicateMemo,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
       showCompleted, setShowCompleted, exportToCsv, printToPdf,
