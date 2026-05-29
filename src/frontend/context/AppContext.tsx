@@ -745,43 +745,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const handleDuplicateSchedule = (id: string) => {
     const target = records.find(r => r.id === id);
     if (!target) return;
-    addRecord({
+    const newRecord = addRecord({
       title: `${target.title} (복사본)`,
       type: target.type,
       category: target.category,
       attrs: { ...target.attrs, completed: false }
     });
     reloadRecords();
-    showToast(`'${target.title}' 복제 완료`);
+    showToast(`'${target.title}' 복제 — 수정 후 저장하세요`);
     logActivity('ADD_SCHED', '일정 복제', target.title);
+    setEditingSchedule(newRecord);
   };
 
   const handleDuplicateInventory = (id: string) => {
     const target = records.find(r => r.id === id);
     if (!target) return;
-    addRecord({
+    const newRecord = addRecord({
       title: `${target.title} (복사본)`,
       type: target.type,
       category: target.category,
       attrs: { ...target.attrs }
     });
     reloadRecords();
-    showToast(`'${target.title}' 복제 완료`);
+    showToast(`'${target.title}' 복제 — 수정 후 저장하세요`);
     logActivity('ADD_INV', '재고 복제', target.title);
+    setEditingInventory(newRecord);
   };
 
   const handleDuplicateMemo = (id: string) => {
     const target = records.find(r => r.id === id);
     if (!target) return;
-    addRecord({
+    const newRecord = addRecord({
       title: `${target.title} (복사본)`,
       type: target.type,
       category: target.category,
       attrs: { ...target.attrs }
     });
     reloadRecords();
-    showToast(`'${target.title}' 복제 완료`);
+    showToast(`'${target.title}' 복제 — 수정 후 저장하세요`);
     logActivity('ADD_MEMO', '메모 복제', target.title);
+    setMemoForm({
+      id: newRecord.id,
+      title: newRecord.title,
+      content: newRecord.attrs.content || '',
+      pinned: newRecord.attrs.pinned || false,
+      color: newRecord.attrs.color || ''
+    });
+    setIsMemoModalOpen(true);
   };
 
   const submitMemo = () => {

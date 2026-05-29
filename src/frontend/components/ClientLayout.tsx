@@ -189,10 +189,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     };
   }, [activeNotification]);
 
-  // 앱 업데이트 (강제 새로고침)
+  // 앱 업데이트 — 서비스 워커 캐시 완전 삭제 후 강제 새로고침
   const [isUpdating, setIsUpdating] = useState(false);
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     setIsUpdating(true);
+    try {
+      // 1. 서비스 워커 전체 unregister
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+      // 2. Cache Storage 전체 삭제
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) {
+      console.warn('캐시 삭제 실패, 그냥 새로고침:', e);
+    }
+    // 3. 강제 새로고침
     window.location.reload();
   };
 

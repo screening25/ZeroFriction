@@ -920,8 +920,20 @@ export default function SettingsSection() {
       {/* 앱 업데이트 버튼 */}
       {(() => {
         const [updating, setUpdating] = useState(false);
-        const handleUpdate = () => {
+        const handleUpdate = async () => {
           setUpdating(true);
+          try {
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map(r => r.unregister()));
+            }
+            if ('caches' in window) {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(k => caches.delete(k)));
+            }
+          } catch (e) {
+            console.warn('캐시 삭제 실패:', e);
+          }
           window.location.reload();
         };
         return (
