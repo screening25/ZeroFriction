@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check, RefreshCw } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -105,6 +105,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           console.error("Failed to load Electron ipcRenderer:", e);
         }
       }
+      // OS 알림 권한 요청 (앱 첫 실행 시)
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     }
   }, []);
 
@@ -167,6 +171,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       };
     }
   }, [mounted, executeNlpCommand]);
+
+  // activeNotification 발생 시 OS 배너 알림 발사
+  useEffect(() => {
+    if (!activeNotification) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    const n = new Notification(activeNotification.title || '일정 알림', {
+      body: `${activeNotification.body}  ${activeNotification.date} ${activeNotification.time}`,
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+    });
+    // 배너 클릭 시 앱 포커스
+    n.onclick = () => {
+      window.focus();
+      n.close();
+    };
+  }, [activeNotification]);
+
+  // 앱 업데이트 (강제 새로고침)
+  const [isUpdating, setIsUpdating] = useState(false);
+  const handleUpdate = () => {
+    setIsUpdating(true);
+    window.location.reload();
+  };
 
   // 커맨드 팔레트(⌘K) 열림 상태
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -246,6 +274,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </button>
             <button className={`theme-toggle ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab(activeTab === 'settings' ? 'all' : 'settings')} title="환경설정 (⌘,)">
               <Settings size={17} />
+            </button>
+            <button
+              className="theme-toggle"
+              onClick={handleUpdate}
+              title="앱 업데이트"
+              style={{ opacity: isUpdating ? 0.5 : 1 }}
+            >
+              <RefreshCw size={17} style={{ animation: isUpdating ? 'spin 1s linear infinite' : 'none' }} />
             </button>
           </div>
         </div>

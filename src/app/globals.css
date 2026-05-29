@@ -1863,6 +1863,11 @@ button,
   }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes bell-ring {
   0%, 100% { transform: rotate(0); }
   10%, 30%, 50%, 70%, 90% { transform: rotate(15deg); }
