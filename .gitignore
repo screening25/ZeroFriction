@@ -50,3 +50,10 @@ Thumbs.db
 
 # === macOS 바로가기 앱 (로컬 사용) ===
 ZeroScheduler.app/
+
+# === Android 로컬 환경 파일 ===
+android/local.properties
+android/.gradle/
+android/app/release/
+*.keystore
+*.jks
