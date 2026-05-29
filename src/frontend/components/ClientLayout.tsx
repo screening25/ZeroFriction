@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -289,14 +289,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </button>
             <button className={`theme-toggle ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab(activeTab === 'settings' ? 'all' : 'settings')} title="환경설정 (⌘,)">
               <Settings size={17} />
-            </button>
-            <button
-              className="theme-toggle"
-              onClick={handleUpdate}
-              title="앱 업데이트"
-              style={{ opacity: isUpdating ? 0.5 : 1 }}
-            >
-              <RefreshCw size={17} style={{ animation: isUpdating ? 'spin 1s linear infinite' : 'none' }} />
             </button>
           </div>
         </div>
