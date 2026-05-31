@@ -319,6 +319,7 @@ export default function SettingsSection() {
   const [trashFilterType, setTrashFilterType] = useState<'all' | 'event' | 'asset' | 'memo'>('all');
   const [expandedTrashId, setExpandedTrashId] = useState<string | null>(null);
   const [updatePage, setUpdatePage] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Electron 창 리사이즈 비교용 — 직전 deviceSize 값을 추적
   const prevDeviceSizeRef = useRef(appSettings.deviceSize);
@@ -918,10 +919,9 @@ export default function SettingsSection() {
       </details>
 
       {/* 앱 업데이트 버튼 */}
-      {(() => {
-        const [updating, setUpdating] = useState(false);
-        const handleUpdate = async () => {
-          setUpdating(true);
+      <button
+        onClick={async () => {
+          setIsUpdating(true);
           try {
             if ('serviceWorker' in navigator) {
               const regs = await navigator.serviceWorker.getRegistrations();
@@ -935,31 +935,26 @@ export default function SettingsSection() {
             console.warn('캐시 삭제 실패:', e);
           }
           window.location.reload();
-        };
-        return (
-          <button
-            onClick={handleUpdate}
-            disabled={updating}
-            style={{
-              width: '100%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              padding: '0.85rem',
-              borderRadius: '14px',
-              border: 'none',
-              background: updating ? 'var(--accent-soft-bg)' : 'var(--accent)',
-              color: updating ? 'var(--accent)' : '#fff',
-              fontSize: '0.85rem', fontWeight: 800,
-              cursor: updating ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: updating ? 'none' : '0 4px 14px var(--accent-glow)',
-              letterSpacing: '0.01em'
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: updating ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            {updating ? '업데이트 중…' : '최신 버전으로 업데이트'}
-          </button>
-        );
-      })()}
+        }}
+        disabled={isUpdating}
+        style={{
+          width: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          padding: '0.85rem',
+          borderRadius: '14px',
+          border: 'none',
+          background: isUpdating ? 'var(--accent-soft-bg)' : 'var(--accent)',
+          color: isUpdating ? 'var(--accent)' : '#fff',
+          fontSize: '0.85rem', fontWeight: 800,
+          cursor: isUpdating ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s ease',
+          boxShadow: isUpdating ? 'none' : '0 4px 14px var(--accent-glow)',
+          letterSpacing: '0.01em'
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isUpdating ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        {isUpdating ? '업데이트 중…' : '최신 버전으로 업데이트'}
+      </button>
 
       {/* 업데이트 정보 (Version & Changelog) */}
       <details className="settings-section settings-section-details" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)', borderRadius: '14px', padding: '0', overflow: 'hidden' }}>
