@@ -28,3 +28,12 @@ model PolicyTracker {
   updatedAt     DateTime @updatedAt
 }
 
+// 모든 기기(APK·데스크톱·웹)가 공유하는 단일 앱 상태 저장소.
+// 기존 localStorage 키(universal_records, archived_records, zero_settings, zero_activities)를
+// 그대로 key 로 사용하고, 값(배열/객체)을 value(Json)에 저장한다 — 클라우드 localStorage.
+model AppState {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+

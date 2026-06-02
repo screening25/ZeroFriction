@@ -124,16 +124,103 @@ const ACCENT_COLORS = [
 ];
 export { ACCENT_COLORS };
 
-// --- Universal Records Handlers ---
+// ===== 공유 저장소 (클라우드 동기화) =====
+// 기존에는 localStorage(기기별 격리)에 저장했기에 APK와 데스크톱 앱이 서로 다른 데이터를 봤다.
+// 이제 모든 데이터는 서버(/api/state → Neon Postgres)에 저장되어 모든 기기가 같은 데이터를 본다.
+// 동기 인터페이스를 유지하기 위해 인메모리 캐시를 두고, 읽기는 캐시에서, 쓰기는 캐시+서버에 한다.
 const REC_KEY = 'universal_records';
 const ARCHIVE_KEY = 'archived_records';
+const SETTINGS_KEY = 'zero_settings';
+const ACT_KEY = 'zero_activities';
 
+type SyncKey = typeof REC_KEY | typeof ARCHIVE_KEY | typeof SETTINGS_KEY | typeof ACT_KEY;
+
+// 인메모리 캐시 — initData()로 서버에서 채운다.
+const _cache: Record<string, any> = {};
+let _initialized = false;
+
+/** 서버에 단일 키 값을 비동기로 저장한다 (last-write-wins). 실패해도 UI를 막지 않는다. */
+function pushToServer(key: SyncKey, value: any): void {
+  if (typeof window === 'undefined') return;
+  fetch('/api/state', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+    keepalive: true,
+  }).catch((e) => console.error('[sync] save failed', key, e));
+}
+
+/**
+ * 앱 시작 시 1회 호출 — 서버에서 전체 상태를 받아 캐시를 채운다.
+ * 이 함수가 끝난 뒤에 getRecords/loadSettings 등을 호출해야 동기화된 데이터를 얻는다.
+ */
+export async function initData(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const res = await fetch('/api/state', { cache: 'no-store' });
+    const data = res.ok ? await res.json() : {};
+    const serverHasRecords = Object.prototype.hasOwnProperty.call(data, REC_KEY);
+    _cache[REC_KEY] = Array.isArray(data[REC_KEY]) ? data[REC_KEY] : [];
+    _cache[ARCHIVE_KEY] = Array.isArray(data[ARCHIVE_KEY]) ? data[ARCHIVE_KEY] : [];
+    _cache[SETTINGS_KEY] = data[SETTINGS_KEY] && typeof data[SETTINGS_KEY] === 'object' ? data[SETTINGS_KEY] : {};
+    _cache[ACT_KEY] = Array.isArray(data[ACT_KEY]) ? data[ACT_KEY] : [];
+    _initialized = true;
+    // 🔒 일회성 자동 마이그레이션: 서버에 기록 키가 아직 없고(=한 번도 안 올라감)
+    // 이 기기 localStorage에 기존 데이터가 있으면 서버로 올려 보존한다.
+    if (!serverHasRecords) migrateFromLocalStorage();
+  } catch (e) {
+    console.error('[sync] initData failed', e);
+    if (!_cache[REC_KEY]) _cache[REC_KEY] = [];
+    if (!_cache[ARCHIVE_KEY]) _cache[ARCHIVE_KEY] = [];
+    if (!_cache[SETTINGS_KEY]) _cache[SETTINGS_KEY] = {};
+    if (!_cache[ACT_KEY]) _cache[ACT_KEY] = [];
+  }
+}
+
+/**
+ * 기존 localStorage 데이터를 서버(공유 DB)로 1회 이전한다.
+ * 서버가 비어 있을 때만 호출되며, localStorage에 데이터가 있으면 그대로 보존·업로드한다.
+ */
+function migrateFromLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const rawRecords = localStorage.getItem(REC_KEY);
+    const parsedRecords = rawRecords ? JSON.parse(rawRecords) : [];
+    if (!Array.isArray(parsedRecords) || parsedRecords.length === 0) return; // 옮길 데이터 없음
+
+    _cache[REC_KEY] = parsedRecords;
+    pushToServer(REC_KEY, parsedRecords);
+
+    const rawArchive = localStorage.getItem(ARCHIVE_KEY);
+    if (rawArchive) {
+      const a = JSON.parse(rawArchive);
+      if (Array.isArray(a)) { _cache[ARCHIVE_KEY] = a; pushToServer(ARCHIVE_KEY, a); }
+    }
+    const rawSettings = localStorage.getItem(SETTINGS_KEY);
+    if (rawSettings) {
+      const s = JSON.parse(rawSettings);
+      if (s && typeof s === 'object') { _cache[SETTINGS_KEY] = s; pushToServer(SETTINGS_KEY, s); }
+    }
+    const rawAct = localStorage.getItem(ACT_KEY);
+    if (rawAct) {
+      const ac = JSON.parse(rawAct);
+      if (Array.isArray(ac)) { _cache[ACT_KEY] = ac; pushToServer(ACT_KEY, ac); }
+    }
+    console.info('[sync] migrated localStorage → server:', parsedRecords.length, 'records');
+  } catch (e) {
+    console.error('[sync] migrateFromLocalStorage failed', e);
+  }
+}
+
+/** initData가 한 번이라도 완료되었는지 여부 */
+export function isDataReady(): boolean { return _initialized; }
+
+// --- Universal Records Handlers ---
 export function getRecords(): UniversalRecord[] {
   if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem(REC_KEY);
-  if (!raw) return [];
+  const list: UniversalRecord[] | undefined = _cache[REC_KEY];
+  if (!list || !Array.isArray(list)) return [];
   try {
-    const list: UniversalRecord[] = JSON.parse(raw);
     let changed = false;
     const seenIds = new Set<string>();
     const repaired = list.map(item => {
@@ -164,7 +251,8 @@ export function getRecords(): UniversalRecord[] {
 }
 
 export function saveRecords(records: UniversalRecord[]): void {
-  localStorage.setItem(REC_KEY, JSON.stringify(records));
+  _cache[REC_KEY] = records;
+  pushToServer(REC_KEY, records);
 }
 
 // --- Archive (휴지통) ---
@@ -174,12 +262,13 @@ export interface ArchivedRecord extends UniversalRecord {
 
 export function getArchive(): ArchivedRecord[] {
   if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem(ARCHIVE_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const list = _cache[ARCHIVE_KEY];
+  return Array.isArray(list) ? list : [];
 }
 
 export function saveArchive(items: ArchivedRecord[]): void {
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(items));
+  _cache[ARCHIVE_KEY] = items;
+  pushToServer(ARCHIVE_KEY, items);
 }
 
 export function restoreFromArchive(id: string): UniversalRecord | null {
@@ -303,56 +392,58 @@ export function deleteRecord(id: string, opts: { permanent?: boolean } = {}): vo
 }
 
 // --- Settings ---
-const SETTINGS_KEY = 'zero_settings';
 export function loadSettings(): AppSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
-  const raw = localStorage.getItem(SETTINGS_KEY);
-  return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+  const s = _cache[SETTINGS_KEY];
+  return s && typeof s === 'object' ? { ...DEFAULT_SETTINGS, ...s } : DEFAULT_SETTINGS;
 }
 export function persistSettings(s: AppSettings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  _cache[SETTINGS_KEY] = s;
+  pushToServer(SETTINGS_KEY, s);
 }
 
 // --- Activities ---
-const ACT_KEY = 'zero_activities';
 export function loadActivities(): ActivityLog[] {
   if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem(ACT_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const list = _cache[ACT_KEY];
+  return Array.isArray(list) ? list : [];
 }
 export function persistActivities(acts: ActivityLog[]): void {
-  localStorage.setItem(ACT_KEY, JSON.stringify(acts));
+  _cache[ACT_KEY] = acts;
+  pushToServer(ACT_KEY, acts);
 }
 
 // --- Export / Import ---
+// 백업/복원은 동기화 대상 4개 키를 캐시에서 직접 읽고/쓴다.
 export function exportAllData(): string {
   const data: Record<string, any> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.startsWith('zero_') || key.startsWith('erp_') || key === 'universal_records')) {
-      try { data[key] = JSON.parse(localStorage.getItem(key) || ''); } catch { data[key] = localStorage.getItem(key); }
-    }
-  }
+  [REC_KEY, ARCHIVE_KEY, SETTINGS_KEY, ACT_KEY].forEach((key) => {
+    if (_cache[key] !== undefined) data[key] = _cache[key];
+  });
   return JSON.stringify(data, null, 2);
 }
 
 export function importAllData(json: string): boolean {
   try {
     const data = JSON.parse(json);
-    Object.entries(data).forEach(([key, val]) => {
-      localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+    ([REC_KEY, ARCHIVE_KEY, SETTINGS_KEY, ACT_KEY] as SyncKey[]).forEach((key) => {
+      if (data[key] !== undefined) {
+        _cache[key] = data[key];
+        pushToServer(key, data[key]);
+      }
     });
     return true;
   } catch { return false; }
 }
 
 export function clearAllData(): void {
-  const keys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.startsWith('zero_') || key.startsWith('erp_') || key === 'universal_records' || key === 'archived_records')) keys.push(key);
-  }
-  keys.forEach(k => localStorage.removeItem(k));
+  _cache[REC_KEY] = [];
+  _cache[ARCHIVE_KEY] = [];
+  _cache[ACT_KEY] = [];
+  pushToServer(REC_KEY, []);
+  pushToServer(ARCHIVE_KEY, []);
+  pushToServer(ACT_KEY, []);
+  // 설정은 보존(테마/색상 등). 필요 시 별도 초기화.
 }
 
 // --- Holidays ---

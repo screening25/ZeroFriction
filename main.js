@@ -99,7 +99,8 @@ function createQuickInputWindow() {
     }
   });
 
-  quickInputWindow.loadURL('http://localhost:3005/quick-input');
+  // 메인 창과 동일한 배포 주소를 사용해야 같은 데이터/세션을 본다 (로컬 dev 서버 의존 제거)
+  quickInputWindow.loadURL('https://zero-friction-roan.vercel.app/quick-input');
 
   quickInputWindow.on('blur', () => {
     quickInputWindow.hide();

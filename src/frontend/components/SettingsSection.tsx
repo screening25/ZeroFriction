@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Download, Upload, AlertTriangle, Trash2, RotateCcw, X } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
-import { ACCENT_COLORS } from '@/database';
+import { ACCENT_COLORS, getRecords, loadActivities, loadSettings, saveRecords, persistActivities, persistSettings, clearAllData } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { createPortal } from 'react-dom';
@@ -337,10 +337,8 @@ export default function SettingsSection() {
    */
   const updateSingleSetting = (newSettings: typeof appSettings) => {
     setLocalSettings(newSettings);
-    handleSettingsChange(newSettings);
+    handleSettingsChange(newSettings); // 서버(공유 DB)에 저장됨 — 모든 기기 동기화
     if (typeof window !== 'undefined') {
-      localStorage.setItem('zero_settings', JSON.stringify(newSettings));
-
       // Electron에서만: deviceSize 변경 시 네이티브 프레임 리사이즈 트리거
       if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
         const size = newSettings.deviceSize || 'default';
@@ -358,16 +356,12 @@ export default function SettingsSection() {
    */
   const handleExportData = () => {
     try {
-      const recordsData = localStorage.getItem('universal_records') || '[]';
-      const activitiesData = localStorage.getItem('zero_activities') || '[]';
-      const settingsData = localStorage.getItem('zero_settings') || '{}';
-
       const backup = {
         version: '1.0.0',
         exportedAt: new Date().toISOString(),
-        records: JSON.parse(recordsData),
-        activities: JSON.parse(activitiesData),
-        settings: JSON.parse(settingsData),
+        records: getRecords(),
+        activities: loadActivities(),
+        settings: loadSettings(),
       };
 
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -404,9 +398,9 @@ export default function SettingsSection() {
         }
 
         if (confirm('백업 파일을 복원하시겠습니까? 현재 데이터는 모두 덮어써집니다.')) {
-          localStorage.setItem('universal_records', JSON.stringify(backup.records));
-          if (backup.activities) localStorage.setItem('zero_activities', JSON.stringify(backup.activities));
-          if (backup.settings) localStorage.setItem('zero_settings', JSON.stringify(backup.settings));
+          saveRecords(backup.records); // 서버(공유 DB)에 저장 → 모든 기기 반영
+          if (backup.activities) persistActivities(backup.activities);
+          if (backup.settings) persistSettings(backup.settings);
 
           reloadRecords();
           showToast('🎉 데이터 복원 완료! 시스템을 새로고침합니다.');
@@ -427,7 +421,8 @@ export default function SettingsSection() {
   const handleResetAll = () => {
     if (confirm('⚠️ [경고] 모든 데이터(일정, 재고, 메모, 설정, 활동로그)가 영구적으로 삭제됩니다. 계속하시겠습니까?')) {
       if (confirm('진짜로 초기화하시겠습니까? 이 작업은 취소할 수 없습니다.')) {
-        localStorage.clear();
+        clearAllData(); // 서버(공유 DB)의 데이터까지 초기화
+        localStorage.removeItem('zero_theme');
         showToast('🔥 시스템 전체 초기화 완료');
         setTimeout(() => {
           window.location.reload();

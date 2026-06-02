@@ -6,7 +6,8 @@ import {
   UniversalRecord, getRecords, addRecord, updateRecord, deleteRecord,
   ActivityLog, ActivityType, AppSettings, loadSettings, persistSettings,
   loadActivities, persistActivities, DEFAULT_SETTINGS,
-  ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive
+  ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive,
+  initData
 } from '@/database';
 
 interface AppContextProps {
@@ -333,31 +334,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.style.setProperty('--accent-glow', color + '40');
   };
 
-  // Init
+  const [archive, setArchive] = useState<ArchivedRecord[]>([]);
+  const reloadRecords = () => {
+    setRecords(getRecords());
+  };
+  const reloadArchive = () => setArchive(getArchive());
+
+  // 서버(공유 DB)에서 모든 상태를 다시 받아 화면에 반영한다.
+  // 초기 로드 + 창 포커스/탭 복귀 시 호출 → 다른 기기(APK 등)의 변경이 즉시 반영된다.
+  const syncFromServer = async (applySettings = true) => {
+    await initData();
+    reloadRecords();
+    reloadArchive();
+    setActivities(loadActivities());
+    if (applySettings) {
+      const s = loadSettings();
+      setAppSettings(s);
+      setCalendarMode(s.calendarView);
+      applyAccentColor(s.accentColor);
+      document.documentElement.setAttribute('data-density', s.density);
+      document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
+    }
+  };
+
+  // Init — 테마는 기기별(localStorage), 데이터는 서버에서 로드
   useEffect(() => {
     const savedTheme = localStorage.getItem('zero_theme') as 'light' | 'dark' | null;
     const initTheme = savedTheme || 'light';
     setTheme(initTheme);
     document.documentElement.setAttribute('data-theme', initTheme);
-    
-    const s = loadSettings();
-    setAppSettings(s);
-    setCalendarMode(s.calendarView);
-    applyAccentColor(s.accentColor);
-    document.documentElement.setAttribute('data-density', s.density);
-    document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
-    setActivities(loadActivities());
-    
-    reloadRecords();
+
+    syncFromServer();
+
+    // 다른 기기에서 바뀐 데이터를 가져오기 위해 창이 다시 활성화될 때마다 재동기화
+    const onFocus = () => { syncFromServer(false); };
+    const onVisible = () => { if (document.visibilityState === 'visible') syncFromServer(false); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
-
-  const reloadRecords = () => {
-    setRecords(getRecords());
-  };
-
-  const [archive, setArchive] = useState<ArchivedRecord[]>([]);
-  const reloadArchive = () => setArchive(getArchive());
-  useEffect(() => { reloadArchive(); }, []);
 
   const restoreArchived = (id: string) => {
     restoreFromArchive(id);
