@@ -3967,7 +3967,7 @@ export default function Home() {
               </div>
               
               {/* 고객사 선택 (등록된 고객사가 있을 때만 표시) */}
-              {(appSettings.clients || []).length > 0 && (
+              {(
                 <div className="form-group">
                   <span className="form-label">고객사</span>
                   <input
@@ -4247,7 +4247,7 @@ export default function Home() {
               </div>
 
               {/* 고객사 (등록된 고객사가 있을 때만 표시) */}
-              {(appSettings.clients || []).length > 0 && (
+              {(
                 <div className="form-group">
                   <span className="form-label">고객사</span>
                   <input
@@ -4619,7 +4619,7 @@ export default function Home() {
               </div>
 
               {/* 고객사 (등록된 고객사가 있을 때만 표시) */}
-              {(appSettings.clients || []).length > 0 && (
+              {(
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>고객사</span>
                   <input

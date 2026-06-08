@@ -197,7 +197,11 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.3", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.4", date: "2026-06-08", latest: true, items: [
+    { b: "업데이트가 안 되던 문제 수정 (캐시버스팅)", t: ": 업데이트 버튼이 캐시된 옛 화면을 다시 불러오던 문제를 수정했습니다. 이제 새로고침 시 쿼리스트링을 붙여 항상 최신 버전을 강제로 받아옵니다. 데스크톱 앱은 Cmd/Ctrl+R로도 최신화되며, 앱 시작 시 캐시를 비웁니다." },
+    { b: "고객사 입력칸 항상 표시", t: ": 등록된 고객사가 없어도 일정·재고·메모에 고객사 입력칸이 항상 보이도록 변경했습니다. 직접 입력하거나, 설정 > 재고 마스터 설정에서 등록하면 배지로 빠르게 선택할 수 있습니다." },
+  ] },
+  { version: "v0.7.3", date: "2026-06-08", items: [
     { b: "다크모드 메모 모달 가독성 수정", t: ": 메모를 열었을 때 모달 배경이 반투명 틴트뿐이라 뒤 화면이 비쳐 글자가 안 보이던 문제를 수정했습니다. 이제 불투명 배경 위에 색상 틴트가 입혀져 또렷하게 보입니다." },
   ] },
   { version: "v0.7.2", date: "2026-06-08", items: [
@@ -948,7 +952,11 @@ export default function SettingsSection() {
           } catch (e) {
             console.warn('캐시 삭제 실패:', e);
           }
-          window.location.reload();
+          // 캐시버스팅 — location.reload()는 HTTP 디스크 캐시를 우회하지 못해
+          // 옛 HTML이 다시 로드될 수 있다. 쿼리스트링을 새로 붙여 강제 재요청.
+          const u = new URL(window.location.href);
+          u.searchParams.set('_v', Date.now().toString());
+          window.location.replace(u.toString());
         }}
         disabled={isUpdating}
         style={{

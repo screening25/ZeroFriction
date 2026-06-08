@@ -208,8 +208,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     } catch (e) {
       console.warn('캐시 삭제 실패, 그냥 새로고침:', e);
     }
-    // 3. 강제 새로고침
-    window.location.reload();
+    // 3. 캐시버스팅 강제 새로고침 — location.reload()는 Electron/Chromium의 HTTP 디스크
+    //    캐시를 우회하지 못해 옛 HTML을 다시 받을 수 있다. 쿼리스트링을 새로 붙여
+    //    네트워크에서 최신 HTML(→최신 청크)을 강제로 받아오게 한다.
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now().toString());
+    window.location.replace(url.toString());
   };
 
   // 커맨드 팔레트(⌘K) 열림 상태

@@ -53,8 +53,24 @@ function createWindow() {
   };
 
   const tryLoadApp = () => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(APP_URL);
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    // HTTP 디스크 캐시를 비우고 캐시버스팅 URL로 로드 — 새 배포(최신 HTML/청크)를
+    // 항상 받아오게 한다. (캐시된 옛 화면이 계속 떠서 "업데이트 안 됨" 방지)
+    const bust = APP_URL + (APP_URL.includes('?') ? '&' : '?') + '_v=' + Date.now();
+    mainWindow.webContents.session.clearCache()
+      .catch(() => {})
+      .finally(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(bust);
+      });
   };
+
+  // Cmd/Ctrl+R → 캐시 비우고 최신 버전 강제 로드
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if ((input.meta || input.control) && input.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      tryLoadApp();
+    }
+  });
 
   tryLoadApp();
 
