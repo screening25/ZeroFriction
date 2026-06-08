@@ -1,9 +1,11 @@
 {
   "name": "zero-scheduler",
-  "version": "0.1.0",
+  "version": "0.7.7",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3005",
+    "version:sync": "node scripts/sync-version.mjs",
+    "prebuild": "node scripts/sync-version.mjs",
     "build": "prisma generate && next build",
     "start": "next start -p 3005",
     "lint": "eslint",
