@@ -62,8 +62,9 @@
   --surface-color: rgba(0, 0, 0, 0.75);
   --input-bg: #1C1C1E;
   --text-primary: #FFFFFF;
-  --text-secondary: #8E8E93;
-  --text-tertiary: #48484A;
+  /* 다크모드 가독성 향상: 본문(secondary)·보조(tertiary) 회색을 한 단계씩 밝게 — 기존 #8E8E93/#48484A는 어두운 카드 위에서 대비가 너무 낮았음 */
+  --text-secondary: #C7C7CC;
+  --text-tertiary: #98989D;
   --accent: #0A84FF;
   --accent-hover: #007AFF;
   --accent-glow: rgba(10, 132, 255, 0.4);

@@ -1013,9 +1013,27 @@ export default function Home() {
     ? inventory
     : inventory.filter(i => i.category === selectedInventoryCategory);
 
+  // 동일 품목코드끼리 그룹으로 묶는다(코드 없으면 품목명 단독 그룹). 그룹 내에서 사이즈·변형별로 나열.
+  const groupedInventories = useMemo(() => {
+    const groups: { code: string; label: string; items: typeof displayInventories }[] = [];
+    const seen = new Map<string, number>();
+    displayInventories.forEach(item => {
+      const codeRaw = (item.attrs.code || '').trim();
+      const key = codeRaw || `__no_code__${item.title}`;
+      const label = codeRaw || item.title;
+      if (seen.has(key)) {
+        groups[seen.get(key)!].items.push(item);
+      } else {
+        seen.set(key, groups.length);
+        groups.push({ code: key, label, items: [item] });
+      }
+    });
+    return groups;
+  }, [displayInventories]);
+
   const inventoryPerPage = appSettings.maxInventoryShown || 5;
-  const inventoryTotalPages = Math.ceil(displayInventories.length / inventoryPerPage);
-  const paginatedInventories = displayInventories.slice(inventoryPage * inventoryPerPage, (inventoryPage + 1) * inventoryPerPage);
+  const inventoryTotalPages = Math.ceil(groupedInventories.length / inventoryPerPage);
+  const paginatedGroups = groupedInventories.slice(inventoryPage * inventoryPerPage, (inventoryPage + 1) * inventoryPerPage);
 
   const memosPerPage = appSettings.maxMemosShown || 3;
   const memoTotalPages = Math.ceil(memos.length / memosPerPage);
@@ -3450,14 +3468,52 @@ export default function Home() {
             <div className="empty-box">등록된 재고가 존재하지 않습니다.</div>
           ) : (
             <div className="card-list" style={{ gap: '1.25rem' }}>
-              {paginatedInventories.map((item, idx) => {
+              {paginatedGroups.map((group, groupIdx) => {
+                const groupOrderNum = `#${String(inventoryPage * inventoryPerPage + groupIdx + 1).padStart(2, '0')}`;
+                const hasNoCode = group.code.startsWith('__no_code__');
+                const isSingleItem = group.items.length === 1;
+                const groupHasDanger = group.items.some(it => (Number(it.attrs.qty) || 0) < 0);
+                const showGroupHeader = !hasNoCode && !isSingleItem;
+                return (
+                <div
+                  key={group.code}
+                  style={showGroupHeader ? {
+                    border: groupHasDanger ? '1px solid var(--danger-soft-border)' : '1px solid var(--panel-border)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    background: 'var(--surface-elevated)'
+                  } : { display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+                >
+                  {showGroupHeader && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', borderBottom: '1px solid var(--panel-border)', background: 'var(--hover-bg)' }}>
+                      <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', flexShrink: 0 }}>{groupOrderNum}</span>
+                      <span className="badge" style={{ background: 'var(--accent-soft-bg)', color: 'var(--accent)', border: '1px solid var(--accent-soft-border)', fontSize: '0.68rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '5px', flexShrink: 0 }}>{group.label}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: 'auto', fontWeight: 600 }}>{group.items.length}종</span>
+                      {groupHasDanger && (
+                        <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', background: 'var(--danger-soft-bg)', color: 'var(--danger)', border: '1px solid var(--danger-soft-border)', fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: '4px', flexShrink: 0 }}>
+                          <AlertTriangle size={9} />위험 재고 포함
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div style={showGroupHeader ? { display: 'flex', flexDirection: 'column' } : { display: 'contents' }}>
+                  {group.items.map((item) => {
                 const qtyNum = Number(item.attrs.qty) || 0;
                 const isNegative = qtyNum < 0;
                 return (
                 <div
                   key={item.id}
-                  className="card card-compact"
-                  style={{
+                  className={showGroupHeader ? '' : 'card card-compact'}
+                  style={showGroupHeader ? {
+                    padding: '0.9rem',
+                    borderTop: '1px solid var(--panel-border)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                    position: 'relative',
+                    background: isNegative ? 'var(--danger-tint)' : 'transparent'
+                  } : {
                     padding: '1.25rem',
                     borderRadius: '10px',
                     cursor: 'pointer',
@@ -3473,7 +3529,7 @@ export default function Home() {
                     {/* Col 1: Index + Package Icon */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
                       <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
-                        #{String(inventoryPage * inventoryPerPage + idx + 1).padStart(2, '0')}
+                        {showGroupHeader ? '' : groupOrderNum}
                       </span>
                       <div style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
                         <Package size={13} />
@@ -3558,6 +3614,11 @@ export default function Home() {
                   {/* Spacious Metadata Row & Linked Badges nicely offset to align with Title */}
                   <div style={{ paddingLeft: '3.1rem', marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     <div className="inv-detail" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-tertiary)', fontSize: '0.72rem', flexWrap: 'wrap', textAlign: 'left' }}>
+                      {isNegative && (
+                        <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', background: 'var(--danger-soft-bg)', color: 'var(--danger)', border: '1px solid var(--danger-soft-border)', fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                          <AlertTriangle size={9} />위험 재고
+                        </span>
+                      )}
                       {item.attrs.serial && (
                         <>
                           <span style={{ color: 'var(--accent)', fontWeight: 600 }}>S/N: {item.attrs.serial}</span>
@@ -3613,6 +3674,10 @@ export default function Home() {
                     <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setEditingInventory(item); }}>수정</button>
                     <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateInventory(item.id); }}>복제</button>
                     <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
+                  </div>
+                </div>
+                );
+                  })}
                   </div>
                 </div>
                 );
