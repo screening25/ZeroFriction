@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.7", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.8", date: "2026-06-08", latest: true, items: [
+    { b: "재고 입출고 이력(트랜잭션) 기록", t: ": 재고가 입고/출고될 때마다 이동 수량·직후 잔량·담당자·고객사·시각을 이력으로 남깁니다. 재고 항목 수정 화면에서 '입출고 이력'을 펼쳐 확인할 수 있습니다. (기존 데이터는 그대로 두고 이후 이동부터 기록되는 안전한 방식)" },
+  ] },
+  { version: "v0.7.7", date: "2026-06-08", items: [
     { b: "일정·재고·메모 통합 검색 추가", t: ": 상단 헤더의 돋보기 버튼으로 검색을 엽니다. 키워드를 입력하면 제목·내용·코드·고객사·담당자·보관위치·시리얼·날짜까지 폭넓게 매칭되고, 전체/일정/재고/메모 탭으로 종류별 필터와 실시간 건수를 볼 수 있습니다. (여러 단어는 모두 포함되는 AND 검색)" },
     { b: "데스크톱 앱 보안 강화", t: ": Electron 창을 contextIsolation·sandbox 기반으로 전환하고 IPC를 preload 화이트리스트로 제한해, 원격 콘텐츠가 OS 권한에 접근하지 못하도록 했습니다." },
   ] },

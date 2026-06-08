@@ -2,6 +2,22 @@
 
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
 
+/**
+ * 재고 입출고 트랜잭션(이력) 한 건.
+ * attrs.qty(순재고)는 그대로 두고, 각 이동을 누적 기록해 이력 추적을 가능하게 한다.
+ */
+export interface InventoryTxn {
+  id: string;
+  ts: string;          // ISO 시각
+  flow: 'IN' | 'OUT';  // 입고/출고
+  qty: number;         // 이동 수량(양수)
+  balance: number;     // 이동 직후 순재고
+  loc?: string;
+  mgr?: string;
+  client?: string;
+  memo?: string;
+}
+
 export interface UniversalRecord {
   id: string;
   title: string;
@@ -10,6 +26,7 @@ export interface UniversalRecord {
   attrs: Record<string, any> & {
     recurrence?: Recurrence;
     linkedIds?: string[];
+    txns?: InventoryTxn[]; // 재고(asset) 전용 — 입출고 이력
   };
   updatedAt: string;
 }
@@ -313,6 +330,19 @@ export function addRecord(rec: Omit<UniversalRecord, 'id' | 'updatedAt'>): Unive
     const flow = rec.attrs.flow || 'IN';
     const txQty = Math.abs(Number(rec.attrs.qty) || 0);
 
+    // 트랜잭션 한 건 생성 헬퍼 (이력 추가용)
+    const makeTxn = (balance: number): InventoryTxn => ({
+      id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ts: updatedAt,
+      flow,
+      qty: txQty,
+      balance,
+      loc: rec.attrs.loc,
+      mgr: rec.attrs.mgr,
+      client: rec.attrs.client,
+      memo: rec.attrs.memo,
+    });
+
     if (existIdx >= 0) {
       const existing = records[existIdx];
       let currentQty = Number(existing.attrs.qty) || 0;
@@ -320,11 +350,15 @@ export function addRecord(rec: Omit<UniversalRecord, 'id' | 'updatedAt'>): Unive
       if (flow === 'IN') currentQty += txQty;
       else if (flow === 'OUT') currentQty = currentQty - txQty;
 
+      // 기존 이력에 이번 이동을 append (가산 방식 — 기존 데이터 손상 없음)
+      const txns: InventoryTxn[] = [ ...(existing.attrs.txns || []), makeTxn(currentQty) ];
+
       existing.attrs = {
         ...existing.attrs,
         ...rec.attrs,
         flow,
-        qty: currentQty
+        qty: currentQty,
+        txns
       };
       existing.updatedAt = updatedAt;
       existing.category = category;
@@ -340,7 +374,7 @@ export function addRecord(rec: Omit<UniversalRecord, 'id' | 'updatedAt'>): Unive
       category,
       id,
       updatedAt,
-      attrs: { ...rec.attrs, flow, qty: initialQty }
+      attrs: { ...rec.attrs, flow, qty: initialQty, txns: [makeTxn(initialQty)] }
     };
     records.push(newAsset);
     saveRecords(records);

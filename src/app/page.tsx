@@ -4247,6 +4247,33 @@ export default function Home() {
                 />
               </div>
 
+              {/* 📜 입출고 이력 (트랜잭션 로그) */}
+              {Array.isArray(editingInventory.attrs.txns) && editingInventory.attrs.txns.length > 0 && (
+                <details className="form-group" style={{ textAlign: 'left' }}>
+                  <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    <ClipboardList size={13} style={{ color: 'var(--accent)' }} />
+                    <span>입출고 이력 ({editingInventory.attrs.txns.length}건)</span>
+                    <ChevronDown size={13} style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} />
+                  </summary>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                    {[...editingInventory.attrs.txns].reverse().map((tx: any) => (
+                      <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.55rem', borderRadius: '8px', background: 'var(--surface-elevated)', border: '1px solid var(--surface-elevated-border)' }}>
+                        <span className="badge" style={{ flexShrink: 0, fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: '4px', background: tx.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: tx.flow === 'OUT' ? 'var(--danger)' : 'var(--success)' }}>
+                          {tx.flow === 'OUT' ? '출고' : '입고'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, flexShrink: 0, color: tx.flow === 'OUT' ? 'var(--danger)' : 'var(--success)' }}>
+                          {tx.flow === 'OUT' ? '-' : '+'}{tx.qty}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>→ {tx.balance}개</span>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)', marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {[tx.client, tx.mgr].filter(Boolean).join(' · ')}{tx.ts ? ` · ${format(parseISO(tx.ts), 'MM.dd HH:mm')}` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
               {Number(editingInventory.attrs.qty) < 0 && (
                 <div style={{
                   background: 'var(--danger-soft-bg)',
