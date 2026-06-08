@@ -315,6 +315,7 @@ export default function Home() {
   const [newLocInput, setNewLocInput] = useState('');
   const [newCatInput, setNewCatInput] = useState('');
   const [newMgrInput, setNewMgrInput] = useState('');
+  const [newClientInput, setNewClientInput] = useState('');
 
   // Bulk Inventory States
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -414,6 +415,23 @@ export default function Home() {
     const updated = { ...appSettings, managers: current.filter(x => x !== mgr) };
     handleSettingsChange(updated);
     showToast(`담당 관리자 '${mgr}' 삭제 완료`);
+  };
+
+  const addMasterClient = (client: string) => {
+    if (!client.trim()) return;
+    const current = appSettings.clients || [];
+    if (current.includes(client.trim())) return;
+    const updated = { ...appSettings, clients: [...current, client.trim()] };
+    handleSettingsChange(updated);
+    setNewClientInput('');
+    showToast(`고객사 '${client.trim()}' 추가 완료`);
+  };
+
+  const deleteMasterClient = (client: string) => {
+    const current = appSettings.clients || [];
+    const updated = { ...appSettings, clients: current.filter(x => x !== client) };
+    handleSettingsChange(updated);
+    showToast(`고객사 '${client}' 삭제 완료`);
   };
 
   // Auto-generate Memo Title & Content when rows or checkboxes change
@@ -727,7 +745,10 @@ export default function Home() {
       if (aPinned !== bPinned) {
         return bPinned - aPinned;
       }
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      // id 내 타임스탬프로 정렬 — 수정해도 순서가 바뀌지 않음
+      const tsA = parseInt(a.id.split('_')[1] || '0', 10);
+      const tsB = parseInt(b.id.split('_')[1] || '0', 10);
+      return tsB - tsA;
     });
   const inventory = records.filter(r => r.type === 'asset');
 
@@ -3015,6 +3036,52 @@ export default function Home() {
                             {mgr}
                             <span
                               onClick={() => deleteMasterManager(mgr)}
+                              style={{ cursor: 'pointer', fontWeight: 800, color: 'var(--danger)', marginLeft: '0.25rem' }}
+                            >
+                              ×
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 4. 고객사 설정 */}
+                    <div className="form-group" style={{ textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+                        <span>고객사 관리</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <input
+                          type="text"
+                          placeholder="새 고객사 입력"
+                          className="input-sm"
+                          value={newClientInput}
+                          onChange={e => setNewClientInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMasterClient(newClientInput); } }}
+                          style={{ flex: 1, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addMasterClient(newClientInput)}
+                          className="ghost-btn"
+                          style={{ padding: '0.25rem 0.65rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          추가
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
+                        {(appSettings.clients || []).length === 0 ? (
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>등록된 고객사가 없습니다.</span>
+                        ) : (appSettings.clients || []).map(client => (
+                          <span
+                            key={client}
+                            className="badge"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.15rem 0.45rem', fontSize: '0.68rem', borderRadius: '6px' }}
+                          >
+                            {client}
+                            <span
+                              onClick={() => deleteMasterClient(client)}
                               style={{ cursor: 'pointer', fontWeight: 800, color: 'var(--danger)', marginLeft: '0.25rem' }}
                             >
                               ×

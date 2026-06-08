@@ -85,6 +85,7 @@ export interface AppSettings {
   categoryColors?: Record<string, string>;
   notificationType?: 'system' | 'browser';
   enableNotifications?: boolean;
+  clients?: string[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -111,7 +112,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     '일반': '#AF52DE'
   },
   notificationType: 'system',
-  enableNotifications: true
+  enableNotifications: true,
+  clients: []
 };
 
 const ACCENT_COLORS = [

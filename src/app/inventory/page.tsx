@@ -33,9 +33,26 @@ export default function InventoryPage() {
 
   const inventory = records.filter(r => r.type === 'asset');
 
+  // Group by code (or title if no code)
+  const groupedInventory = React.useMemo(() => {
+    const groups: { code: string; label: string; items: typeof inventory }[] = [];
+    const seen = new Map<string, number>();
+    inventory.forEach(item => {
+      const key = item.attrs.code?.trim() || `__no_code__${item.title}`;
+      const label = item.attrs.code?.trim() || item.title;
+      if (seen.has(key)) {
+        groups[seen.get(key)!].items.push(item);
+      } else {
+        seen.set(key, groups.length);
+        groups.push({ code: key, label, items: [item] });
+      }
+    });
+    return groups;
+  }, [inventory]);
+
   const [currentPage, setCurrentPage] = React.useState(0);
   const itemsPerPage = appSettings?.maxInventoryShown || 5;
-  const totalPages = Math.ceil(inventory.length / itemsPerPage);
+  const totalPages = Math.ceil(groupedInventory.length / itemsPerPage);
 
   React.useEffect(() => {
     if (currentPage >= totalPages && totalPages > 0) {
@@ -45,7 +62,7 @@ export default function InventoryPage() {
     }
   }, [totalPages, currentPage]);
 
-  const paginatedInventory = inventory.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+  const paginatedGroups = groupedInventory.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
   // Bulk Modal States
   const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
@@ -63,7 +80,7 @@ export default function InventoryPage() {
     if (currentPage >= totalPages && totalPages > 0) {
       setCurrentPage(totalPages - 1);
     }
-  }, [inventory.length, totalPages, currentPage]);
+  }, [groupedInventory.length, totalPages, currentPage]);
 
   // Auto-generate Memo Title & Content when rows or checkboxes change
   React.useEffect(() => {
@@ -482,71 +499,127 @@ export default function InventoryPage() {
           background: 'transparent'
         }}>등록된 재고 항목이 없습니다.</div>
       ) : (
-        <div className="card-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          {paginatedInventory.map((item, index) => {
-            const orderNum = `#${String(currentPage * itemsPerPage + index + 1).padStart(2, '0')}`;
-            const qtyNum = Number(item.attrs.qty) || 0;
-            const isNegative = qtyNum < 0;
-            return (
-              <div key={item.id} className="inv-card" onClick={() => setEditingInventory(item)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem', background: isNegative ? 'var(--danger-tint)' : 'var(--success-tint)', border: isNegative ? '1px solid var(--danger-soft-border)' : '1px solid var(--success-soft-border)', borderRadius: '10px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', width: '22px', flexShrink: 0 }}>
-                    {orderNum}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-                        {item.attrs.code && (
-                          <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', background: 'var(--hover-bg)', color: 'var(--text-secondary)', padding: '0.08rem 0.3rem', borderRadius: '4px', border: '1px solid var(--panel-border)', flexShrink: 0 }}>
-                            {item.attrs.code}
-                          </span>
-                        )}
-                        <div className="inv-name text-ellipsis whitespace-nowrap overflow-hidden" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.title}</div>
-                      </div>
-                      <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', fontSize: '0.62rem', padding: '0.1rem 0.3rem', borderRadius: '4px', flexShrink: 0 }}>
-                        {item.attrs.flow === 'OUT' ? '출고' : '입고'}
-                      </span>
-                      {isNegative && (
-                        <span className="badge" style={{ background: 'var(--danger-soft-bg-strong)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', borderRadius: '4px', flexShrink: 0, fontWeight: 700 }}>
-                          재고 부족
-                        </span>
-                      )}
-                    </div>
-                    <div className="inv-detail text-ellipsis whitespace-nowrap overflow-hidden" style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
-                      {item.attrs.loc && `${item.attrs.loc}`}{item.attrs.mgr && ` · ${item.attrs.mgr}`} · {format(parseISO(item.updatedAt), 'MM.dd HH:mm')}
-                    </div>
+        <div className="card-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {paginatedGroups.map((group, groupIndex) => {
+            const groupOrderNum = `#${String(currentPage * itemsPerPage + groupIndex + 1).padStart(2, '0')}`;
+            const hasNoCode = group.code.startsWith('__no_code__');
+            const groupHasDanger = group.items.some(item => (Number(item.attrs.qty) || 0) < 0);
+            const isSingleItem = group.items.length === 1;
 
-                    {/* Linked Badges */}
-                    {item.attrs.linkedIds && item.attrs.linkedIds.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                        {item.attrs.linkedIds.map((linkedId: string) => {
-                          const linkedRecord = records.find(r => r.id === linkedId);
-                          if (!linkedRecord) return null;
-                          return (
-                            <span 
-                              key={linkedId} 
-                              style={{ 
-                                fontSize: '0.65rem', 
-                                backgroundColor: 'var(--hover-bg)', 
-                                color: 'var(--text-secondary)', 
-                                borderRadius: '9999px', 
-                                padding: '0.1rem 0.35rem', 
-                                border: '1px solid var(--panel-border)' 
-                              }}
-                            >
-                              #{linkedRecord.title}
-                            </span>
-                          );
-                        })}
-                      </div>
+            return (
+              <div key={group.code} style={{
+                border: groupHasDanger ? '1px solid var(--danger-soft-border)' : '1px solid var(--success-soft-border)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                background: groupHasDanger ? 'var(--danger-tint)' : 'var(--success-tint)'
+              }}>
+                {/* 그룹 헤더 (코드가 있고 항목이 여러 개일 때만 표시) */}
+                {!hasNoCode && !isSingleItem && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.45rem 0.7rem',
+                    borderBottom: '1px solid var(--panel-border)',
+                    background: 'var(--hover-bg)'
+                  }}>
+                    <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', width: '22px', flexShrink: 0 }}>{groupOrderNum}</span>
+                    <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', background: 'var(--accent-soft-bg)', color: 'var(--accent)', padding: '0.08rem 0.35rem', borderRadius: '4px', border: '1px solid var(--accent-soft-border)', flexShrink: 0, fontWeight: 700 }}>
+                      {group.label}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      {group.items[0]?.title?.replace(group.label, '').trim() || group.items[0]?.title}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginLeft: 'auto' }}>{group.items.length}종</span>
+                    {groupHasDanger && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.6rem', fontWeight: 700, color: 'var(--danger)', background: 'var(--danger-soft-bg-strong)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                        <AlertTriangle size={9} />위험 재고 포함
+                      </span>
                     )}
                   </div>
-                </div>
-                <div className="inv-qty" style={{ fontSize: '0.9rem', fontWeight: 700, flexShrink: 0, paddingRight: '0.5rem', color: isNegative ? 'var(--danger)' : 'var(--success)' }}>
-                  {qtyNum >= 0 ? '+' : ''}{qtyNum}개
-                </div>
-                <div className="card-hover-actions" onClick={(e) => e.stopPropagation()}>
-                  <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
+                )}
+
+                {/* 사이즈별 항목 목록 */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {group.items.map((item, itemIndex) => {
+                    const qtyNum = Number(item.attrs.qty) || 0;
+                    const isNegative = qtyNum < 0;
+                    const showOrderNum = isSingleItem || hasNoCode;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="inv-card"
+                        onClick={() => setEditingInventory(item)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.5rem 0.7rem',
+                          borderTop: itemIndex > 0 ? '1px solid var(--panel-border)' : undefined,
+                          position: 'relative',
+                          overflow: 'hidden',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                          {showOrderNum && (
+                            <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', width: '22px', flexShrink: 0 }}>
+                              {groupOrderNum}
+                            </span>
+                          )}
+                          {!showOrderNum && (
+                            <span style={{ width: '22px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: isNegative ? 'var(--danger)' : 'var(--success)', display: 'block' }} />
+                            </span>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                                {showOrderNum && item.attrs.code && (
+                                  <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', background: 'var(--hover-bg)', color: 'var(--text-secondary)', padding: '0.08rem 0.3rem', borderRadius: '4px', border: '1px solid var(--panel-border)', flexShrink: 0 }}>
+                                    {item.attrs.code}
+                                  </span>
+                                )}
+                                <div className="inv-name text-ellipsis whitespace-nowrap overflow-hidden" style={{ fontSize: '0.84rem', fontWeight: 600 }}>{item.title}</div>
+                              </div>
+                              <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', fontSize: '0.62rem', padding: '0.1rem 0.3rem', borderRadius: '4px', flexShrink: 0 }}>
+                                {item.attrs.flow === 'OUT' ? '출고' : '입고'}
+                              </span>
+                              {isNegative && (
+                                <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', background: 'var(--danger-soft-bg-strong)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', borderRadius: '4px', flexShrink: 0, fontWeight: 700 }}>
+                                  <AlertTriangle size={8} />위험 재고
+                                </span>
+                              )}
+                            </div>
+                            <div className="inv-detail text-ellipsis whitespace-nowrap overflow-hidden" style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
+                              {item.attrs.loc && `${item.attrs.loc}`}{item.attrs.mgr && ` · ${item.attrs.mgr}`} · {format(parseISO(item.updatedAt), 'MM.dd HH:mm')}
+                            </div>
+
+                            {item.attrs.linkedIds && item.attrs.linkedIds.length > 0 && (
+                              <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                                {item.attrs.linkedIds.map((linkedId: string) => {
+                                  const linkedRecord = records.find(r => r.id === linkedId);
+                                  if (!linkedRecord) return null;
+                                  return (
+                                    <span key={linkedId} style={{ fontSize: '0.65rem', backgroundColor: 'var(--hover-bg)', color: 'var(--text-secondary)', borderRadius: '9999px', padding: '0.1rem 0.35rem', border: '1px solid var(--panel-border)' }}>
+                                      #{linkedRecord.title}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="inv-qty" style={{ fontSize: '0.9rem', fontWeight: 700, flexShrink: 0, paddingRight: '0.5rem', color: isNegative ? 'var(--danger)' : 'var(--success)' }}>
+                          {qtyNum >= 0 ? '+' : ''}{qtyNum}개
+                        </div>
+                        <div className="card-hover-actions" onClick={(e) => e.stopPropagation()}>
+                          <button className="ghost-btn danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={(e) => { e.stopPropagation(); deleteInventoryItem(item.id); }}>삭제</button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
