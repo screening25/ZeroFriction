@@ -2636,25 +2636,29 @@ export default function Home() {
                           추가
                         </button>
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
-                        {(appSettings.clients || []).length === 0 ? (
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>등록된 고객사가 없습니다.</span>
-                        ) : (appSettings.clients || []).map(client => (
-                          <span
-                            key={client}
-                            className="badge"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.15rem 0.45rem', fontSize: '0.68rem', borderRadius: '6px' }}
-                          >
-                            {client}
-                            <span
-                              onClick={() => deleteMasterClient(client)}
-                              style={{ cursor: 'pointer', fontWeight: 800, color: 'var(--danger)', marginLeft: '0.25rem' }}
+                      {(appSettings.clients || []).length === 0 ? (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>등록된 고객사가 없습니다.</div>
+                      ) : (
+                        <div style={{ marginTop: '0.5rem', border: '1px solid var(--panel-border)', borderRadius: '10px', overflow: 'hidden', maxHeight: '220px', overflowY: 'auto' }}>
+                          {(appSettings.clients || []).map((client, ci) => (
+                            <div
+                              key={client}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', borderTop: ci > 0 ? '1px solid var(--panel-border)' : 'none', background: 'var(--input-bg)' }}
                             >
-                              ×
-                            </span>
-                          </span>
-                        ))}
-                      </div>
+                              <span style={{ fontSize: '0.66rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', width: '1.4rem', flexShrink: 0 }}>{String(ci + 1).padStart(2, '0')}</span>
+                              <span style={{ flex: 1, minWidth: 0, fontSize: '0.78rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client}</span>
+                              <button
+                                type="button"
+                                onClick={() => deleteMasterClient(client)}
+                                title="삭제"
+                                style={{ flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', padding: '0.15rem' }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
