@@ -493,11 +493,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const body = `${s.title}`;
               const fullBody = `${s.title} (${s.attrs.time})`;
 
-              const isElectron = (typeof window !== 'undefined') && (
-                (window as any).__IS_ELECTRON__ ||
-                (typeof (window as any).process !== 'undefined' && (window as any).process.versions && !!(window as any).process.versions.electron) ||
-                (!!window.navigator && !!window.navigator.userAgent && window.navigator.userAgent.toLowerCase().indexOf(' electron/') > -1)
-              );
+              // Electron 감지 — preload가 노출한 electronAPI가 단일 신호원이다.
+              const electronAPI = (typeof window !== 'undefined') ? (window as any).electronAPI : undefined;
+              const isElectron = !!electronAPI;
 
               // ① 인앱 글래스모피즘 카드는 알림 타입과 무관하게 항상 표시 — 제시각 알림의 기본 UI
               setActiveNotification({
@@ -509,14 +507,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               });
 
               // ② 데스크톱(Electron) 앱이면 창을 앞으로 가져와 카드가 확실히 보이도록 한다
-              if (isElectron && (window as any).ipcRenderer) {
-                (window as any).ipcRenderer.send('focus-window');
+              if (isElectron) {
+                electronAPI.focusWindow();
               }
 
               // ③ 'browser'(OS 배너) 설정이면 OS 레벨 배너도 함께 발송 (앱이 백그라운드일 때 대비)
               if (appSettings.notificationType === 'browser' && typeof window !== 'undefined') {
-                if (isElectron && (window as any).ipcRenderer) {
-                  (window as any).ipcRenderer.send('send-notification', { title, body: fullBody });
+                if (isElectron) {
+                  electronAPI.sendNotification({ title, body: fullBody });
                 } else if ('Notification' in window && Notification.permission === 'granted') {
                   new Notification(title, { body: fullBody });
                 } else {

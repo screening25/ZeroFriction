@@ -16,32 +16,23 @@ export default function QuickInputPage() {
     // Bind global escape key to close/hide
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        const ipc = (window as any).ipcRenderer;
-        if (ipc) {
-          ipc.send('quick-nlp-close');
-        }
+        (window as any).electronAPI?.quickNlpClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
 
     // Bind IPC event to clear input when window is hidden/shown
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      const onClear = () => {
-        setValue('');
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      };
-      ipc.on('clear-quick-input', onClear);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        ipc.removeListener('clear-quick-input', onClear);
-      };
-    }
+    const api = (window as any).electronAPI;
+    const unsubscribe = api?.onClearQuickInput(() => {
+      setValue('');
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    });
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      unsubscribe?.();
     };
   }, []);
 
@@ -49,18 +40,12 @@ export default function QuickInputPage() {
     e.preventDefault();
     if (!value.trim()) return;
 
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      ipc.send('quick-nlp-submit', value);
-    }
+    (window as any).electronAPI?.quickNlpSubmit(value);
     setValue('');
   };
 
   const handleAction = (action: string) => {
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      ipc.send('quick-action', action);
-    }
+    (window as any).electronAPI?.quickAction(action);
   };
 
   return (

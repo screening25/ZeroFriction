@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check, RefreshCw, Search } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -93,18 +93,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     setMounted(true);
     if (typeof window !== 'undefined') {
-      const isElectron = (typeof window.process !== 'undefined' && window.process.versions && !!window.process.versions.electron) ||
-        (window.navigator && window.navigator.userAgent && window.navigator.userAgent.toLowerCase().indexOf(' electron/') > -1);
-      if (isElectron) {
-        (window as any).__IS_ELECTRON__ = true;
-        try {
-          if ((window as any).require) {
-            (window as any).ipcRenderer = (window as any).require('electron').ipcRenderer;
-          }
-        } catch (e) {
-          console.error("Failed to load Electron ipcRenderer:", e);
-        }
-      }
+      // Electron 환경 감지는 이제 window.electronAPI(preload 노출) 유무로 판단한다.
+      // (contextIsolation/sandbox 환경에서는 window.process·require가 존재하지 않는다.)
       // OS 알림 권한 요청 (앱 첫 실행 시)
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
@@ -115,35 +105,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Listen to IPC 'tray-action' events and dispatch them to the window
   useEffect(() => {
     if (!mounted) return;
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      const handler = (event: any, action: string) => {
-        window.dispatchEvent(new CustomEvent('tray-action', { detail: action }));
-      };
-      ipc.on('tray-action', handler);
-      return () => {
-        ipc.removeListener('tray-action', handler);
-      };
-    }
+    const api = (window as any).electronAPI;
+    if (!api) return;
+    // onTrayAction은 구독 해제 함수를 반환한다 → 그대로 cleanup으로 사용
+    return api.onTrayAction((action: string) => {
+      window.dispatchEvent(new CustomEvent('tray-action', { detail: action }));
+    });
   }, [mounted]);
 
   // Listen to IPC 'focus-nlp-input' events and focus/select the input
   useEffect(() => {
     if (!mounted) return;
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      const handler = () => {
-        const el = document.querySelector<HTMLInputElement>('.command-input');
-        if (el) {
-          el.focus();
-          el.select();
-        }
-      };
-      ipc.on('focus-nlp-input', handler);
-      return () => {
-        ipc.removeListener('focus-nlp-input', handler);
-      };
-    }
+    const api = (window as any).electronAPI;
+    if (!api) return;
+    return api.onFocusNlpInput(() => {
+      const el = document.querySelector<HTMLInputElement>('.command-input');
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    });
   }, [mounted]);
 
   // 전역 앱 상태/액션 (실제로 이 레이아웃에서 사용하는 값만 구독)
@@ -154,6 +135,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     isActivityDrawerOpen, setIsActivityDrawerOpen,
     nlpInput, setNlpInput, loading, handleNlpSubmit, executeNlpCommand,
     manualSync, syncing,
+    searchQuery, setSearchResult,
     activeTab, setActiveTab,
     activeNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
   } = useApp();
@@ -161,16 +143,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Listen to IPC 'execute-quick-nlp' and execute command on main window
   useEffect(() => {
     if (!mounted) return;
-    const ipc = (window as any).ipcRenderer;
-    if (ipc) {
-      const handler = async (event: any, text: string) => {
-        executeNlpCommand(text);
-      };
-      ipc.on('execute-quick-nlp', handler);
-      return () => {
-        ipc.removeListener('execute-quick-nlp', handler);
-      };
-    }
+    const api = (window as any).electronAPI;
+    if (!api) return;
+    return api.onExecuteQuickNlp((text: string) => {
+      executeNlpCommand(text);
+    });
   }, [mounted, executeNlpCommand]);
 
   // activeNotification 발생 시 OS 배너 알림 발사
@@ -286,6 +263,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             Zero-Friction
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+            <button
+              className={`theme-toggle ${searchQuery !== null ? 'active' : ''}`}
+              onClick={() => { if (searchQuery !== null) { setSearchResult(null, null); } else { setActiveTab('all'); setSearchResult('', null); } }}
+              title="검색 (일정·재고·메모)"
+            >
+              <Search size={17} />
+            </button>
             <button className="theme-toggle" onClick={() => manualSync()} disabled={syncing} title="동기화 (서버에서 최신 데이터 불러오기)">
               <RefreshCw size={17} style={syncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
             </button>

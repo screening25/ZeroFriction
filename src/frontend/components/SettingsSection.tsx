@@ -197,7 +197,11 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.6", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.7", date: "2026-06-08", latest: true, items: [
+    { b: "일정·재고·메모 통합 검색 추가", t: ": 상단 헤더의 돋보기 버튼으로 검색을 엽니다. 키워드를 입력하면 제목·내용·코드·고객사·담당자·보관위치·시리얼·날짜까지 폭넓게 매칭되고, 전체/일정/재고/메모 탭으로 종류별 필터와 실시간 건수를 볼 수 있습니다. (여러 단어는 모두 포함되는 AND 검색)" },
+    { b: "데스크톱 앱 보안 강화", t: ": Electron 창을 contextIsolation·sandbox 기반으로 전환하고 IPC를 preload 화이트리스트로 제한해, 원격 콘텐츠가 OS 권한에 접근하지 못하도록 했습니다." },
+  ] },
+  { version: "v0.7.6", date: "2026-06-08", items: [
     { b: "고객사 등록 위치를 일정 설정으로 이동", t: ": 고객사 목록을 등록·삭제하는 '고객사 관리'를 재고 '기준 정보 설정'에서 일정 탭의 '일정 카테고리 설정' 모달로 옮겼습니다. 고객사를 주로 일정에서 쓰는 흐름에 맞췄습니다. (등록된 목록은 일정·재고·메모 어디서나 그대로 공유됩니다)" },
   ] },
   { version: "v0.7.5", date: "2026-06-08", items: [
@@ -369,12 +373,12 @@ export default function SettingsSection() {
     handleSettingsChange(newSettings); // 서버(공유 DB)에 저장됨 — 모든 기기 동기화
     if (typeof window !== 'undefined') {
       // Electron에서만: deviceSize 변경 시 네이티브 프레임 리사이즈 트리거
-      if ((window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
+      if ((window as any).electronAPI) {
         const size = newSettings.deviceSize || 'default';
         if (size !== prevDeviceSizeRef.current) {
           prevDeviceSizeRef.current = size;
           // Trigger electron frame size adjustments!
-          (window as any).ipcRenderer.send('resize-window', { size });
+          (window as any).electronAPI.resizeWindow({ size });
         }
       }
     }
@@ -815,8 +819,8 @@ export default function SettingsSection() {
                     // OS 배너 알림 테스트 (기존 경로 유지)
                     const title = 'Zero-Friction 알림 테스트';
                     const body = 'OS 표준 슬라이드 배너 알림이 정상 작동 중입니다!';
-                    if (typeof window !== 'undefined' && (window as any).__IS_ELECTRON__ && (window as any).ipcRenderer) {
-                      (window as any).ipcRenderer.send('send-notification', { title, body });
+                    if (typeof window !== 'undefined' && (window as any).electronAPI) {
+                      (window as any).electronAPI.sendNotification({ title, body });
                       showToast('테스트 배너 알림을 발송했습니다.');
                     } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                       new Notification(title, { body });

@@ -1103,13 +1103,19 @@ export default function Home() {
   const lowStockItems = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0); // Critical items with negative stock (qty < 0)
   const recentInventoryFlow = inventory.slice(0, appSettings.maxInventoryShown || 5); // Show latest asset adjustments up to limit
 
-  // Filter records for NLQ View
+  // 검색 결과 필터 — 제목·카테고리·내용·코드·메모뿐 아니라 고객사·시리얼·위치·담당자·날짜/시간까지 폭넓게 매칭
   const filteredSearchRecords = records.filter(r => {
     if (searchType && r.type !== searchType) return false;
     if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    const hay = `${r.title} ${r.category} ${r.attrs?.content || ''} ${r.attrs?.code || ''} ${r.attrs?.memo || ''}`.toLowerCase();
-    return hay.includes(query);
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    const a = r.attrs || {};
+    const hay = [
+      r.title, r.category, a.content, a.code, a.memo,
+      a.client, a.serial, a.loc, a.mgr, a.date, a.time
+    ].filter(Boolean).join(' ').toLowerCase();
+    // 공백으로 나눈 모든 토큰을 AND 매칭 (예: "수원 입고" → 둘 다 포함)
+    return query.split(/\s+/).every(tok => hay.includes(tok));
   });
 
 
@@ -1184,18 +1190,72 @@ export default function Home() {
       {searchQuery !== null && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', padding: '0.2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>검색 결과</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>검색된 결과입니다</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>'{searchQuery}' 키워드 검색 결과 (ESC 누르면 대시보드로 복귀)</div>
-            </div>
-            <button 
-              className="ghost-btn" 
+            <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>검색</div>
+            <button
+              className="ghost-btn"
               onClick={() => setSearchResult(null, null)}
               style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
               닫기 (ESC)
             </button>
+          </div>
+
+          {/* 🔍 직접 입력 검색창 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.7rem', borderRadius: '12px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)' }}>
+            <Search size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery || ''}
+              onChange={e => setSearchResult(e.target.value, searchType)}
+              placeholder="일정·재고·메모 검색 (제목, 내용, 코드, 고객사, 담당자, 날짜…)"
+              style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.85rem', color: 'var(--text-primary)' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchResult('', searchType)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', flexShrink: 0 }} title="지우기">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* 타입 필터 탭 */}
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+            {[
+              { key: null, label: '전체' },
+              { key: 'event', label: '일정' },
+              { key: 'asset', label: '재고' },
+              { key: 'memo', label: '메모' },
+            ].map(t => {
+              const isSel = (searchType || null) === t.key;
+              return (
+                <button
+                  key={t.label}
+                  onClick={() => setSearchResult(searchQuery || '', t.key)}
+                  style={{
+                    fontSize: '0.74rem', fontWeight: 600, padding: '0.25rem 0.7rem', borderRadius: '8px', cursor: 'pointer',
+                    border: isSel ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
+                    background: isSel ? 'var(--accent-soft-bg)' : 'var(--panel-bg)',
+                    color: isSel ? 'var(--accent)' : 'var(--text-secondary)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {t.label}
+                  <span style={{ marginLeft: '0.3rem', fontSize: '0.66rem', opacity: 0.7 }}>
+                    {records.filter(r => (!t.key || r.type === t.key)).filter(r => {
+                      const q = (searchQuery || '').toLowerCase().trim();
+                      if (!q) return true;
+                      const a = r.attrs || {};
+                      const hay = [r.title, r.category, a.content, a.code, a.memo, a.client, a.serial, a.loc, a.mgr, a.date, a.time].filter(Boolean).join(' ').toLowerCase();
+                      return q.split(/\s+/).every(tok => hay.includes(tok));
+                    }).length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+            {searchQuery ? `'${searchQuery}' 검색 결과 ${filteredSearchRecords.length}건` : `전체 ${filteredSearchRecords.length}건 · 키워드를 입력하세요`} (ESC로 닫기)
           </div>
           
           <div className="card-list" style={{ gap: '1.25rem' }}>

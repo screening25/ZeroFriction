@@ -30,8 +30,12 @@ function createWindow() {
     backgroundColor: '#F2F2F7',
     icon: path.join(__dirname, 'public', 'icon.png'),
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      // 보안 기본값: 원격 콘텐츠가 Node/OS 권한에 접근하지 못하게 한다.
+      // IPC는 preload가 노출하는 window.electronAPI 화이트리스트로만 사용한다.
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
     }
   });
 
@@ -110,8 +114,10 @@ function createQuickInputWindow() {
     resizable: false,
     hasShadow: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
     }
   });
 
