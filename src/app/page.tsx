@@ -668,6 +668,34 @@ export default function Home() {
     records.filter(r => r.type === 'asset').map(r => (r.attrs.code || '').trim()).filter(Boolean)
   )).sort(), [records]);
 
+  // 품목코드 → 그 코드로 등록된 품목명들(중복 제거·정렬). 코드 선택 시 품목명 후보로 제공.
+  const namesByCode = useMemo(() => {
+    const m: Record<string, Set<string>> = {};
+    records.filter(r => r.type === 'asset').forEach(r => {
+      const c = (r.attrs.code || '').trim();
+      const t = (r.title || '').trim();
+      if (!c || !t) return;
+      (m[c] ||= new Set()).add(t);
+    });
+    const out: Record<string, string[]> = {};
+    Object.keys(m).forEach(c => { out[c] = Array.from(m[c]).sort(); });
+    return out;
+  }, [records]);
+
+  // 품목코드 → 저장된 카테고리(가장 최근 갱신 기준). 코드 선택 시 카테고리 자동 선택.
+  const categoryByCode = useMemo(() => {
+    const best: Record<string, { cat: string; ts: number }> = {};
+    records.filter(r => r.type === 'asset').forEach(r => {
+      const c = (r.attrs.code || '').trim();
+      if (!c || !r.category) return;
+      const ts = Date.parse(r.updatedAt || '') || 0;
+      if (!best[c] || ts >= best[c].ts) best[c] = { cat: r.category, ts };
+    });
+    const out: Record<string, string> = {};
+    Object.keys(best).forEach(c => { out[c] = best[c].cat; });
+    return out;
+  }, [records]);
+
   // 재고는 사용자가 지정한 수동 순서(attrs.sortOrder) 우선. 미지정 항목은 기존 순서 유지(안정 정렬).
   const inventory = records.filter(r => r.type === 'asset').slice().sort((a, b) => {
     const ao = a.attrs.sortOrder, bo = b.attrs.sortOrder;
@@ -4241,27 +4269,28 @@ export default function Home() {
                 placeholder="품목코드 검색 또는 입력"
                 emptyText="기존 코드가 없습니다. 입력한 값으로 등록됩니다."
                 onChange={code => {
-                  // 기존 코드를 그대로 고르면 같은 코드의 최근 품목명/카테고리를 재사용(비어 있을 때만 채움)
-                  const match = records.find(r => r.type === 'asset' && (r.attrs.code || '').trim() === code.trim());
+                  const codeT = code.trim();
+                  const names = namesByCode[codeT] || [];
+                  const savedCat = categoryByCode[codeT];
                   setEditingInventory({
                     ...editingInventory,
-                    title: editingInventory.title?.trim() ? editingInventory.title : (match?.title || editingInventory.title),
-                    category: editingInventory.category || match?.category || editingInventory.category,
+                    // 코드에 저장된 카테고리 자동 선택
+                    category: savedCat || editingInventory.category,
+                    // 품목명: 이미 입력값이 있으면 유지, 없고 후보가 1개뿐이면 자동 채움(여러 개면 아래 드롭다운에서 선택)
+                    title: editingInventory.title?.trim() ? editingInventory.title : (names.length === 1 ? names[0] : editingInventory.title),
                     attrs: { ...editingInventory.attrs, code },
                   });
                 }}
               />
 
-              <div className="form-group">
-                <span className="form-label">품목명</span>
-                <input
-                  type="text"
-                  className="input-sm"
-                  placeholder=""
-                  value={editingInventory.title}
-                  onChange={e => setEditingInventory({...editingInventory, title: e.target.value})}
-                />
-              </div>
+              <SearchSelect
+                label="품목명"
+                value={editingInventory.title}
+                options={namesByCode[(editingInventory.attrs.code || '').trim()] || []}
+                placeholder="품목명 검색 또는 입력"
+                emptyText="이 코드로 등록된 품목명이 없습니다. 입력한 값으로 등록됩니다."
+                onChange={t => setEditingInventory({ ...editingInventory, title: t })}
+              />
 
               {/* Category Dropdown (Master Data Only) */}
               <div className="form-group">
