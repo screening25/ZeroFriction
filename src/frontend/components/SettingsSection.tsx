@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.4", date: "2026-06-08", latest: true, items: [
+  { version: "v0.8.5", date: "2026-06-08", latest: true, items: [
+    { b: "품목코드 재사용(자동완성)", t: ": 재고 등록 시 품목코드 칸이 검색창으로 바뀌어, 기존에 입력했던 품목코드를 검색·선택해 재사용할 수 있습니다. 기존 코드를 고르면 같은 코드의 품목명·카테고리도 (비어 있을 때) 자동으로 채워집니다." },
+  ] },
+  { version: "v0.8.4", date: "2026-06-08", items: [
     { b: "메모 작성 날짜 표시", t: ": 메모 카드 우측에 작성 날짜(yy.MM.dd)를 표시합니다." },
     { b: "상단 브랜드 텍스트 제거", t: ": 헤더의 'Zero-Friction' 글자를 없애 화면을 더 깔끔하게 정리했습니다." },
   ] },

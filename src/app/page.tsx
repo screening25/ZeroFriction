@@ -15,6 +15,7 @@ import { hexToRgb, getCategoryColorStyles, getMemoCardStyle, getMemoModalStyle }
 import { isHoliday } from '@/frontend/utils/calendar';
 import { isSerialPattern } from '@/frontend/utils/inventory';
 import ClientPicker from '@/frontend/components/ClientPicker';
+import SearchSelect from '@/frontend/components/SearchSelect';
 
 interface BulkRow {
   code: string;
@@ -662,6 +663,11 @@ export default function Home() {
       const tsB = parseInt(b.id.split('_')[1] || '0', 10);
       return tsB - tsA;
     });
+  // 기존에 입력한 품목코드 모음(재사용용) — 중복 제거 후 정렬
+  const knownCodes = useMemo(() => Array.from(new Set(
+    records.filter(r => r.type === 'asset').map(r => (r.attrs.code || '').trim()).filter(Boolean)
+  )).sort(), [records]);
+
   // 재고는 사용자가 지정한 수동 순서(attrs.sortOrder) 우선. 미지정 항목은 기존 순서 유지(안정 정렬).
   const inventory = records.filter(r => r.type === 'asset').slice().sort((a, b) => {
     const ao = a.attrs.sortOrder, bo = b.attrs.sortOrder;
@@ -4227,16 +4233,24 @@ export default function Home() {
               </div>
 
               {/* 품목코드 및 품목명 각각 독립된 세로 form-group 으로 배치하여 100% 화면에 핏(Fit)되도록 교정! */}
-              <div className="form-group">
-                <span className="form-label">품목코드<span className="req-star">*</span></span>
-                <input
-                  type="text"
-                  className="input-sm"
-                  value={editingInventory.attrs.code || ''}
-                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, code: e.target.value }})}
-                  placeholder=""
-                />
-              </div>
+              <SearchSelect
+                label="품목코드"
+                required
+                value={editingInventory.attrs.code || ''}
+                options={knownCodes}
+                placeholder="품목코드 검색 또는 입력"
+                emptyText="기존 코드가 없습니다. 입력한 값으로 등록됩니다."
+                onChange={code => {
+                  // 기존 코드를 그대로 고르면 같은 코드의 최근 품목명/카테고리를 재사용(비어 있을 때만 채움)
+                  const match = records.find(r => r.type === 'asset' && (r.attrs.code || '').trim() === code.trim());
+                  setEditingInventory({
+                    ...editingInventory,
+                    title: editingInventory.title?.trim() ? editingInventory.title : (match?.title || editingInventory.title),
+                    category: editingInventory.category || match?.category || editingInventory.category,
+                    attrs: { ...editingInventory.attrs, code },
+                  });
+                }}
+              />
 
               <div className="form-group">
                 <span className="form-label">품목명</span>
