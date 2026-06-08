@@ -85,8 +85,11 @@ export default function Home() {
 
   const [schedulePage, setSchedulePage] = useState<number>(0);
   const [inventoryPage, setInventoryPage] = useState<number>(0);
+  const [inventoryFlowView, setInventoryFlowView] = useState<'all' | 'IN' | 'OUT'>('all'); // 총재고/입고/출고 뷰
   const [dragKey, setDragKey] = useState<string | null>(null); // 드래그 중인 재고 그룹 코드(시각 표시용)
   const dragKeyRef = useRef<string | null>(null); // 핸들러가 동기로 읽는 값(상태는 비동기라 stale closure 방지)
+  const [dragItemId, setDragItemId] = useState<string | null>(null); // 그룹 내 개별 항목 드래그(시각용)
+  const dragItemRef = useRef<string | null>(null);
 
   // States for @mention suggestion autocomplete popup
   const [mentionTriggerInfo, setMentionTriggerInfo] = useState<{ query: string; triggerIndex: number } | null>(null);
@@ -919,9 +922,10 @@ export default function Home() {
   const paginatedSchedules = displaySchedules.slice(schedulePage * schedulesPerPage, (schedulePage + 1) * schedulesPerPage);
 
   // Apply Inventory Local Category filter
-  const displayInventories = selectedInventoryCategory === '전체'
+  const displayInventories = (selectedInventoryCategory === '전체'
     ? inventory
-    : inventory.filter(i => i.category === selectedInventoryCategory);
+    : inventory.filter(i => i.category === selectedInventoryCategory)
+  ).filter(i => inventoryFlowView === 'all' ? true : (i.attrs.flow || 'IN') === inventoryFlowView);
 
   // 동일 품목코드끼리 그룹으로 묶는다(코드 없으면 품목명 단독 그룹). 그룹 내에서 사이즈·변형별로 나열.
   const groupedInventories = useMemo(() => {
@@ -962,6 +966,27 @@ export default function Home() {
     });
     reloadRecords();
     showToast('재고 순서를 변경했습니다.');
+  };
+
+  // 같은 그룹(동일 품목코드) 안에서 개별 항목 순서 변경
+  const reorderInventoryItems = (fromId: string, toId: string) => {
+    if (!fromId || fromId === toId) return;
+    const codeOf = (it: any) => (it.attrs.code || '').trim() || `__no_code__${it.title}`;
+    const from = inventory.find(i => i.id === fromId);
+    const to = inventory.find(i => i.id === toId);
+    if (!from || !to || codeOf(from) !== codeOf(to)) return; // 같은 그룹 내에서만
+    const flat = groupedInventories.flatMap(g => g.items);
+    const order = flat.map(i => i.id);
+    const fi = order.indexOf(fromId), ti = order.indexOf(toId);
+    if (fi < 0 || ti < 0) return;
+    order.splice(ti, 0, order.splice(fi, 1)[0]);
+    let seq = 0;
+    order.forEach(id => {
+      const it = flat.find(x => x.id === id);
+      if (it) updateRecord(it.id, { attrs: { ...it.attrs, sortOrder: seq++ } });
+    });
+    reloadRecords();
+    showToast('순서를 변경했습니다.');
   };
 
   const memosPerPage = appSettings.maxMemosShown || 3;
@@ -1063,14 +1088,17 @@ export default function Home() {
   // Add or Update Inventory (Support direct addition!)
   const saveInventory = () => {
     if (!editingInventory) return;
-    if (!editingInventory.title.trim()) {
-      showToast('품목명을 입력해주십시오');
+    const code = (editingInventory.attrs.code || '').trim();
+    if (!code) {
+      showToast('품목코드를 입력해주십시오');
       return;
     }
+    // 품목명은 선택 — 비어 있으면 품목코드를 표시명으로 사용(레코드 식별/그룹화 안정)
+    const title = editingInventory.title.trim() || code;
     if (!editingInventory.id) {
       // 신규 등록
       addRecord({
-        title: editingInventory.title,
+        title,
         type: 'asset',
         category: editingInventory.category || '재고',
         attrs: {
@@ -1080,11 +1108,11 @@ export default function Home() {
       });
       reloadRecords();
       showToast('새 재고 품목 등록 완료');
-      logActivity('ADD_INV', '재고 직접 추가', `${editingInventory.title} ${editingInventory.attrs.qty}개`);
+      logActivity('ADD_INV', '재고 직접 추가', `${title} ${editingInventory.attrs.qty}개`);
       setEditingInventory(null);
     } else {
-      // 기존 수정
-      handleUpdateInventory(editingInventory.id, editingInventory);
+      // 기존 수정 — 품목명이 비어 있으면 품목코드를 표시명으로
+      handleUpdateInventory(editingInventory.id, { ...editingInventory, title });
     }
   };
 
@@ -3409,8 +3437,46 @@ export default function Home() {
           </AnimatePresence>
 
           {/* Local Inventory Category Horizon Filtering Bar - Show ONLY when custom categories exist! */}
+          {/* 총 재고 / 입고 / 출고 현황 세그먼트 */}
+          {(() => {
+            const catFiltered = selectedInventoryCategory === '전체' ? inventory : inventory.filter(i => i.category === selectedInventoryCategory);
+            const counts = {
+              all: catFiltered.length,
+              IN: catFiltered.filter(i => (i.attrs.flow || 'IN') === 'IN').length,
+              OUT: catFiltered.filter(i => (i.attrs.flow || 'IN') === 'OUT').length,
+            };
+            const views: { key: 'all' | 'IN' | 'OUT'; label: string }[] = [
+              { key: 'all', label: '총 재고 현황' },
+              { key: 'IN', label: '입고 현황' },
+              { key: 'OUT', label: '출고 현황' },
+            ];
+            return (
+              <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.6rem' }}>
+                {views.map(v => {
+                  const sel = inventoryFlowView === v.key;
+                  return (
+                    <button
+                      key={v.key}
+                      onClick={() => { setInventoryFlowView(v.key); setInventoryPage(0); }}
+                      style={{
+                        flex: 1, fontSize: '0.74rem', fontWeight: 700, padding: '0.4rem 0.3rem', borderRadius: '10px', cursor: 'pointer',
+                        border: sel ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
+                        background: sel ? 'var(--accent-soft-bg)' : 'var(--panel-bg)',
+                        color: sel ? 'var(--accent)' : 'var(--text-secondary)',
+                        transition: 'all 0.15s ease', whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {v.label}
+                      <span style={{ marginLeft: '0.25rem', fontSize: '0.66rem', opacity: 0.7 }}>{counts[v.key]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {showInventoryFilterBar && (
-            <div 
+            <div
               style={{
                 display: 'flex',
                 gap: '0.35rem',
@@ -3506,6 +3572,8 @@ export default function Home() {
                 <div
                   key={item.id}
                   className={showGroupHeader ? '' : 'card card-compact'}
+                  onDragOver={showGroupHeader ? (e => { const k = dragItemRef.current; if (k && k !== item.id) e.preventDefault(); }) : undefined}
+                  onDrop={showGroupHeader ? (e => { e.preventDefault(); const k = dragItemRef.current; if (k) reorderInventoryItems(k, item.id); dragItemRef.current = null; setDragItemId(null); }) : undefined}
                   style={showGroupHeader ? {
                     padding: '0.9rem',
                     borderTop: '1px solid var(--panel-border)',
@@ -3514,6 +3582,7 @@ export default function Home() {
                     flexDirection: 'column',
                     gap: '0.35rem',
                     position: 'relative',
+                    opacity: dragItemId === item.id ? 0.45 : 1,
                     background: isNegative ? 'var(--danger-tint)' : 'transparent'
                   } : {
                     padding: '1.25rem',
@@ -3528,6 +3597,19 @@ export default function Home() {
                   onClick={() => setEditingInventory ? setEditingInventory(item) : null}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    {/* 그룹 내 항목 드래그 핸들 (사이즈별 순서 변경) */}
+                    {showGroupHeader && (
+                      <div
+                        draggable
+                        onDragStart={e => { dragItemRef.current = item.id; setDragItemId(item.id); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.id); } catch {} e.stopPropagation(); }}
+                        onDragEnd={() => { dragItemRef.current = null; setDragItemId(null); }}
+                        onClick={e => e.stopPropagation()}
+                        title="드래그하여 순서 변경"
+                        style={{ flexShrink: 0, marginRight: '0.3rem', padding: '0.15rem', cursor: 'grab', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Menu size={13} />
+                      </div>
+                    )}
                     {/* Col 1: Index + Package Icon */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '3.1rem', flexShrink: 0 }}>
                       <span className="text-xs font-mono text-gray-400" style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
@@ -4120,24 +4202,24 @@ export default function Home() {
 
               {/* 품목코드 및 품목명 각각 독립된 세로 form-group 으로 배치하여 100% 화면에 핏(Fit)되도록 교정! */}
               <div className="form-group">
-                <span className="form-label">품목코드</span>
-                <input 
-                  type="text" 
-                  className="input-sm" 
-                  value={editingInventory.attrs.code || ''} 
+                <span className="form-label">품목코드<span className="req-star">*</span></span>
+                <input
+                  type="text"
+                  className="input-sm"
+                  value={editingInventory.attrs.code || ''}
                   onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, code: e.target.value }})}
                   placeholder=""
                 />
               </div>
 
               <div className="form-group">
-                <span className="form-label">품목명<span className="req-star">*</span></span>
-                <input 
-                  type="text" 
-                  className="input-sm" 
+                <span className="form-label">품목명</span>
+                <input
+                  type="text"
+                  className="input-sm"
                   placeholder=""
-                  value={editingInventory.title} 
-                  onChange={e => setEditingInventory({...editingInventory, title: e.target.value})} 
+                  value={editingInventory.title}
+                  onChange={e => setEditingInventory({...editingInventory, title: e.target.value})}
                 />
               </div>
 

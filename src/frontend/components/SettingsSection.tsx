@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Download, Upload, AlertTriangle, Trash2, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, Download, Upload, AlertTriangle, Trash2, RotateCcw, X, RefreshCw } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS, getRecords, loadActivities, loadSettings, saveRecords, persistActivities, persistSettings, clearAllData } from '@/database';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -197,7 +197,14 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.9", date: "2026-06-08", latest: true, items: [
+  { version: "v0.8.0", date: "2026-06-08", latest: true, items: [
+    { b: "재고 품목코드 필수화", t: ": 재고 등록 시 필수 항목을 품목명 → 품목코드로 변경했습니다. 품목명은 선택이며, 비워 두면 품목코드가 표시명으로 쓰입니다." },
+    { b: "총 재고 / 입고 / 출고 현황 분리", t: ": 재고 화면 상단에 '총 재고 현황·입고 현황·출고 현황' 세그먼트를 추가해 구분(flow)별로 건수와 함께 볼 수 있습니다." },
+    { b: "그룹 안 사이즈별 순서도 드래그", t: ": 같은 품목코드 그룹 안의 개별 항목(사이즈별)도 각 행의 ☰ 핸들로 끌어 순서를 바꿀 수 있습니다." },
+    { b: "동기화 버튼을 설정으로 이동", t: ": 상단 헤더가 복잡해 데이터 동기화 버튼을 설정 화면으로 옮겼습니다." },
+    { b: "고객사 입력 안내문구 제거", t: ": 고객사 입력칸의 플레이스홀더 문구를 없앴습니다." },
+  ] },
+  { version: "v0.7.9", date: "2026-06-08", items: [
     { b: "재고 순서 직접 변경(드래그)", t: ": 재고 카드 왼쪽의 ☰ 핸들을 잡고 위/아래로 끌어 원하는 순서로 재배치할 수 있습니다. 바뀐 순서는 저장되어 다음에도 유지됩니다." },
   ] },
   { version: "v0.7.8", date: "2026-06-08", items: [
@@ -347,7 +354,9 @@ export default function SettingsSection() {
     emptyArchive,
     clearActivities,
     exportToCsv,
-    setActiveNotification
+    setActiveNotification,
+    manualSync,
+    syncing
   } = useApp();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -992,6 +1001,28 @@ export default function SettingsSection() {
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isUpdating ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         {isUpdating ? '업데이트 중…' : '최신 버전으로 업데이트'}
+      </button>
+
+      {/* 데이터 동기화 버튼 (헤더에서 이동) */}
+      <button
+        type="button"
+        onClick={() => manualSync()}
+        disabled={syncing}
+        style={{
+          width: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          padding: '0.7rem',
+          borderRadius: '14px',
+          border: '1px solid var(--panel-border)',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-secondary)',
+          fontSize: '0.82rem', fontWeight: 700,
+          cursor: syncing ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <RefreshCw size={14} style={syncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+        {syncing ? '동기화 중…' : '데이터 동기화 (서버에서 최신 불러오기)'}
       </button>
 
       {/* 업데이트 정보 (Version & Changelog) */}

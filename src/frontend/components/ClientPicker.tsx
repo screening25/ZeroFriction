@@ -25,7 +25,6 @@ export default function ClientPicker({
         className="input-sm"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        placeholder="고객사를 선택하거나 직접 입력하세요."
       />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem' }}>
         {clients.map(client => {
