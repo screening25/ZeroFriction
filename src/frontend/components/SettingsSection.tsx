@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.5", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.6", date: "2026-06-08", latest: true, items: [
+    { b: "고객사 등록 위치를 일정 설정으로 이동", t: ": 고객사 목록을 등록·삭제하는 '고객사 관리'를 재고 '기준 정보 설정'에서 일정 탭의 '일정 카테고리 설정' 모달로 옮겼습니다. 고객사를 주로 일정에서 쓰는 흐름에 맞췄습니다. (등록된 목록은 일정·재고·메모 어디서나 그대로 공유됩니다)" },
+  ] },
+  { version: "v0.7.5", date: "2026-06-08", items: [
     { b: "위험 재고 기준 음수로 통일", t: ": 대시보드 '재고 건전성' 타일과 브리핑이 안전재고(5개 미만)·품절(0개) 기준을 쓰던 것을, 위험 재고 = 수량이 0개 밑(음수)으로 떨어진 품목으로 통일했습니다. 카드 뱃지와 동일한 기준입니다." },
   ] },
   { version: "v0.7.4", date: "2026-06-08", items: [
