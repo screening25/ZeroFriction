@@ -197,7 +197,11 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.3", date: "2026-06-08", latest: true, items: [
+  { version: "v0.8.4", date: "2026-06-08", latest: true, items: [
+    { b: "메모 작성 날짜 표시", t: ": 메모 카드 우측에 작성 날짜(yy.MM.dd)를 표시합니다." },
+    { b: "상단 브랜드 텍스트 제거", t: ": 헤더의 'Zero-Friction' 글자를 없애 화면을 더 깔끔하게 정리했습니다." },
+  ] },
+  { version: "v0.8.3", date: "2026-06-08", items: [
     { b: "고객사 선택을 검색창(접힘) 방식으로", t: ": 일정·재고·메모의 고객사 입력이 기본은 깔끔한 검색창으로 접혀 있고, 클릭하면 아래로 목록이 펼쳐집니다. 검색해서 고르거나 직접 입력할 수 있습니다." },
   ] },
   { version: "v0.8.2", date: "2026-06-08", items: [

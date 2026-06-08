@@ -7,8 +7,8 @@ import { test, expect, Page } from '@playwright/test';
 
 async function gotoApp(page: Page) {
   await page.goto('/');
-  // 하이드레이션 이후 셸이 보일 때까지
-  await expect(page.getByText('Zero-Friction').first()).toBeVisible();
+  // 하이드레이션 이후 셸(네비)이 보일 때까지
+  await expect(page.locator('.nav-link', { hasText: '전체' })).toBeVisible();
 }
 
 test('앱 셸과 네비게이션 탭이 렌더된다', async ({ page }) => {

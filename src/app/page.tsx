@@ -3939,6 +3939,16 @@ export default function Home() {
                       <span className="badge" style={{ fontSize: '0.55rem', padding: '0.08rem 0.3rem', flexShrink: 0, background: 'var(--accent-soft-bg)', color: 'var(--accent)', border: '1px solid var(--accent-soft-border)' }}>{m.attrs.client}</span>
                     )}
                   </div>
+                  {/* 작성 날짜 */}
+                  {(() => {
+                    const ts = parseInt((m.id.split('_')[1] || '0'), 10);
+                    const created = m.attrs.effectiveDate ? parseISO(m.attrs.effectiveDate) : (ts ? new Date(ts) : (m.updatedAt ? parseISO(m.updatedAt) : null));
+                    return created ? (
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', flexShrink: 0, fontFamily: 'monospace' }}>
+                        {format(created, 'yy.MM.dd')}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
 
                 {m.attrs.content && (

@@ -256,11 +256,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         padding: '2.0rem 1.2rem 0.6rem 1.2rem',
         gap: '0.6rem'
       }}>
-        {/* Top Row: Brand Title + Quick Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', width: '100%' }}>
-          <div className="app-title" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.015em', userSelect: 'none', flexShrink: 0 }}>
-            Zero-Friction
-          </div>
+        {/* Top Row: Quick Controls (브랜드 텍스트 제거) */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap', width: '100%' }}>
           <div className="header-actions" style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
             <button
               className={`theme-toggle ${searchQuery !== null ? 'active' : ''}`}
