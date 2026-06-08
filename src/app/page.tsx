@@ -129,6 +129,20 @@ const getMemoCardStyle = (color: string, isDark: boolean) => {
     : { backgroundColor: '#FFFFFF', border: '1px solid rgba(0, 0, 0, 0.06)' };
 };
 
+/**
+ * 메모 모달 전용 배경 스타일.
+ * getMemoCardStyle은 반투명 틴트(rgba ~0.05~0.10)만 반환하므로, 그대로 모달 배경에 쓰면
+ * 모달이 비쳐서(특히 다크모드) 뒤 화면이 겹쳐 보여 가독성이 무너진다.
+ * 따라서 불투명 베이스(--bg-color) 위에 색상 틴트를 합성해 항상 불투명하게 만든다.
+ */
+const getMemoModalStyle = (color: string, isDark: boolean) => {
+  const { backgroundColor, border } = getMemoCardStyle(color, isDark);
+  return {
+    background: `linear-gradient(0deg, ${backgroundColor}, ${backgroundColor}), var(--bg-color)`,
+    border,
+  };
+};
+
 
 /**
  * 메인 페이지(SPA 루트). activeTab에 따라 전체 개요·일정(캘린더)·재고·메모·설정 뷰를
@@ -4336,7 +4350,7 @@ export default function Home() {
               transition={{ duration: 0.15 }} 
               className="modal-content memo-modal-content"
               style={{
-                ...getMemoCardStyle(memoForm.color || '', theme === 'dark'),
+                ...getMemoModalStyle(memoForm.color || '', theme === 'dark'),
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',

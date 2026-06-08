@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.2", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.3", date: "2026-06-08", latest: true, items: [
+    { b: "다크모드 메모 모달 가독성 수정", t: ": 메모를 열었을 때 모달 배경이 반투명 틴트뿐이라 뒤 화면이 비쳐 글자가 안 보이던 문제를 수정했습니다. 이제 불투명 배경 위에 색상 틴트가 입혀져 또렷하게 보입니다." },
+  ] },
+  { version: "v0.7.2", date: "2026-06-08", items: [
     { b: "재고·메모에도 고객사 연동", t: ": 일정뿐 아니라 재고·메모 등록/수정 시에도 등록된 고객사를 선택하거나 직접 입력할 수 있습니다. 지정한 고객사는 재고 카드·메모 카드에 배지로 표시됩니다." },
   ] },
   { version: "v0.7.1", date: "2026-06-08", items: [
