@@ -57,3 +57,8 @@ android/.gradle/
 android/app/release/
 *.keystore
 *.jks
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

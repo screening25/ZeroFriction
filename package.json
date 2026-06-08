@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3005",
     "version:sync": "node scripts/sync-version.mjs",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
     "prebuild": "node scripts/sync-version.mjs",
     "build": "prisma generate && next build",
     "start": "next start -p 3005",
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.1",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
