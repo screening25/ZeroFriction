@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2, Menu } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS, addRecord, updateRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -85,6 +85,8 @@ export default function Home() {
 
   const [schedulePage, setSchedulePage] = useState<number>(0);
   const [inventoryPage, setInventoryPage] = useState<number>(0);
+  const [dragKey, setDragKey] = useState<string | null>(null); // 드래그 중인 재고 그룹 코드(시각 표시용)
+  const dragKeyRef = useRef<string | null>(null); // 핸들러가 동기로 읽는 값(상태는 비동기라 stale closure 방지)
 
   // States for @mention suggestion autocomplete popup
   const [mentionTriggerInfo, setMentionTriggerInfo] = useState<{ query: string; triggerIndex: number } | null>(null);
@@ -651,7 +653,14 @@ export default function Home() {
       const tsB = parseInt(b.id.split('_')[1] || '0', 10);
       return tsB - tsA;
     });
-  const inventory = records.filter(r => r.type === 'asset');
+  // 재고는 사용자가 지정한 수동 순서(attrs.sortOrder) 우선. 미지정 항목은 기존 순서 유지(안정 정렬).
+  const inventory = records.filter(r => r.type === 'asset').slice().sort((a, b) => {
+    const ao = a.attrs.sortOrder, bo = b.attrs.sortOrder;
+    if (ao == null && bo == null) return 0;
+    if (ao == null) return 1;
+    if (bo == null) return -1;
+    return ao - bo;
+  });
 
   // Autocomplete / suggestion helpers for @mentions in textarea
   const getMentionQuery = (text: string, cursorIndex: number) => {
@@ -935,6 +944,25 @@ export default function Home() {
   const inventoryPerPage = appSettings.maxInventoryShown || 5;
   const inventoryTotalPages = Math.ceil(groupedInventories.length / inventoryPerPage);
   const paginatedGroups = groupedInventories.slice(inventoryPage * inventoryPerPage, (inventoryPage + 1) * inventoryPerPage);
+
+  // 재고 그룹을 드래그하여 순서 변경 — 새 순서대로 모든 항목에 sortOrder를 재부여해 영속화
+  const reorderInventoryGroups = (fromKey: string, toKey: string) => {
+    if (!fromKey || fromKey === toKey) return;
+    const order = groupedInventories.map(g => g.code);
+    const from = order.indexOf(fromKey);
+    const to = order.indexOf(toKey);
+    if (from < 0 || to < 0) return;
+    order.splice(to, 0, order.splice(from, 1)[0]);
+    let seq = 0;
+    order.forEach(code => {
+      const g = groupedInventories.find(x => x.code === code);
+      g?.items.forEach(it => {
+        updateRecord(it.id, { attrs: { ...it.attrs, sortOrder: seq++ } });
+      });
+    });
+    reloadRecords();
+    showToast('재고 순서를 변경했습니다.');
+  };
 
   const memosPerPage = appSettings.maxMemosShown || 3;
   const memoTotalPages = Math.ceil(memos.length / memosPerPage);
@@ -3433,13 +3461,31 @@ export default function Home() {
                 return (
                 <div
                   key={group.code}
-                  style={showGroupHeader ? {
-                    border: groupHasDanger ? '1px solid var(--danger-soft-border)' : '1px solid var(--panel-border)',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: 'var(--surface-elevated)'
-                  } : { display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+                  onDragOver={e => { const k = dragKeyRef.current; if (k && k !== group.code) e.preventDefault(); }}
+                  onDrop={e => { e.preventDefault(); const k = dragKeyRef.current; if (k) reorderInventoryGroups(k, group.code); dragKeyRef.current = null; setDragKey(null); }}
+                  style={{ display: 'flex', alignItems: 'stretch', gap: '0.4rem', opacity: dragKey === group.code ? 0.45 : 1, transition: 'opacity 0.15s ease' }}
                 >
+                  {/* ☰ 드래그 핸들 — 잡고 위/아래로 옮기면 순서 변경 */}
+                  <div
+                    draggable
+                    onDragStart={e => { dragKeyRef.current = group.code; setDragKey(group.code); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', group.code); } catch {} }}
+                    onDragEnd={() => { dragKeyRef.current = null; setDragKey(null); }}
+                    onClick={e => e.stopPropagation()}
+                    title="드래그하여 순서 변경"
+                    style={{ flexShrink: 0, alignSelf: 'center', padding: '0.25rem', cursor: 'grab', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', touchAction: 'none' }}
+                  >
+                    <Menu size={16} />
+                  </div>
+                  <div
+                    style={showGroupHeader ? {
+                      flex: 1,
+                      minWidth: 0,
+                      border: groupHasDanger ? '1px solid var(--danger-soft-border)' : '1px solid var(--panel-border)',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: 'var(--surface-elevated)'
+                    } : { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+                  >
                   {showGroupHeader && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', borderBottom: '1px solid var(--panel-border)', background: 'var(--hover-bg)' }}>
                       <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', flexShrink: 0 }}>{groupOrderNum}</span>
@@ -3640,6 +3686,7 @@ export default function Home() {
                 </div>
                 );
                   })}
+                  </div>
                   </div>
                 </div>
                 );

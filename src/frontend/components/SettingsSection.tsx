@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.7.8", date: "2026-06-08", latest: true, items: [
+  { version: "v0.7.9", date: "2026-06-08", latest: true, items: [
+    { b: "재고 순서 직접 변경(드래그)", t: ": 재고 카드 왼쪽의 ☰ 핸들을 잡고 위/아래로 끌어 원하는 순서로 재배치할 수 있습니다. 바뀐 순서는 저장되어 다음에도 유지됩니다." },
+  ] },
+  { version: "v0.7.8", date: "2026-06-08", items: [
     { b: "재고 입출고 이력(트랜잭션) 기록", t: ": 재고가 입고/출고될 때마다 이동 수량·직후 잔량·담당자·고객사·시각을 이력으로 남깁니다. 재고 항목 수정 화면에서 '입출고 이력'을 펼쳐 확인할 수 있습니다. (기존 데이터는 그대로 두고 이후 이동부터 기록되는 안전한 방식)" },
   ] },
   { version: "v0.7.7", date: "2026-06-08", items: [
