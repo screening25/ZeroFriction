@@ -5,12 +5,10 @@ import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMo
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Calendar, FileSpreadsheet, Printer } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
-import { solarHolidays, lunarHolidays2026 } from '@/database';
 import CustomSelect from '@/frontend/components/CustomSelect';
 import CustomDatePicker from '@/frontend/components/CustomDatePicker';
 import CustomTimePicker from '@/frontend/components/CustomTimePicker';
-
-const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
+import { isHoliday } from '@/frontend/utils/calendar';
 
 export default function CalendarPage() {
   const {

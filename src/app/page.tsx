@@ -5,13 +5,15 @@ import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMo
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2 } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
-import { solarHolidays, lunarHolidays2026, ACCENT_COLORS, addRecord, updateRecord, expandRecurringEvents } from '@/database';
+import { ACCENT_COLORS, addRecord, updateRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
 import CustomTimePicker from '@/frontend/components/CustomTimePicker';
 import CustomSelect from '@/frontend/components/CustomSelect';
 import CustomDatePicker from '@/frontend/components/CustomDatePicker';
 import Markdown from '@/frontend/components/Markdown';
 import { hexToRgb, getCategoryColorStyles, getMemoCardStyle, getMemoModalStyle } from '@/frontend/utils/styles';
+import { isHoliday } from '@/frontend/utils/calendar';
+import { isSerialPattern } from '@/frontend/utils/inventory';
 
 interface BulkRow {
   code: string;
@@ -24,36 +26,7 @@ interface BulkRow {
   serial?: string;
 }
 
-/**
- * 주어진 날짜가 공휴일(양력 또는 2026년 음력 환산)인지 판별한다.
- * @param date 검사할 날짜
- * @returns 공휴일이면 true
- */
-const isHoliday = (date: Date) => solarHolidays.includes(format(date, 'MM-dd')) || lunarHolidays2026.includes(format(date, 'yyyy-MM-dd'));
-
-const isSerialPattern = (val: string): boolean => {
-  const cleanVal = val.trim();
-  if (!cleanVal) return false;
-  
-  // Pattern 1: Alphanumeric parts separated by hyphens or underscores
-  const parts = cleanVal.split(/[-_]/);
-  if (parts.length >= 3) {
-    const lastPart = parts[parts.length - 1];
-    const isNumericLast = /^\d+$/.test(lastPart);
-    const hasLettersAndDigits = /[a-zA-Z]/.test(cleanVal) && /\d/.test(cleanVal);
-    if (isNumericLast || hasLettersAndDigits) {
-      return true;
-    }
-  }
-  
-  // Pattern 2: Typical barcode/serial containing a hyphen/underscore and alphanumeric + ending digits
-  if (/^[A-Z0-9]+[-_][0-9]+$/i.test(cleanVal)) {
-    return true;
-  }
-  
-  return false;
-};
-
+// isHoliday → @/frontend/utils/calendar, isSerialPattern → @/frontend/utils/inventory 로 분리됨
 // 색상·카드 스타일 헬퍼는 @/frontend/utils/styles 로 분리됨 (hexToRgb, getCategoryColorStyles, getMemoCardStyle, getMemoModalStyle)
 
 
