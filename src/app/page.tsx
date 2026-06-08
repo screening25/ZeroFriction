@@ -1279,8 +1279,8 @@ export default function Home() {
             const totalTodaySchedules = schedules.filter(s => s.attrs.date === todayStr).length;
             const remainingTodaySchedules = todayIncompleteSchedules.length;
             const overdueSchedulesCount = overdueSchedules.length;
-            const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
-            
+            const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0).length; // 위험 재고 = 수량 음수
+
             let greeting = "오늘도 좋은 하루 보내시길 바랍니다!";
             const hour = new Date().getHours();
             if (hour >= 5 && hour < 9) greeting = "오늘도 힘차게 시작하는 좋은 아침입니다!";
@@ -1538,26 +1538,21 @@ export default function Home() {
               }}>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>재고 건전성</div>
                 {(() => {
-                  const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).length;
-                  const outOfStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) === 0).length;
-                  
+                  // 위험 재고 = 수량이 음수(0개 밑)로 떨어진 품목
+                  const dangerItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0).length;
+
                   let healthText = "양호";
                   let healthColor = "var(--success)"; // Green
                   let healthIcon = <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />;
                   let healthDesc = "모든 품목 수량 충분";
-                  
-                  if (outOfStockItemsCount > 0 || lowStockItemsCount >= 3) {
+
+                  if (dangerItemsCount > 0) {
                     healthText = "위험";
                     healthColor = "var(--danger)"; // Red
                     healthIcon = <AlertTriangle size={14} style={{ color: 'var(--danger)' }} />;
-                    healthDesc = `${outOfStockItemsCount > 0 ? `품절 ${outOfStockItemsCount}개 · ` : ''}총 ${lowStockItemsCount}개 부족`;
-                  } else if (lowStockItemsCount > 0) {
-                    healthText = "주의";
-                    healthColor = "#EAB308"; // Amber/Yellow
-                    healthIcon = <AlertTriangle size={14} style={{ color: '#EAB308' }} />;
-                    healthDesc = `${lowStockItemsCount}개 품목 안전재고 이하`;
+                    healthDesc = `위험 재고 ${dangerItemsCount}개 (수량 음수)`;
                   }
-                  
+
                   return (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1573,7 +1568,7 @@ export default function Home() {
                       </div>
                       
                       <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {inventory.filter(i => (Number(i.attrs.qty) || 0) < 5).map(i => i.title).join(', ') || '부족한 품목 없음'}
+                        {inventory.filter(i => (Number(i.attrs.qty) || 0) < 0).map(i => i.title).join(', ') || '위험 재고 없음'}
                       </div>
                     </>
                   );
