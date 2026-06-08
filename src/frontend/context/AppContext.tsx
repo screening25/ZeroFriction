@@ -52,6 +52,8 @@ interface AppContextProps {
   setActiveCategory: (c: string | null) => void;
   
   reloadRecords: () => void;
+  manualSync: () => Promise<void>;
+  syncing: boolean;
   toggleTheme: () => void;
   logActivity: (type: ActivityType, title: string, snippet: string) => void;
   archive: ArchivedRecord[];
@@ -354,6 +356,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       applyAccentColor(s.accentColor);
       document.documentElement.setAttribute('data-density', s.density);
       document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
+    }
+  };
+
+  // 수동 동기화 — Sync 버튼이 호출. 서버에서 최신 데이터를 즉시 다시 불러온다.
+  const [syncing, setSyncing] = useState(false);
+  const manualSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      await syncFromServer(false);
+      showToast('🔄 동기화 완료');
+    } catch {
+      showToast('⚠️ 동기화 실패 — 네트워크를 확인하세요');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -1206,7 +1223,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       editingSchedule, setEditingSchedule, editingInventory, setEditingInventory, handleUpdateInventory,
       isMemoModalOpen, setIsMemoModalOpen, memoPage, setMemoPage, memoForm, setMemoForm,
       activeTab, setActiveTab, activeCategory, setActiveCategory,
-      reloadRecords, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, executeNlpCommand, handleUpdateSchedule,
+      reloadRecords, manualSync, syncing, toggleTheme, logActivity, handleSettingsChange, showToast, handleNlpSubmit, executeNlpCommand, handleUpdateSchedule,
       toggleComplete, toggleDone, handleDeleteSchedule, submitMemo, updateMemoContentDirectly, deleteMemo, deleteInventoryItem,
       handleDuplicateSchedule, handleDuplicateInventory, handleDuplicateMemo,
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,

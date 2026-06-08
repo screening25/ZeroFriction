@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check } from 'lucide-react';
+import { Sun, Moon, Calendar, Package, Layers, Activity, Settings, Command, FileText, X, Bell, Clock, Check, RefreshCw } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import CommandPalette from '@/frontend/components/CommandPalette';
 
@@ -153,6 +153,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     activities,
     isActivityDrawerOpen, setIsActivityDrawerOpen,
     nlpInput, setNlpInput, loading, handleNlpSubmit, executeNlpCommand,
+    manualSync, syncing,
     activeTab, setActiveTab,
     activeNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
   } = useApp();
@@ -281,6 +282,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             Zero-Friction
           </div>
           <div className="header-actions" style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+            <button className="theme-toggle" onClick={() => manualSync()} disabled={syncing} title="동기화 (서버에서 최신 데이터 불러오기)">
+              <RefreshCw size={17} style={syncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+            </button>
             <button className="theme-toggle" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (⌘K)">
               <Command size={17} />
             </button>
