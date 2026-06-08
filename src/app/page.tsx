@@ -86,6 +86,12 @@ export default function Home() {
   const [schedulePage, setSchedulePage] = useState<number>(0);
   const [inventoryPage, setInventoryPage] = useState<number>(0);
   const [inventoryFlowView, setInventoryFlowView] = useState<'all' | 'IN' | 'OUT'>('all'); // 총재고/입고/출고 뷰
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set()); // 접힌 재고 그룹(코드)
+  const toggleGroupCollapse = (code: string) => setCollapsedGroups(prev => {
+    const next = new Set(prev);
+    next.has(code) ? next.delete(code) : next.add(code);
+    return next;
+  });
   const [dragKey, setDragKey] = useState<string | null>(null); // 드래그 중인 재고 그룹 코드(시각 표시용)
   const dragKeyRef = useRef<string | null>(null); // 핸들러가 동기로 읽는 값(상태는 비동기라 stale closure 방지)
   const [dragItemId, setDragItemId] = useState<string | null>(null); // 그룹 내 개별 항목 드래그(시각용)
@@ -3524,6 +3530,7 @@ export default function Home() {
                 const isSingleItem = group.items.length === 1;
                 const groupHasDanger = group.items.some(it => (Number(it.attrs.qty) || 0) < 0);
                 const showGroupHeader = !hasNoCode && !isSingleItem;
+                const isCollapsed = showGroupHeader && collapsedGroups.has(group.code);
                 return (
                 <div
                   key={group.code}
@@ -3553,7 +3560,12 @@ export default function Home() {
                     } : { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
                   >
                   {showGroupHeader && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', borderBottom: '1px solid var(--panel-border)', background: 'var(--hover-bg)' }}>
+                    <div
+                      onClick={() => toggleGroupCollapse(group.code)}
+                      title={isCollapsed ? '펼치기' : '접기'}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.9rem', borderBottom: isCollapsed ? 'none' : '1px solid var(--panel-border)', background: 'var(--hover-bg)', cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      <ChevronDown size={14} style={{ flexShrink: 0, color: 'var(--text-tertiary)', transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s ease' }} />
                       <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-tertiary)', flexShrink: 0 }}>{groupOrderNum}</span>
                       <span className="badge" style={{ background: 'var(--accent-soft-bg)', color: 'var(--accent)', border: '1px solid var(--accent-soft-border)', fontSize: '0.68rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '5px', flexShrink: 0 }}>{group.label}</span>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: 'auto', fontWeight: 600 }}>{group.items.length}종</span>
@@ -3564,7 +3576,7 @@ export default function Home() {
                       )}
                     </div>
                   )}
-                  <div style={showGroupHeader ? { display: 'flex', flexDirection: 'column' } : { display: 'contents' }}>
+                  <div style={{ ...(showGroupHeader ? { display: isCollapsed ? 'none' : 'flex', flexDirection: 'column' } : { display: 'contents' }) }}>
                   {group.items.map((item) => {
                 const qtyNum = Number(item.attrs.qty) || 0;
                 const isNegative = qtyNum < 0;
