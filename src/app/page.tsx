@@ -1200,7 +1200,7 @@ export default function Home() {
                       if (item.type === 'event') setEditingSchedule(item);
                       else if (item.type === 'asset') setEditingInventory(item);
                       else {
-                        setMemoForm({ id: item.id, title: item.title, content: item.attrs.content || '', pinned: item.attrs.pinned || false, color: item.attrs.color || '' });
+                        setMemoForm({ id: item.id, title: item.title, content: item.attrs.content || '', pinned: item.attrs.pinned || false, color: item.attrs.color || '', client: item.attrs.client || '' });
                         setIsMemoEditing(false); // 상세보기 = 읽기 전용
                         setIsMemoModalOpen(true);
                       }
@@ -1868,7 +1868,7 @@ export default function Home() {
                           ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                         }} 
                         onClick={() => {
-                          setMemoForm({ id: m.id, title: m.title || '제목 없음', content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' });
+                          setMemoForm({ id: m.id, title: m.title || '제목 없음', content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '', client: m.attrs.client || '' });
                           setIsMemoEditing(false); // 상세보기 = 읽기 전용
                           setIsMemoModalOpen(true);
                         }}
@@ -3637,6 +3637,12 @@ export default function Home() {
                           <span style={{ opacity: 0.3 }}>•</span>
                         </>
                       )}
+                      {item.attrs.client && (
+                        <>
+                          <span className="badge" style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--panel-border)', fontSize: '0.6rem', fontWeight: 600, padding: '0.1rem 0.3rem', borderRadius: '4px' }}>{item.attrs.client}</span>
+                          <span style={{ opacity: 0.3 }}>•</span>
+                        </>
+                      )}
                       {item.updatedAt && (
                         <>
                           <span>{format(parseISO(item.updatedAt), 'MM.dd HH:mm')}</span>
@@ -3800,7 +3806,7 @@ export default function Home() {
                   ...getMemoCardStyle(m.attrs.color || '', theme === 'dark')
                 }}
                 onClick={() => {
-                  setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' });
+                  setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '', client: m.attrs.client || '' });
                   setIsMemoEditing(false); // 카드 클릭 = 상세보기(읽기 전용)
                   setIsMemoModalOpen(true);
                 }}
@@ -3828,6 +3834,9 @@ export default function Home() {
                     {m.category && (
                       <span className="badge" style={{ fontSize: '0.55rem', padding: '0.08rem 0.3rem', flexShrink: 0, marginLeft: '0.5rem' }}>{m.category}</span>
                     )}
+                    {m.attrs.client && (
+                      <span className="badge" style={{ fontSize: '0.55rem', padding: '0.08rem 0.3rem', flexShrink: 0, background: 'var(--accent-soft-bg)', color: 'var(--accent)', border: '1px solid var(--accent-soft-border)' }}>{m.attrs.client}</span>
+                    )}
                   </div>
                 </div>
 
@@ -3854,7 +3863,7 @@ export default function Home() {
                 )}
 
                 <div className="card-hover-actions">
-                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '' }); setIsMemoEditing(true); setIsMemoModalOpen(true); }}>수정</button>
+                  <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); setMemoForm({ id: m.id, title: m.title, content: m.attrs.content || '', pinned: m.attrs.pinned || false, color: m.attrs.color || '', client: m.attrs.client || '' }); setIsMemoEditing(true); setIsMemoModalOpen(true); }}>수정</button>
                   <button className="ghost-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateMemo(m.id); }}>복제</button>
                   <button className="ghost-btn danger" onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }}>삭제</button>
                 </div>
@@ -4223,15 +4232,50 @@ export default function Home() {
                 />
               </div>
 
+              {/* 고객사 (등록된 고객사가 있을 때만 표시) */}
+              {(appSettings.clients || []).length > 0 && (
+                <div className="form-group">
+                  <span className="form-label">고객사</span>
+                  <input
+                    type="text"
+                    className="input-sm"
+                    value={editingInventory.attrs.client || ''}
+                    onChange={e => setEditingInventory({ ...editingInventory, attrs: { ...editingInventory.attrs, client: e.target.value } })}
+                    placeholder="고객사를 선택하거나 직접 입력하세요."
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem' }}>
+                    {(appSettings.clients || []).map(client => {
+                      const isSelected = editingInventory.attrs.client === client;
+                      return (
+                        <button
+                          key={client}
+                          type="button"
+                          onClick={() => setEditingInventory({ ...editingInventory, attrs: { ...editingInventory.attrs, client: isSelected ? '' : client } })}
+                          style={{
+                            fontSize: '0.72rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '8px',
+                            border: isSelected ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
+                            background: isSelected ? 'var(--accent-soft-bg)' : 'var(--surface-color)',
+                            color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                          }}
+                        >
+                          {client}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Serial Number Input */}
               <div className="form-group">
                 <span className="form-label">시리얼 번호</span>
-                <input 
-                  type="text" 
-                  className="input-sm" 
+                <input
+                  type="text"
+                  className="input-sm"
                   placeholder="시리얼 번호"
-                  value={editingInventory.attrs.serial || ''} 
-                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, serial: e.target.value }})} 
+                  value={editingInventory.attrs.serial || ''}
+                  onChange={e => setEditingInventory({...editingInventory, attrs: { ...editingInventory.attrs, serial: e.target.value }})}
                 />
               </div>
 
@@ -4560,6 +4604,41 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* 고객사 (등록된 고객사가 있을 때만 표시) */}
+              {(appSettings.clients || []).length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>고객사</span>
+                  <input
+                    type="text"
+                    className="input-sm"
+                    value={memoForm.client || ''}
+                    onChange={e => setMemoForm({ ...memoForm, client: e.target.value })}
+                    placeholder="고객사를 선택하거나 직접 입력하세요."
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {(appSettings.clients || []).map(client => {
+                      const isSelected = memoForm.client === client;
+                      return (
+                        <button
+                          key={client}
+                          type="button"
+                          onClick={() => setMemoForm({ ...memoForm, client: isSelected ? '' : client })}
+                          style={{
+                            fontSize: '0.72rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '8px',
+                            border: isSelected ? '1px solid var(--accent-soft-border)' : '1px solid var(--panel-border)',
+                            background: isSelected ? 'var(--accent-soft-bg)' : 'var(--surface-color)',
+                            color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                          }}
+                        >
+                          {client}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Bottom Settings Control Bar */}
               <div style={{
                 display: 'flex',
@@ -4636,6 +4715,9 @@ export default function Home() {
                   <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {memoForm.title || '(제목 없음)'}
                   </div>
+                  {memoForm.client && (
+                    <span className="badge" style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem', flexShrink: 0, background: 'var(--accent-soft-bg)', color: 'var(--accent)', border: '1px solid var(--accent-soft-border)' }}>{memoForm.client}</span>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.85rem', lineHeight: '1.5', color: 'var(--text-primary)', flex: 1, overflowY: 'auto', paddingTop: '0.2rem' }}>
                   {memoForm.content

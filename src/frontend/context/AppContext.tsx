@@ -44,8 +44,8 @@ interface AppContextProps {
   setIsMemoModalOpen: (o: boolean) => void;
   memoPage: number;
   setMemoPage: (p: number) => void;
-  memoForm: { id?: string; title: string; content: string; pinned?: boolean; color?: string };
-  setMemoForm: (f: { id?: string; title: string; content: string; pinned?: boolean; color?: string }) => void;
+  memoForm: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string };
+  setMemoForm: (f: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string }) => void;
   activeTab: 'all' | 'calendar' | 'inventory' | 'category' | 'settings';
   setActiveTab: (t: 'all' | 'calendar' | 'inventory' | 'category' | 'settings') => void;
   activeCategory: string | null;
@@ -287,7 +287,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [editingInventory, setEditingInventory] = useState<UniversalRecord | null>(null);
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
   const [memoPage, setMemoPage] = useState(0);
-  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string}>({ title: '', content: '', pinned: false, color: '' });
+  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string}>({ title: '', content: '', pinned: false, color: '' });
   const [notified, setNotified] = useState<Set<string>>(new Set());
   const [activeNotification, setActiveNotification] = useState<{
     id: string;
@@ -832,26 +832,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const submitMemo = () => {
     if (!memoForm.title || !memoForm.content) return;
     if (memoForm.id) {
-      updateRecord(memoForm.id, { 
-        title: memoForm.title, 
-        attrs: { 
+      updateRecord(memoForm.id, {
+        title: memoForm.title,
+        attrs: {
           content: memoForm.content,
           pinned: memoForm.pinned || false,
-          color: memoForm.color || ''
-        } 
+          color: memoForm.color || '',
+          client: memoForm.client || ''
+        }
       });
       logActivity('UPDATE_MEMO', '변동 사항 수정', memoForm.title);
     } else {
-      addRecord({ 
-        title: memoForm.title, 
+      addRecord({
+        title: memoForm.title,
         type: 'memo',
         category: '메모',
-        attrs: { 
-          content: memoForm.content, 
+        attrs: {
+          content: memoForm.content,
           pinned: memoForm.pinned || false,
           color: memoForm.color || '',
-          effectiveDate: new Date().toISOString().split('T')[0] 
-        } 
+          client: memoForm.client || '',
+          effectiveDate: new Date().toISOString().split('T')[0]
+        }
       });
       logActivity('ADD_MEMO', '변동 사항 등록', memoForm.title);
     }
