@@ -5,7 +5,7 @@ import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMo
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2, Menu } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
-import { ACCENT_COLORS, addRecord, updateRecord, expandRecurringEvents } from '@/database';
+import { ACCENT_COLORS, addRecord, updateRecord, deleteRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
 import CustomTimePicker from '@/frontend/components/CustomTimePicker';
 import CustomSelect from '@/frontend/components/CustomSelect';
@@ -30,6 +30,26 @@ interface BulkRow {
 
 // isHoliday → @/frontend/utils/calendar, isSerialPattern → @/frontend/utils/inventory 로 분리됨
 // 색상·카드 스타일 헬퍼는 @/frontend/utils/styles 로 분리됨 (hexToRgb, getCategoryColorStyles, getMemoCardStyle, getMemoModalStyle)
+
+/** 마크다운 문법을 제거해 한 줄 발췌용 평문으로 변환한다(목록 미리보기에서 raw 마크다운이 보이지 않게). */
+const stripMarkdown = (md: string): string =>
+  (md || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/~~(.*?)~~/g, '$2')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/^[\s:|-]{3,}$/gm, ' ')
+    .replace(/\|/g, ' ')
+    .replace(/[#>*_~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 
 /**
@@ -827,7 +847,7 @@ export default function Home() {
             id: r.id,
             title: r.attrs.title || '제목 없음',
             type: 'memo',
-            subtitle: r.attrs.content ? (r.attrs.content.substring(0, 40) + '...') : '내용 없음',
+            subtitle: r.attrs.content ? (stripMarkdown(r.attrs.content).substring(0, 40) + '...') : '내용 없음',
             record: r
           });
         }
@@ -1005,6 +1025,32 @@ export default function Home() {
   const paginatedGroups = groupedInventories.slice(inventoryPage * inventoryPerPage, (inventoryPage + 1) * inventoryPerPage);
 
   // 재고 그룹을 드래그하여 순서 변경 — 새 순서대로 모든 항목에 sortOrder를 재부여해 영속화
+  // 기존에 따로 쌓인 같은 (품목코드+품목명) 재고 레코드를 하나로 합친다(수량 합산·이력 통합).
+  // 합산 기준이 도입되기 전 입·출고가 별도 레코드로 남아 "따로 보이는" 경우를 정리.
+  const consolidateInventory = () => {
+    const assets = records.filter(r => r.type === 'asset');
+    const groups = new Map<string, typeof assets>();
+    assets.forEach(r => {
+      const key = `${(r.attrs.code || '').trim()}|||${(r.title || '').trim()}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r);
+    });
+    let merged = 0;
+    groups.forEach(list => {
+      if (list.length < 2) return;
+      const keeper = list[0];
+      let netQty = 0;
+      let txns: any[] = [];
+      list.forEach(r => { netQty += Number(r.attrs.qty) || 0; txns = txns.concat(r.attrs.txns || []); });
+      txns.sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+      updateRecord(keeper.id, { attrs: { ...keeper.attrs, qty: netQty, flow: netQty < 0 ? 'OUT' : 'IN', txns } });
+      list.slice(1).forEach(r => deleteRecord(r.id, { permanent: true }));
+      merged += list.length - 1;
+    });
+    reloadRecords();
+    showToast(merged > 0 ? `중복 재고 ${merged}건을 합쳤습니다.` : '합칠 중복 재고가 없습니다.');
+  };
+
   const reorderInventoryGroups = (fromKey: string, toKey: string) => {
     if (!fromKey || fromKey === toKey) return;
     const order = groupedInventories.map(g => g.code);
@@ -1952,7 +1998,7 @@ export default function Home() {
                         
                         {/* Excerpt of content */}
                         <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left', paddingLeft: m.attrs.pinned ? '0.85rem' : '0' }}>
-                          {m.attrs.content ? m.attrs.content.substring(0, 50).replace(/[\r\n]+/g, ' ') : '내용 없음'}
+                          {m.attrs.content ? stripMarkdown(m.attrs.content).substring(0, 50) : '내용 없음'}
                         </div>
                       </div>
                     ))
@@ -2914,6 +2960,15 @@ export default function Home() {
           <div className="section-header" style={{ marginBottom: '0.8rem' }}>
             <div className="section-title">재고 현황</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 중복 합치기: 같은 품목코드+품목명으로 따로 쌓인 입·출고 레코드를 하나로 */}
+              <button
+                className="btn-ghost"
+                onClick={() => { if (confirm('같은 품목코드+품목명으로 따로 등록된 재고를 하나로 합치고 수량을 합산합니다. 진행할까요?')) consolidateInventory(); }}
+                title="중복 재고 합치기 (같은 코드+품목명 입·출고 합산)"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
+              >
+                합치기
+              </button>
               {/* 정렬: 수동(드래그) → 코드↑ → 코드↓ 순환 */}
               <button
                 className="btn-ghost"
@@ -3656,7 +3711,7 @@ export default function Home() {
                 return (
                 <div
                   key={item.id}
-                  className={showGroupHeader ? '' : 'card card-compact'}
+                  className={showGroupHeader ? 'inv-row' : 'card card-compact'}
                   onDragOver={showGroupHeader ? (e => { const k = dragItemRef.current; if (k && k !== item.id) e.preventDefault(); }) : undefined}
                   onDrop={showGroupHeader ? (e => { e.preventDefault(); const k = dragItemRef.current; if (k) reorderInventoryItems(k, item.id); dragItemRef.current = null; setDragItemId(null); }) : undefined}
                   style={showGroupHeader ? {

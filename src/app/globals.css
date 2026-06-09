@@ -404,18 +404,29 @@ button:focus, button:focus-visible, button:active, .nav-link:focus, .nav-link:fo
 /* --- Card Hover Ghost Buttons --- */
 .card-hover-actions {
   position: absolute;
-  right: 0.8rem;
-  bottom: 0.6rem;
+  right: 0.6rem;
+  bottom: 0.5rem;
   display: flex;
   gap: 0.3rem;
-  opacity: 0.35;
-  pointer-events: auto;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateY(0);
+  opacity: 0;                 /* 평소엔 숨겨 콘텐츠와 겹치지 않음 */
+  pointer-events: none;
+  /* 호버 시 떠 있는 깔끔한 칩(배경+블러)으로 표시 → 뒤 콘텐츠와 시각적 충돌 없음 */
+  padding: 0.18rem 0.28rem;
+  border-radius: 9px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 2px 10px var(--shadow-color);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(2px);
   z-index: 10;
 }
-.card:hover .card-hover-actions {
+.card:hover .card-hover-actions,
+.inv-row:hover .card-hover-actions {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 .ghost-btn {
   background: var(--panel-border);
