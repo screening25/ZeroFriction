@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.6", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.7", date: "2026-06-09", latest: true, items: [
+    { b: "입출고 로그 수정/삭제", t: ": 입출고 로그의 각 기록에서 '수정'을 눌러 입고/출고·수량·메모를 고치거나 삭제할 수 있습니다. 수정하면 해당 품목의 잔량·재고가 시간순으로 다시 계산됩니다." },
+  ] },
+  { version: "v0.9.6", date: "2026-06-09", items: [
     { b: "품목코드·고객사 선택이 안 되던 문제 수정", t: ": 검색 목록에서 항목을 눌러도 선택되지 않던 문제(입력칸이 먼저 닫혀 클릭이 씹히던 경합)를 고쳤습니다. 이제 누르는 즉시 선택됩니다." },
   ] },
   { version: "v0.9.5", date: "2026-06-09", items: [
