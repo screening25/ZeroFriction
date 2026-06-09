@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.7", date: "2026-06-09", latest: true, items: [
+  { version: "v0.8.8", date: "2026-06-09", latest: true, items: [
+    { b: "정렬(오름·내림차순) 추가", t: ": 고객사는 가나다·ABC 오름/내림차순으로 정렬되고(일정 카테고리 설정에서 방향 토글), 메모는 작성일 오름/내림차순, 재고는 수동(드래그)·품목코드 오름/내림차순으로 각 화면 상단 버튼에서 바꿀 수 있습니다." },
+  ] },
+  { version: "v0.8.7", date: "2026-06-09", items: [
     { b: "입출고 합산 기준 수정", t: ": 출고가 같은 품목코드+품목명의 입고 수량에서 차감되도록 고쳤습니다. 이전엔 품목명만으로 합산해 코드가 같아도 따로 잡히던 문제를 해결했습니다. (이후 등록되는 입·출고부터 적용)" },
   ] },
   { version: "v0.8.6", date: "2026-06-08", items: [

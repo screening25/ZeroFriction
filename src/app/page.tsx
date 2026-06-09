@@ -658,11 +658,20 @@ export default function Home() {
       if (aPinned !== bPinned) {
         return bPinned - aPinned;
       }
-      // id 내 타임스탬프로 정렬 — 수정해도 순서가 바뀌지 않음
+      // id 내 타임스탬프(작성 시각)로 정렬 — 수정해도 순서가 바뀌지 않음. 방향은 memoSort.
       const tsA = parseInt(a.id.split('_')[1] || '0', 10);
       const tsB = parseInt(b.id.split('_')[1] || '0', 10);
-      return tsB - tsA;
+      return (appSettings.memoSort === 'asc') ? (tsA - tsB) : (tsB - tsA);
     });
+  // 고객사 정렬(가나다/ABC, 오름/내림차순) — 한국어 로케일 기준
+  const clientSortDir = appSettings.clientSort || 'asc';
+  const sortedClients = useMemo(() => {
+    const arr = [...(appSettings.clients || [])];
+    arr.sort((a, b) => a.localeCompare(b, 'ko'));
+    if (clientSortDir === 'desc') arr.reverse();
+    return arr;
+  }, [appSettings.clients, clientSortDir]);
+
   // 기존에 입력한 품목코드 모음(재사용용) — 중복 제거 후 정렬
   const knownCodes = useMemo(() => Array.from(new Set(
     records.filter(r => r.type === 'asset').map(r => (r.attrs.code || '').trim()).filter(Boolean)
@@ -696,8 +705,14 @@ export default function Home() {
     return out;
   }, [records]);
 
-  // 재고는 사용자가 지정한 수동 순서(attrs.sortOrder) 우선. 미지정 항목은 기존 순서 유지(안정 정렬).
+  // 재고 정렬: 'manual'(수동 드래그 sortOrder) / 'asc'·'desc'(품목코드 가나다·ABC).
+  const inventorySort = appSettings.inventorySort || 'manual';
   const inventory = records.filter(r => r.type === 'asset').slice().sort((a, b) => {
+    if (inventorySort === 'asc' || inventorySort === 'desc') {
+      const cmp = (a.attrs.code || a.title || '').localeCompare(b.attrs.code || b.title || '', 'ko');
+      return inventorySort === 'asc' ? cmp : -cmp;
+    }
+    // manual: 사용자가 지정한 수동 순서(attrs.sortOrder) 우선. 미지정은 기존 순서 유지(안정 정렬).
     const ao = a.attrs.sortOrder, bo = b.attrs.sortOrder;
     if (ao == null && bo == null) return 0;
     if (ao == null) return 1;
@@ -2650,6 +2665,14 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
                         <span>고객사 관리</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSettingsChange({ ...appSettings, clientSort: clientSortDir === 'asc' ? 'desc' : 'asc' })}
+                          title="가나다·ABC 정렬 방향"
+                          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.15rem 0.45rem', borderRadius: '6px', border: '1px solid var(--panel-border)', background: 'var(--panel-bg)', color: 'var(--text-secondary)', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          가나다 {clientSortDir === 'asc' ? '↑' : '↓'}
+                        </button>
                       </div>
                       <div style={{ display: 'flex', gap: '0.35rem' }}>
                         <input
@@ -2674,7 +2697,7 @@ export default function Home() {
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>등록된 고객사가 없습니다.</div>
                       ) : (
                         <div style={{ marginTop: '0.5rem', border: '1px solid var(--panel-border)', borderRadius: '10px', overflow: 'hidden', maxHeight: '220px', overflowY: 'auto' }}>
-                          {(appSettings.clients || []).map((client, ci) => (
+                          {sortedClients.map((client, ci) => (
                             <div
                               key={client}
                               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', borderTop: ci > 0 ? '1px solid var(--panel-border)' : 'none', background: 'var(--input-bg)' }}
@@ -2891,6 +2914,18 @@ export default function Home() {
           <div className="section-header" style={{ marginBottom: '0.8rem' }}>
             <div className="section-title">재고 현황</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 정렬: 수동(드래그) → 코드↑ → 코드↓ 순환 */}
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  const next = inventorySort === 'manual' ? 'asc' : inventorySort === 'asc' ? 'desc' : 'manual';
+                  handleSettingsChange({ ...appSettings, inventorySort: next });
+                }}
+                title="정렬: 수동(드래그)/코드 오름차순/내림차순"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
+              >
+                {inventorySort === 'manual' ? '수동' : inventorySort === 'asc' ? '코드 ↑' : '코드 ↓'}
+              </button>
               {/* 📊 엑셀 내보내기 버튼 */}
               <button 
                 className="btn-ghost" 
@@ -3858,9 +3893,18 @@ export default function Home() {
           <div className="section-header">
             <div className="section-title">메모</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* 정렬: 작성일 최신순(↓)/오래된순(↑) */}
+              <button
+                className="btn-ghost"
+                onClick={() => handleSettingsChange({ ...appSettings, memoSort: appSettings.memoSort === 'asc' ? 'desc' : 'asc' })}
+                title="작성일 정렬"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
+              >
+                작성일 {appSettings.memoSort === 'asc' ? '↑' : '↓'}
+              </button>
               {/* 📊 엑셀 내보내기 버튼 */}
-              <button 
-                className="btn-ghost" 
+              <button
+                className="btn-ghost"
                 onClick={() => exportToCsv('memo')}
                 title="메모 엑셀 다운로드"
                 style={{ 
@@ -4100,7 +4144,7 @@ export default function Home() {
               {/* 고객사 선택 */}
               <ClientPicker
                 value={editingSchedule.attrs.client || ''}
-                clients={appSettings.clients || []}
+                clients={sortedClients}
                 onChange={v => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, client: v } })}
               />
 
@@ -4357,7 +4401,7 @@ export default function Home() {
               {/* 고객사 선택 */}
               <ClientPicker
                 value={editingInventory.attrs.client || ''}
-                clients={appSettings.clients || []}
+                clients={sortedClients}
                 onChange={v => setEditingInventory({ ...editingInventory, attrs: { ...editingInventory.attrs, client: v } })}
               />
 
@@ -4728,7 +4772,7 @@ export default function Home() {
               {/* 고객사 선택 */}
               <ClientPicker
                 value={memoForm.client || ''}
-                clients={appSettings.clients || []}
+                clients={sortedClients}
                 onChange={v => setMemoForm({ ...memoForm, client: v })}
               />
 
