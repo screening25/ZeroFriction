@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.3", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.4", date: "2026-06-09", latest: true, items: [
+    { b: "재고 상단 버튼 정리(더보기 메뉴)", t: ": 재고 화면 상단에 버튼이 너무 많아 제목이 두 줄로 깨지고 누르기 힘들던 것을, '＋등록' 버튼과 '⋯ 더보기' 메뉴 두 개로 정리했습니다. 일괄등록·입출고 로그·정렬·합치기·기준 정보·Excel·PDF는 더보기 메뉴에 모았습니다." },
+  ] },
+  { version: "v0.9.3", date: "2026-06-09", items: [
     { b: "입출고 로그(통합) 추가", t: ": 재고 탭의 '로그' 버튼으로 전체 입·출고 기록을 시간순으로 한 곳에서 봅니다. 각 기록의 품목코드·품목명·수량·직후 잔량·담당자·고객사·위치·시각을 보여주고, CSV로 내보낼 수 있습니다." },
   ] },
   { version: "v0.9.2", date: "2026-06-09", items: [

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2, Menu } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Package, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, FileText, MapPin, Tag, User, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, Search, CornerDownLeft, FileSpreadsheet, Printer, X, ListPlus, Trash2, Menu, MoreHorizontal, ArrowDownUp } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { ACCENT_COLORS, addRecord, updateRecord, deleteRecord, expandRecurringEvents } from '@/database';
 import SettingsSection from '@/frontend/components/SettingsSection';
@@ -108,6 +108,7 @@ export default function Home() {
   const [inventoryPage, setInventoryPage] = useState<number>(0);
   const [inventoryFlowView, setInventoryFlowView] = useState<'all' | 'IN' | 'OUT'>('all'); // 총재고/입고/출고 뷰
   const [isTxnLogOpen, setIsTxnLogOpen] = useState(false); // 입출고 로그 모달
+  const [isInvMenuOpen, setIsInvMenuOpen] = useState(false); // 재고 '더보기' 메뉴
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set()); // 접힌 재고 그룹(코드)
   const toggleGroupCollapse = (code: string) => setCollapsedGroups(prev => {
     const next = new Set(prev);
@@ -2992,176 +2993,58 @@ export default function Home() {
         <section>
           <div className="section-header" style={{ marginBottom: '0.8rem' }}>
             <div className="section-title">재고 현황</div>
-            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-              {/* 입출고 로그 보기 */}
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', position: 'relative' }}>
+              {/* ➕ 재고 등록 (주요 동작) */}
               <button
                 className="btn-ghost"
-                onClick={() => setIsTxnLogOpen(true)}
-                title="입출고 로그 (전체 입·출고 기록)"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
-              >
-                <ClipboardList size={12} /> 로그
-              </button>
-              {/* 중복 합치기: 같은 품목코드+품목명으로 따로 쌓인 입·출고 레코드를 하나로 */}
-              <button
-                className="btn-ghost"
-                onClick={() => { if (confirm('같은 품목코드+품목명으로 따로 등록된 재고를 하나로 합치고 수량을 합산합니다. 진행할까요?')) consolidateInventory(); }}
-                title="중복 재고 합치기 (같은 코드+품목명 입·출고 합산)"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
-              >
-                합치기
-              </button>
-              {/* 정렬: 수동(드래그) → 코드↑ → 코드↓ 순환 */}
-              <button
-                className="btn-ghost"
-                onClick={() => {
-                  const next = inventorySort === 'manual' ? 'asc' : inventorySort === 'asc' ? 'desc' : 'manual';
-                  handleSettingsChange({ ...appSettings, inventorySort: next });
-                }}
-                title="정렬: 수동(드래그)/코드 오름차순/내림차순"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', flexShrink: 0 }}
-              >
-                {inventorySort === 'manual' ? '수동' : inventorySort === 'asc' ? '코드 ↑' : '코드 ↓'}
-              </button>
-              {/* 📊 엑셀 내보내기 버튼 */}
-              <button 
-                className="btn-ghost" 
-                onClick={() => exportToCsv('asset')}
-                title="재고 엑셀 다운로드"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.3rem', 
-                  padding: '0.25rem 0.55rem', 
-                  borderRadius: '6px', 
-                  fontSize: '0.72rem', 
-                  fontWeight: 650, 
-                  border: '1px solid var(--panel-border)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
-                  flexShrink: 0
-                }}
-              >
-                <FileSpreadsheet size={12} />
-                <span className="btn-label-hide-md">Excel</span>
-              </button>
-
-              {/* 🖨️ PDF 인쇄 버튼 */}
-              <button 
-                className="btn-ghost" 
-                onClick={() => printToPdf('asset')}
-                title="재고 PDF 인쇄"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.3rem', 
-                  padding: '0.25rem 0.55rem', 
-                  borderRadius: '6px', 
-                  fontSize: '0.72rem', 
-                  fontWeight: 650, 
-                  border: '1px solid var(--panel-border)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
-                  flexShrink: 0
-                }}
-              >
-                <Printer size={12} />
-                <span className="btn-label-hide-md">PDF</span>
-              </button>
-
-              {/* ⚙️ 기준 정보 관리 모달 버튼 */}
-              <button 
-                className="btn-ghost" 
-                onClick={() => setIsMasterSettingsOpen(true)}
-                title="기준 정보 관리"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.3rem', 
-                  padding: '0.25rem 0.55rem', 
-                  borderRadius: '6px', 
-                  fontSize: '0.72rem', 
-                  fontWeight: 650, 
-                  border: '1px solid var(--panel-border)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-secondary)',
-                  flexShrink: 0
-                }}
-              >
-                <Sliders size={12} />
-                <span className="btn-label-hide-md">기준 정보 관리</span>
-              </button>
-
-              {/* 📦 일괄 등록 버튼 */}
-              <button 
-                className="btn-ghost" 
-                onClick={() => {
-                  setIsBulkModalOpen(true);
-                  setBulkRows([]);
-                  setPasteText('');
-                  setCreateMemo(false);
-                  setMemoTitle('');
-                  setMemoContent('');
-                  setIsMemoCustom(false);
-                }}
-                title="재고 여러 개를 한 번에 처리"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.3rem', 
-                  padding: '0.25rem 0.55rem', 
-                  borderRadius: '6px', 
-                  fontSize: '0.72rem', 
-                  fontWeight: 650, 
-                  border: '1px solid var(--accent-glow)',
-                  background: 'var(--accent-soft-bg)',
-                  color: 'var(--accent)',
-                  cursor: 'pointer',
-                  flexShrink: 0
-                }}
-              >
-                <ListPlus size={12} />
-                <span className="btn-label-hide-sm">일괄 등록</span>
-              </button>
-
-              {/* ➕ 재고 등록 버튼! */}
-              <button 
-                className="btn-ghost" 
                 onClick={() => setEditingInventory({
-                  id: '',
-                  title: '',
-                  type: 'asset',
-                  category: '재고',
-                  attrs: {
-                    code: '',
-                    qty: 1,
-                    flow: 'IN',
-                    loc: '',
-                    mgr: '',
-                    serial: '',
-                    memo: ''
-                  },
+                  id: '', title: '', type: 'asset', category: '재고',
+                  attrs: { code: '', qty: 1, flow: 'IN', loc: '', mgr: '', serial: '', memo: '' },
                   updatedAt: new Date().toISOString()
                 })}
                 title="재고 등록"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  padding: '0.25rem 0.55rem',
-                  borderRadius: '6px',
-                  fontSize: '0.72rem',
-                  fontWeight: 650,
-                  border: '1px solid var(--accent-soft-border)',
-                  background: 'var(--accent-soft-bg)',
-                  color: 'var(--accent)',
-                  flexShrink: 0
-                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.35rem 0.7rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, border: '1px solid var(--accent-soft-border)', background: 'var(--accent-soft-bg)', color: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
               >
-                <Plus size={12} />
-                <span className="btn-label-hide-sm">재고 등록</span>
+                <Plus size={14} /> 등록
               </button>
-              <Package size={14} style={{ color: 'var(--text-tertiary)' }} />
+
+              {/* ⋯ 더보기 — 나머지 기능을 메뉴로 묶음 */}
+              <button
+                className="btn-ghost"
+                onClick={() => setIsInvMenuOpen(o => !o)}
+                title="더보기"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', width: '2rem', height: '2rem', borderRadius: '8px', border: '1px solid var(--panel-border)', background: isInvMenuOpen ? 'var(--hover-bg)' : 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}
+              >
+                <MoreHorizontal size={16} />
+              </button>
+
+              {isInvMenuOpen && (
+                <>
+                  <div onClick={() => setIsInvMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.4rem', zIndex: 50, minWidth: '200px', background: 'var(--panel-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: '1px solid var(--panel-border)', borderRadius: '12px', boxShadow: '0 10px 30px var(--shadow-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    {([
+                      { icon: <ListPlus size={14} />, label: '일괄 등록', on: () => { setIsBulkModalOpen(true); setBulkRows([]); setPasteText(''); setCreateMemo(false); setMemoTitle(''); setMemoContent(''); setIsMemoCustom(false); } },
+                      { icon: <ClipboardList size={14} />, label: '입출고 로그', on: () => setIsTxnLogOpen(true) },
+                      { icon: <ArrowDownUp size={14} />, label: `정렬: ${inventorySort === 'manual' ? '수동(드래그)' : inventorySort === 'asc' ? '코드 오름차순' : '코드 내림차순'}`, on: () => handleSettingsChange({ ...appSettings, inventorySort: inventorySort === 'manual' ? 'asc' : inventorySort === 'asc' ? 'desc' : 'manual' }), keepOpen: true },
+                      { icon: <Layers size={14} />, label: '중복 합치기', on: () => { if (confirm('같은 품목코드+품목명으로 따로 등록된 재고를 하나로 합치고 수량을 합산합니다. 진행할까요?')) consolidateInventory(); } },
+                      { icon: <Sliders size={14} />, label: '기준 정보 관리', on: () => setIsMasterSettingsOpen(true) },
+                      { icon: <FileSpreadsheet size={14} />, label: 'Excel 내보내기', on: () => exportToCsv('asset') },
+                      { icon: <Printer size={14} />, label: 'PDF 인쇄', on: () => printToPdf('asset') },
+                    ] as { icon: React.ReactNode; label: string; on: () => void; keepOpen?: boolean }[]).map((m, mi) => (
+                      <button
+                        key={mi}
+                        onClick={() => { m.on(); if (!m.keepOpen) setIsInvMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', width: '100%', padding: '0.6rem 0.8rem', border: 'none', borderTop: mi > 0 ? '1px solid var(--panel-border)' : 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, textAlign: 'left', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span style={{ color: 'var(--text-tertiary)', display: 'flex', flexShrink: 0 }}>{m.icon}</span>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
