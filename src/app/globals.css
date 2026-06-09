@@ -994,6 +994,16 @@ textarea.input-sm {
    border-color: var(--accent);
 }
 
+/* SearchSelect 콤보박스 입력 — 우측 셰브론과 안 겹치게 패딩 확보(모달 반응형 !important 규칙보다 높은 특이도) */
+.modal-content input.ss-input,
+input.ss-input {
+   padding-right: 1.7rem !important;
+}
+/* 드롭다운 옵션 hover 피드백 */
+.ss-option:hover {
+   background: var(--hover-bg) !important;
+}
+
 .ios-delete-btn {
   width: 100%;
   background: var(--bg-secondary);

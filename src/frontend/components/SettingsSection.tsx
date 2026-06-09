@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.9", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.0", date: "2026-06-09", latest: true, items: [
+    { b: "검색창 아이콘 겹침·호버 수정", t: ": 품목코드·품목명·고객사 검색창에서 돋보기 아이콘이 글자와 겹치던 문제를 없애고(아이콘 제거로 깔끔하게), 드롭다운 항목에 마우스를 올리면 강조 표시되도록 했습니다." },
+  ] },
+  { version: "v0.8.9", date: "2026-06-09", items: [
     { b: "품목코드·품목명 검색창 UI 정돈", t: ": 검색 목록이 펼쳐질 때 아래 입력칸들이 밀려 어색하게 움직이던 문제를 고쳤습니다. 이제 목록이 입력칸 위에 떠서(overlay) 표시돼 화면이 흔들리지 않습니다." },
   ] },
   { version: "v0.8.8", date: "2026-06-09", items: [

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Check, Search, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 /**
  * 범용 검색-선택 콤보박스.
@@ -41,16 +41,14 @@ export default function SearchSelect({
     <div className="form-group" style={{ position: 'relative' }}>
       <span className="form-label">{label}{required && <span className="req-star">*</span>}</span>
       <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
         <input
           type="text"
-          className="input-sm"
+          className="input-sm ss-input"
           value={value || ''}
           onChange={e => { onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={closeSoon}
           placeholder={placeholder}
-          style={{ paddingLeft: '1.9rem', paddingRight: '1.7rem' }}
         />
         {options.length > 0 && (
           <ChevronDown
@@ -86,6 +84,7 @@ export default function SearchSelect({
                 <button
                   key={opt}
                   type="button"
+                  className="ss-option"
                   onClick={() => { onChange(isSelected ? '' : opt); setOpen(false); }}
                   style={{
                     width: '100%',
