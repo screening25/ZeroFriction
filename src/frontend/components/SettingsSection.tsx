@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.2", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.3", date: "2026-06-09", latest: true, items: [
+    { b: "입출고 로그(통합) 추가", t: ": 재고 탭의 '로그' 버튼으로 전체 입·출고 기록을 시간순으로 한 곳에서 봅니다. 각 기록의 품목코드·품목명·수량·직후 잔량·담당자·고객사·위치·시각을 보여주고, CSV로 내보낼 수 있습니다." },
+  ] },
+  { version: "v0.9.2", date: "2026-06-09", items: [
     { b: "재고 카드 입고/출고 → 재고 상태로 변경", t: ": 합산 재고에서 입고/출고 뱃지가 마지막 이동에 따라 뒤집혀 헷갈리던 것을, 현재 수량 기준 '보유/소진/부족' 상태로 바꿨습니다. 개별 입고·출고는 '입출고 이력'에서 건별로 확인합니다. 현황 탭도 '총 재고/보유 중/소진·부족'으로 정리." },
   ] },
   { version: "v0.9.1", date: "2026-06-09", items: [
