@@ -85,7 +85,10 @@ export default function SearchSelect({
                   key={opt}
                   type="button"
                   className="ss-option"
-                  onClick={() => { onChange(isSelected ? '' : opt); setOpen(false); }}
+                  // onMouseDown(+preventDefault)로 선택을 확정 — 입력칸 blur가 목록을 먼저 닫아
+                  // 클릭이 씹히는 경합을 방지한다. 터치도 동일 경로로 동작.
+                  onMouseDown={e => { e.preventDefault(); cancelClose(); onChange(isSelected ? '' : opt); setOpen(false); }}
+                  onClick={e => e.preventDefault()}
                   style={{
                     width: '100%',
                     display: 'flex',

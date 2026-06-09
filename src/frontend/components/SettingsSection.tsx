@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.5", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.6", date: "2026-06-09", latest: true, items: [
+    { b: "품목코드·고객사 선택이 안 되던 문제 수정", t: ": 검색 목록에서 항목을 눌러도 선택되지 않던 문제(입력칸이 먼저 닫혀 클릭이 씹히던 경합)를 고쳤습니다. 이제 누르는 즉시 선택됩니다." },
+  ] },
+  { version: "v0.9.5", date: "2026-06-09", items: [
     { b: "버튼·입력 먹통 문제 수정(데스크톱)", t: ": 상단 헤더 전체가 창 '드래그 영역'이라 데스크톱 앱에서 헤더의 버튼·검색 입력이 클릭/입력을 삼켜 동작하지 않던 문제를 고쳤습니다. 헤더는 정상 클릭되고, 창 이동은 맨 위 얇은 영역으로만 합니다." },
   ] },
   { version: "v0.9.4", date: "2026-06-09", items: [
