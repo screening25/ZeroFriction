@@ -59,13 +59,15 @@ export default function SearchSelect({
             style={{ position: 'absolute', right: '0.55rem', top: '50%', transform: `translateY(-50%) ${open ? 'rotate(180deg)' : ''}`, color: 'var(--text-tertiary)', cursor: 'pointer', transition: 'transform 0.15s ease' }}
           />
         )}
-      </div>
-
-      {open && options.length > 0 && (
+        {open && options.length > 0 && (
         <div
           onMouseDown={cancelClose}
           style={{
-            marginTop: '0.35rem',
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 50,
             border: '1px solid var(--panel-border)',
             borderRadius: '10px',
             overflow: 'hidden',
@@ -108,7 +110,8 @@ export default function SearchSelect({
             })
           )}
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

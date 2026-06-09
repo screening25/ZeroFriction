@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.8", date: "2026-06-09", latest: true, items: [
+  { version: "v0.8.9", date: "2026-06-09", latest: true, items: [
+    { b: "품목코드·품목명 검색창 UI 정돈", t: ": 검색 목록이 펼쳐질 때 아래 입력칸들이 밀려 어색하게 움직이던 문제를 고쳤습니다. 이제 목록이 입력칸 위에 떠서(overlay) 표시돼 화면이 흔들리지 않습니다." },
+  ] },
+  { version: "v0.8.8", date: "2026-06-09", items: [
     { b: "정렬(오름·내림차순) 추가", t: ": 고객사는 가나다·ABC 오름/내림차순으로 정렬되고(일정 카테고리 설정에서 방향 토글), 메모는 작성일 오름/내림차순, 재고는 수동(드래그)·품목코드 오름/내림차순으로 각 화면 상단 버튼에서 바꿀 수 있습니다." },
   ] },
   { version: "v0.8.7", date: "2026-06-09", items: [
