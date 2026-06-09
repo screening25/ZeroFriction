@@ -326,7 +326,13 @@ export function addRecord(rec: Omit<UniversalRecord, 'id' | 'updatedAt'>): Unive
     // 재고 이동은 IN(입고/증가)과 OUT(출고/감소) 2가지 트랜잭션으로 누적 기록한다.
     // attrs.qty 는 현재 누적 재고(net stock) — 출고가 보유분보다 많거나
     // 재고가 0인 상태에서 출고하면 음수로 떨어진다 (정확한 채무/미배송 추적).
-    const existIdx = records.findIndex(r => r.type === 'asset' && r.title === rec.title);
+    //
+    // 합산(netting) 기준: 품목코드 + 품목명(사이즈). 즉 같은 코드의 같은 사이즈끼리만
+    // IN/OUT을 누적한다. 코드가 없으면 과거 호환을 위해 품목명만으로 매칭한다.
+    const recCode = (rec.attrs.code || '').trim();
+    const existIdx = recCode
+      ? records.findIndex(r => r.type === 'asset' && (r.attrs.code || '').trim() === recCode && r.title === rec.title)
+      : records.findIndex(r => r.type === 'asset' && r.title === rec.title);
     const flow = rec.attrs.flow || 'IN';
     const txQty = Math.abs(Number(rec.attrs.qty) || 0);
 
