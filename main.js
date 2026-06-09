@@ -307,7 +307,54 @@ app.on('ready', () => {
   createWindow();
   createQuickInputWindow();
   createTray();
+  startNotificationScheduler();
 });
+
+/**
+ * 백그라운드 알림 스케줄러 (메인 프로세스).
+ * 창을 트레이로 닫아 둔 상태에서도(렌더러가 절전·숨김이어도) 메인 프로세스가
+ * 주기적으로 서버(/api/state)의 일정을 확인해 예약 시각에 OS 네이티브 알림을 띄운다.
+ * (앱을 완전히 종료(Cmd+Q)하면 프로세스가 사라져 동작하지 않음 — 그 경우는 Web Push가 담당)
+ */
+const APP_URL_FOR_SCHED = 'https://zero-friction-roan.vercel.app';
+const notifiedKeys = new Set();
+async function checkSchedulesAndNotify() {
+  try {
+    // 창이 보이고 포커스되어 있으면 렌더러(웹앱)가 알림을 담당 → 중복 방지 위해 스킵
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()) return;
+    const res = await fetch(`${APP_URL_FOR_SCHED}/api/state`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const records = data.universal_records || [];
+    const settings = data.zero_settings || {};
+    const defOffset = typeof settings.defaultNotifyOffset === 'number' ? settings.defaultNotifyOffset : 0;
+    const now = Date.now();
+    records.forEach((r) => {
+      if (!r || r.type !== 'event') return;
+      const a = r.attrs || {};
+      if (a.completed || a.allDay || !a.date || !a.time) return;
+      const offset = (typeof a.notifyOffset === 'number') ? a.notifyOffset : defOffset;
+      if (offset < 0) return; // 알림 없음
+      const sched = new Date(`${a.date}T${a.time}`).getTime();
+      if (isNaN(sched)) return;
+      const fireAt = sched - offset * 60000;
+      const key = `${r.id}_${a.date}_${a.time}`;
+      // 발사 시각 이후 0~90초 윈도 안에서, 아직 안 알린 건만
+      if (now >= fireAt && now < fireAt + 90000 && !notifiedKeys.has(key)) {
+        notifiedKeys.add(key);
+        try {
+          const n = new Notification({ title: r.title || '일정 알림', body: `${a.time}${a.memo ? ' · ' + a.memo : ''}` });
+          n.on('click', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
+          n.show();
+        } catch (e) {}
+      }
+    });
+  } catch (e) { /* 네트워크 오류 등은 조용히 무시 */ }
+}
+function startNotificationScheduler() {
+  checkSchedulesAndNotify();
+  setInterval(checkSchedulesAndNotify, 30000); // 30초마다
+}
 
 app.on('before-quit', () => {
   isQuitting = true;
