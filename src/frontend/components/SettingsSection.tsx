@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.8.6", date: "2026-06-08", latest: true, items: [
+  { version: "v0.8.7", date: "2026-06-09", latest: true, items: [
+    { b: "입출고 합산 기준 수정", t: ": 출고가 같은 품목코드+품목명의 입고 수량에서 차감되도록 고쳤습니다. 이전엔 품목명만으로 합산해 코드가 같아도 따로 잡히던 문제를 해결했습니다. (이후 등록되는 입·출고부터 적용)" },
+  ] },
+  { version: "v0.8.6", date: "2026-06-08", items: [
     { b: "품목코드별 품목명·카테고리 재사용", t: ": 품목코드를 고르면 그 코드로 등록했던 품목명들이 목록으로 떠서 여러 개 중 골라 쓸 수 있고, 카테고리는 저장된 값으로 자동 선택됩니다." },
   ] },
   { version: "v0.8.5", date: "2026-06-08", items: [

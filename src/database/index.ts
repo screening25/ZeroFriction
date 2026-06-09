@@ -103,6 +103,9 @@ export interface AppSettings {
   notificationType?: 'system' | 'browser';
   enableNotifications?: boolean;
   clients?: string[];
+  clientSort?: 'asc' | 'desc';      // 고객사 정렬 방향(가나다/ABC)
+  memoSort?: 'asc' | 'desc';        // 메모 정렬(작성일)
+  inventorySort?: 'manual' | 'asc' | 'desc'; // 재고 정렬(수동 드래그/품목코드 오름·내림)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -130,7 +133,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   notificationType: 'system',
   enableNotifications: true,
-  clients: []
+  clients: [],
+  clientSort: 'asc',
+  memoSort: 'desc',
+  inventorySort: 'manual'
 };
 
 const ACCENT_COLORS = [
