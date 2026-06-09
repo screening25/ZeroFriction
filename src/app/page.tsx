@@ -1000,7 +1000,11 @@ export default function Home() {
   const displayInventories = (selectedInventoryCategory === '전체'
     ? inventory
     : inventory.filter(i => i.category === selectedInventoryCategory)
-  ).filter(i => inventoryFlowView === 'all' ? true : (i.attrs.flow || 'IN') === inventoryFlowView);
+  ).filter(i => {
+    if (inventoryFlowView === 'all') return true;
+    const q = Number(i.attrs.qty) || 0;
+    return inventoryFlowView === 'IN' ? q > 0 : q <= 0; // IN=보유(>0), OUT=소진·부족(<=0)
+  });
 
   // 동일 품목코드끼리 그룹으로 묶는다(코드 없으면 품목명 단독 그룹). 그룹 내에서 사이즈·변형별로 나열.
   const groupedInventories = useMemo(() => {
@@ -2040,7 +2044,6 @@ export default function Home() {
                     recentInventoryFlow.map((item, idx) => {
                       const qtyNum = Number(item.attrs.qty) || 0;
                       const isNegative = qtyNum < 0;
-                      const isOut = item.attrs.flow === 'OUT';
                       return (
                         <div 
                           key={item.id} 
@@ -2061,19 +2064,19 @@ export default function Home() {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                             {/* Flow Badge & Title */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
-                              <span 
-                                className="badge" 
-                                style={{ 
-                                  background: isOut ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', 
-                                  color: isOut ? 'var(--danger)' : 'var(--success)', 
-                                  fontSize: '0.55rem', 
-                                  padding: '0.05rem 0.25rem', 
-                                  borderRadius: '4px', 
+                              <span
+                                className="badge"
+                                style={{
+                                  background: isNegative ? 'var(--danger-soft-bg)' : qtyNum === 0 ? 'var(--hover-bg)' : 'var(--success-soft-bg)',
+                                  color: isNegative ? 'var(--danger)' : qtyNum === 0 ? 'var(--text-tertiary)' : 'var(--success)',
+                                  fontSize: '0.55rem',
+                                  padding: '0.05rem 0.25rem',
+                                  borderRadius: '4px',
                                   fontWeight: 800,
                                   flexShrink: 0
                                 }}
                               >
-                                {isOut ? '출고' : '입고'}
+                                {isNegative ? '부족' : qtyNum === 0 ? '소진' : '보유'}
                               </span>
                               <span 
                                 style={{ 
@@ -3571,18 +3574,18 @@ export default function Home() {
           </AnimatePresence>
 
           {/* Local Inventory Category Horizon Filtering Bar - Show ONLY when custom categories exist! */}
-          {/* 총 재고 / 입고 / 출고 현황 세그먼트 */}
+          {/* 총 재고 / 보유 / 소진·부족 현황 세그먼트 (현재 수량 기준) */}
           {(() => {
             const catFiltered = selectedInventoryCategory === '전체' ? inventory : inventory.filter(i => i.category === selectedInventoryCategory);
             const counts = {
               all: catFiltered.length,
-              IN: catFiltered.filter(i => (i.attrs.flow || 'IN') === 'IN').length,
-              OUT: catFiltered.filter(i => (i.attrs.flow || 'IN') === 'OUT').length,
+              IN: catFiltered.filter(i => (Number(i.attrs.qty) || 0) > 0).length,
+              OUT: catFiltered.filter(i => (Number(i.attrs.qty) || 0) <= 0).length,
             };
             const views: { key: 'all' | 'IN' | 'OUT'; label: string }[] = [
-              { key: 'all', label: '총 재고 현황' },
-              { key: 'IN', label: '입고 현황' },
-              { key: 'OUT', label: '출고 현황' },
+              { key: 'all', label: '총 재고' },
+              { key: 'IN', label: '보유 중' },
+              { key: 'OUT', label: '소진·부족' },
             ];
             return (
               <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.6rem' }}>
@@ -3806,11 +3809,21 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* Col 4: Flow badge (fixed width/aligned) */}
+                    {/* Col 4: 재고 상태 뱃지 (보유/소진/부족) — 마지막 이동이 아니라 현재 수량 기준 */}
                     <div style={{ width: '55px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <span className="badge" style={{ background: item.attrs.flow === 'OUT' ? 'var(--danger-soft-bg)' : 'var(--success-soft-bg)', color: item.attrs.flow === 'OUT' ? 'var(--danger)' : 'var(--success)', border: `1px solid ${item.attrs.flow === 'OUT' ? 'var(--danger-soft-border)' : 'var(--success-soft-border)'}`, fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600 }}>
-                        {item.attrs.flow === 'OUT' ? '출고' : '입고'}
-                      </span>
+                      {(() => {
+                        const isOut = qtyNum < 0;
+                        const isZero = qtyNum === 0;
+                        const label = isOut ? '부족' : isZero ? '소진' : '보유';
+                        const color = isOut ? 'var(--danger)' : isZero ? 'var(--text-tertiary)' : 'var(--success)';
+                        const bg = isOut ? 'var(--danger-soft-bg)' : isZero ? 'var(--hover-bg)' : 'var(--success-soft-bg)';
+                        const bd = isOut ? 'var(--danger-soft-border)' : isZero ? 'var(--panel-border)' : 'var(--success-soft-border)';
+                        return (
+                          <span className="badge" style={{ background: bg, color, border: `1px solid ${bd}`, fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 600 }}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     
                     {/* Col 5: Quantity indicator (aligned right) */}
