@@ -2,4 +2,4 @@
 // 비밀키는 절대 코드에 두지 않고 Vercel 환경변수 VAPID_PRIVATE_KEY 로만 설정한다.
 export const VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-  'BMZhZVv2SzLrqoJbCtiqydwmQaBBysYcQ5deDJpQWWktVbEOl25u63MRACdu9R-V2hR-0KAM9V2Co9WzahhDO6Q';
+  'BGwZKBCFFhOR-g11K3k1OX0RMhPJRe2UHotyH48jZdGr91TLB0WMNLIO9IgzYu3kAeC7e9kixBKcKboQdXIkFfw';
