@@ -1,11 +1,12 @@
 'use client';
 
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import CustomTimePicker from './CustomTimePicker';
 import CustomSelect from './CustomSelect';
 import CustomDatePicker from './CustomDatePicker';
 import ClientPicker from './ClientPicker';
-import ScheduleMemoInventory from './ScheduleMemoInventory';
+import ScheduleMemoInventory, { type ScheduleMemoInventoryHandle } from './ScheduleMemoInventory';
 import { getCategoryColorStyles } from '@/frontend/utils/styles';
 import type { AppSettings, UniversalRecord } from '@/database';
 
@@ -36,13 +37,28 @@ export default function ScheduleEditModal({
   const getCategorySoftBg = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).soft;
   const getCategoryBorder = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).border;
 
+  // 일정 저장 시 보류 중인 재고 행을 함께 기록하기 위한 핸들
+  const invRef = useRef<ScheduleMemoInventoryHandle>(null);
+
+  const handleSave = () => {
+    // 보류 중인 재고 행을 먼저 기록하고, 생성/합산된 품목 id를 이 일정의 연관 데이터로 연결한다.
+    // saveSchedule은 같은 클릭 틱에서 setState 결과를 볼 수 없으므로, 저장 직전 1회에 한해
+    // editingSchedule 객체의 linkedIds를 직접 갱신한다(곧바로 영속화되고 모달이 닫힘).
+    const ids = invRef.current?.recordPending() ?? [];
+    if (ids.length > 0) {
+      const cur = editingSchedule.attrs.linkedIds || [];
+      editingSchedule.attrs.linkedIds = [...cur, ...ids.filter((id: string) => !cur.includes(id))];
+    }
+    saveSchedule();
+  };
+
   return (
           <div className="modal-overlay" onClick={onClose}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.15 }} className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="ios-modal-header">
                 <button className="ios-text-btn" onClick={onClose}>취소</button>
                 <div className="ios-modal-title">일정 등록</div>
-                <button className="ios-text-btn bold" onClick={saveSchedule}>저장</button>
+                <button className="ios-text-btn bold" onClick={handleSave}>저장</button>
               </div>
               
               <div className="form-group">
@@ -142,16 +158,11 @@ export default function ScheduleEditModal({
               <div className="form-group">
                 <span className="form-label">메모</span>
                 <textarea rows={4} className="input-sm" value={editingSchedule.attrs.memo || ''} onChange={e => setEditingSchedule({...editingSchedule, attrs: { ...editingSchedule.attrs, memo: e.target.value }})} />
-                {/* 메모 속 재고 줄 인식·직접 입력 → 즉시 입출고 기록(시리얼 포함). 기록 품목은 일정에 자동 연결 */}
+                {/* 재고 직접 추가 — 행 입력 후 일정 저장 시 함께 입출고 기록·일정에 자동 연결 */}
                 <ScheduleMemoInventory
-                  memo={editingSchedule.attrs.memo || ''}
+                  ref={invRef}
                   scheduleTitle={editingSchedule.title}
                   client={editingSchedule.attrs.client}
-                  onLink={ids => {
-                    const cur = editingSchedule.attrs.linkedIds || [];
-                    const next = [...cur, ...ids.filter(id => !cur.includes(id))];
-                    setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, linkedIds: next } });
-                  }}
                 />
               </div>
               
