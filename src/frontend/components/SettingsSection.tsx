@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.8", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.9", date: "2026-06-09", latest: true, items: [
+    { b: "웹 푸시(앱 꺼져도 알림) 2차", t: ": 브라우저/PWA용 Web Push를 추가했습니다. 기기가 푸시를 구독하고, 서버(Vercel Cron)가 예약 시각에 푸시를 보내 폰·노트북이 꺼져 있어도 알림이 옵니다. (작동하려면 Vercel에 VAPID 비밀키 환경변수 추가 + 분 단위 크론 가능한 플랜 필요)" },
+  ] },
+  { version: "v0.9.8", date: "2026-06-09", items: [
     { b: "앱이 꺼져 있어도 알림(1차)", t: ": ①데스크톱은 앱을 트레이로 닫아둔 상태에서도 백그라운드에서 일정을 확인해 알림을 띄웁니다(앱 재시작 후 적용). ②안드로이드는 일정을 OS에 예약해 앱을 완전히 꺼도 정시에 알림이 뜹니다(APK 재빌드 필요). 폰 브라우저용 Web Push는 다음 단계로 추가됩니다." },
   ] },
   { version: "v0.9.7", date: "2026-06-09", items: [

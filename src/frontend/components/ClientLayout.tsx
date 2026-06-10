@@ -99,6 +99,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
+      // 웹 푸시 구독 — 앱이 꺼져 있어도 서버가 예약 시각에 푸시를 보낸다(웹/PWA). 잠시 뒤 SW 준비 후 시도.
+      import('@/frontend/utils/webPush').then(m => setTimeout(() => m.subscribeWebPush(), 1500)).catch(() => {});
     }
   }, []);
 
