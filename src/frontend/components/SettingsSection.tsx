@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.7", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.8", date: "2026-06-09", latest: true, items: [
+    { b: "앱이 꺼져 있어도 알림(1차)", t: ": ①데스크톱은 앱을 트레이로 닫아둔 상태에서도 백그라운드에서 일정을 확인해 알림을 띄웁니다(앱 재시작 후 적용). ②안드로이드는 일정을 OS에 예약해 앱을 완전히 꺼도 정시에 알림이 뜹니다(APK 재빌드 필요). 폰 브라우저용 Web Push는 다음 단계로 추가됩니다." },
+  ] },
+  { version: "v0.9.7", date: "2026-06-09", items: [
     { b: "입출고 로그 수정/삭제", t: ": 입출고 로그의 각 기록에서 '수정'을 눌러 입고/출고·수량·메모를 고치거나 삭제할 수 있습니다. 수정하면 해당 품목의 잔량·재고가 시간순으로 다시 계산됩니다." },
   ] },
   { version: "v0.9.6", date: "2026-06-09", items: [

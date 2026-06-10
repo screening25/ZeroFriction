@@ -9,6 +9,7 @@ import {
   ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive,
   initData
 } from '@/database';
+import { syncLocalNotifications } from '@/frontend/utils/nativeNotify';
 
 interface AppContextProps {
   theme: 'light' | 'dark';
@@ -466,6 +467,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  // 안드로이드(Capacitor) 로컬 알림 재예약 — 일정/설정 변경 시 OS에 예약을 갱신해
+  // 앱이 완전히 꺼져 있어도 정시에 알림이 뜨게 한다(웹/Electron에선 no-op).
+  useEffect(() => {
+    syncLocalNotifications(records, appSettings);
+  }, [records, appSettings]);
 
   // 일정 알림 스케줄러: 10초마다 임박한 일정을 검사해 알림을 발송한다.
   // 트리거 시각(일정시각 - notifyOffset) 기준 0~300초 윈도 안에서, 아직 알리지 않은 건만 발송한다.
