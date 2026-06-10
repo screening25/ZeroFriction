@@ -72,10 +72,11 @@
 | 항목 | 내용 |
 | --- | --- |
 | 웹 푸시 구독 | `webPush.subscribeWebPush()` — 서비스워커 PushSubscription 생성 후 `/api/push/subscribe`에 등록(AppState `push_subscriptions`에 endpoint 기준 저장). Capacitor 네이티브는 스킵 |
-| 발송 크론 | `/api/push/cron`(GET) — 발송 시각 도달 일정을 찾아 등록 기기로 `web-push` 발송, `push_sent`로 중복 방지·만료 구독 제거. `vercel.json`에 1분 크론 등록 |
+| 발송 엔드포인트 | `/api/push/cron`(GET) — 발송 시각 도달 일정을 찾아 등록 기기로 `web-push` 발송, `push_sent`로 중복 방지·만료 구독 제거. 1분마다 외부에서 호출 |
 | VAPID | 공개키는 `src/lib/vapid.ts`(공개값), 비밀키는 `VAPID_PRIVATE_KEY` 환경변수(서버 전용) |
 
-> ⚠️ 작동 조건(수동): ① Vercel 환경변수 `VAPID_PRIVATE_KEY`(+선택 `VAPID_SUBJECT`) 추가 후 재배포, ② 분 단위 크론이 가능한 Vercel 플랜(Hobby는 하루 1회 제한). 미설정 시 크론은 500("VAPID_PRIVATE_KEY 미설정") 반환.
+> ⚠️ 작동 조건(수동): ① Vercel 환경변수 `VAPID_PRIVATE_KEY`(+선택 `VAPID_SUBJECT`) 추가 후 재배포, ② `/api/push/cron`을 1분마다 호출(무료 cron-job.org·GitHub Actions, 또는 Vercel Pro Cron). 미설정 시 500("VAPID_PRIVATE_KEY 미설정") 반환.
+> 참고: 처음엔 `vercel.json`에 1분 크론을 넣었으나 Hobby 플랜에서 분 단위 크론이 거부돼 배포가 실패 → `vercel.json` 제거하고 외부 크론 방식으로 변경.
 
 ---
 

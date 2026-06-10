@@ -6,10 +6,11 @@ import { VAPID_PUBLIC_KEY } from '@/lib/vapid';
 export const dynamic = 'force-dynamic';
 
 /**
- * 예약 알림 발송 크론.
- * Vercel Cron이 1분마다 호출 → 발송 시각이 임박/도달한 일정을 찾아
- * 등록된 모든 기기(PushSubscription)로 Web Push를 보낸다(앱이 꺼져 있어도 OS가 수신).
- * 중복 발송은 push_sent(보낸 키 목록)로 방지.
+ * 예약 알림 발송 엔드포인트.
+ * 1분마다 호출(외부 크론 cron-job.org/GitHub Actions, 또는 Vercel Pro Cron)되면
+ * 발송 시각이 도달한 일정을 찾아 등록된 모든 기기(PushSubscription)로 Web Push 발송.
+ * (앱/브라우저가 꺼져 있어도 OS가 수신) 중복은 push_sent로 방지.
+ * 참고: Vercel Hobby 플랜은 분 단위 Cron 불가 → vercel.json crons 대신 외부 크론 사용.
  */
 export async function GET() {
   const priv = process.env.VAPID_PRIVATE_KEY;
