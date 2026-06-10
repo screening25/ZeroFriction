@@ -1904,6 +1904,8 @@ button,
   to { transform: rotate(360deg); }
 }
 
+.spin { animation: spin 0.9s linear infinite; }
+
 @keyframes bell-ring {
   0%, 100% { transform: rotate(0); }
   10%, 30%, 50%, 70%, 90% { transform: rotate(15deg); }

@@ -197,7 +197,12 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.11", date: "2026-06-10", latest: true, items: [
+  { version: "v0.9.12", date: "2026-06-10", latest: true, items: [
+    { b: "📷 카메라 라벨 스캔(무료 OCR)", t: ": 재고 등록 화면에서 품목 라벨을 사진으로 찍으면 글자를 인식해, 각 줄을 모델명(코드)/사이즈(품목명)/시리얼 중 어디에 넣을지 직접 골라 자동 입력합니다(기기 내장 OCR, 서버·키 불필요)." },
+    { b: "📦 일정 ↔ 재고 연동", t: ": 일정 등록 화면 안에서 특정 품목을 골라 바로 입·출고를 기록하고 메모를 남길 수 있습니다. 기록한 재고는 그 일정에 자동 연결됩니다." },
+    { b: "📱 모바일 알림 켜기 버튼", t: ": 설정에 '이 기기에서 알림 받기(모바일)'를 추가했습니다. 폰(아이폰은 홈 화면 추가 후 실행)에서 눌러 권한을 허용하면 앱이 닫혀 있어도 알림을 받습니다. PWA 아이콘도 정상화." },
+  ] },
+  { version: "v0.9.11", date: "2026-06-10", items: [
     { b: "알림 뜰 때 앱 창이 같이 튀어나오던 문제 수정", t: ": 데스크톱 앱에서 알림 발사 시 창을 강제로 앞으로 가져오던(focusWindow) 동작을 제거했습니다. 이제 최소화 상태에서 OS 배너만 뜨고 앱은 그대로 있습니다. 푸시 전용 서비스워커 등록으로 웹 푸시 구독도 정상화." },
   ] },
   { version: "v0.9.10", date: "2026-06-09", items: [
@@ -909,7 +914,7 @@ export default function SettingsSection() {
                     let perm = Notification.permission;
                     if (perm === 'default') perm = await Notification.requestPermission();
                     if (perm === 'granted') {
-                      new Notification(title, { body, icon: '/icon-192x192.png' });
+                      new Notification(title, { body, icon: '/icon.png' });
                       showToast('테스트 배너 알림을 발송했습니다.');
                     } else {
                       showToast('OS 알림 권한이 꺼져 있습니다. 시스템 설정에서 이 앱의 알림을 허용해 주세요.');
@@ -924,6 +929,38 @@ export default function SettingsSection() {
               style={{ width: '6.0rem' }}
             >
               테스트 실행
+            </button>
+          </div>
+
+          {/* 모바일(폰) 푸시 구독 — 앱/브라우저가 닫혀 있어도 OS 알림 수신. iOS는 홈 화면 추가 후 실행 필요 */}
+          <div className="flex items-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+            <span className="settings-label-compact">이 기기에서 알림 받기(모바일)</span>
+            <button
+              type="button"
+              className="settings-btn-compact"
+              onClick={async () => {
+                try {
+                  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    showToast('이 브라우저는 푸시를 지원하지 않습니다.');
+                    return;
+                  }
+                  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+                    showToast('알림 권한이 차단됨. 브라우저/시스템 설정에서 허용해 주세요.');
+                    return;
+                  }
+                  showToast('알림 권한을 요청합니다…');
+                  const { subscribeWebPush } = await import('@/frontend/utils/webPush');
+                  await subscribeWebPush();
+                  showToast(Notification.permission === 'granted'
+                    ? '이 기기를 알림 대상으로 등록했습니다.'
+                    : '권한이 허용되지 않아 등록되지 않았습니다.');
+                } catch {
+                  showToast('알림 등록 중 오류가 발생했습니다.');
+                }
+              }}
+              style={{ width: '6.0rem' }}
+            >
+              알림 켜기
             </button>
           </div>
         </div>

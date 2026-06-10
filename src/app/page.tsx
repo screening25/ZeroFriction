@@ -16,6 +16,7 @@ import { isHoliday } from '@/frontend/utils/calendar';
 import { isSerialPattern } from '@/frontend/utils/inventory';
 import ClientPicker from '@/frontend/components/ClientPicker';
 import SearchSelect from '@/frontend/components/SearchSelect';
+import CameraScan from '@/frontend/components/CameraScan';
 
 interface BulkRow {
   code: string;
@@ -111,6 +112,8 @@ export default function Home() {
   const [editingTxnId, setEditingTxnId] = useState<string | null>(null); // 수정 중인 로그 항목
   const [txnDraft, setTxnDraft] = useState<{ flow: 'IN' | 'OUT'; qty: number; memo: string }>({ flow: 'IN', qty: 0, memo: '' });
   const [isInvMenuOpen, setIsInvMenuOpen] = useState(false); // 재고 '더보기' 메뉴
+  // 일정 안에서 특정 재고를 입출고 기록하기 위한 드래프트
+  const [schedInv, setSchedInv] = useState<{ assetId: string; qty: number; flow: 'IN' | 'OUT'; memo: string }>({ assetId: '', qty: 1, flow: 'OUT', memo: '' });
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set()); // 접힌 재고 그룹(코드)
   const toggleGroupCollapse = (code: string) => setCollapsedGroups(prev => {
     const next = new Set(prev);
@@ -4369,6 +4372,72 @@ export default function Home() {
                 </div>
               </div>
               
+              {/* 📦 이 일정에서 재고 입출고 기록 — 특정 품목을 선택해 즉시 입·출고 처리하고 메모를 남긴다 */}
+              <div className="form-group" style={{ marginTop: '0.6rem' }}>
+                <span className="form-label">이 일정에서 재고 입출고</span>
+                {records.filter(r => r.type === 'asset').length === 0 ? (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', paddingLeft: '0.2rem' }}>등록된 재고가 없습니다.</span>
+                ) : (
+                  <>
+                    <CustomSelect
+                      value={schedInv.assetId}
+                      placeholder="품목 선택"
+                      options={[
+                        { value: '', label: '품목 선택' },
+                        ...records.filter(r => r.type === 'asset').map(r => ({
+                          value: r.id,
+                          label: `${r.attrs.code ? '[' + r.attrs.code + '] ' : ''}${r.title} (${Number(r.attrs.qty) || 0}개)`
+                        }))
+                      ]}
+                      onChange={val => setSchedInv({ ...schedInv, assetId: val })}
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.45rem' }}>
+                      <input type="number" min={1} className="input-sm" style={{ flex: 1 }} value={schedInv.qty}
+                        onChange={e => setSchedInv({ ...schedInv, qty: Number(e.target.value) })} />
+                      <div style={{ width: '120px' }}>
+                        <CustomSelect value={schedInv.flow}
+                          options={[{ value: 'IN', label: '입고' }, { value: 'OUT', label: '출고' }]}
+                          onChange={val => setSchedInv({ ...schedInv, flow: val as 'IN' | 'OUT' })} />
+                      </div>
+                    </div>
+                    <input type="text" className="input-sm" placeholder="메모(선택)" style={{ marginTop: '0.45rem' }}
+                      value={schedInv.memo} onChange={e => setSchedInv({ ...schedInv, memo: e.target.value })} />
+                    <button type="button" className="ghost-btn" style={{ marginTop: '0.5rem', width: '100%' }}
+                      onClick={() => {
+                        const asset = records.find(r => r.id === schedInv.assetId && r.type === 'asset');
+                        if (!asset) { showToast('품목을 선택하세요.'); return; }
+                        const q = Math.abs(Number(schedInv.qty) || 0);
+                        if (q <= 0) { showToast('수량을 입력하세요.'); return; }
+                        addRecord({
+                          title: asset.title,
+                          type: 'asset',
+                          category: asset.category || '재고',
+                          attrs: {
+                            code: asset.attrs.code || '',
+                            qty: q,
+                            flow: schedInv.flow,
+                            loc: asset.attrs.loc,
+                            mgr: asset.attrs.mgr,
+                            client: editingSchedule.attrs.client || asset.attrs.client,
+                            memo: `[일정] ${editingSchedule.title}${schedInv.memo ? ' · ' + schedInv.memo : ''}`,
+                          }
+                        });
+                        const linked = editingSchedule.attrs.linkedIds || [];
+                        if (!linked.includes(asset.id)) {
+                          setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, linkedIds: [...linked, asset.id] } });
+                        }
+                        reloadRecords();
+                        logActivity('UPDATE_INV', '일정 연동 입출고', `${asset.title} ${schedInv.flow === 'OUT' ? '출고' : '입고'} ${q}개`);
+                        showToast(`${asset.title} ${schedInv.flow === 'OUT' ? '출고' : '입고'} ${q}개 기록됨`);
+                        setSchedInv({ assetId: '', qty: 1, flow: 'OUT', memo: '' });
+                      }}
+                    >
+                      재고 기록
+                    </button>
+                  </>
+                )}
+              </div>
+
               <div className="ios-toggle-row">
                 <span className="ios-toggle-label">완료 처리</span>
                 <button
@@ -4397,6 +4466,19 @@ export default function Home() {
                 <div className="ios-modal-title">재고 등록</div>
                 <button className="ios-text-btn bold" onClick={saveInventory}>저장</button>
               </div>
+
+              {/* 📷 카메라 라벨 스캔 — 모델명(코드)/사이즈(품목명)/시리얼을 찍어 자동 입력 */}
+              <CameraScan
+                onApply={fields => setEditingInventory({
+                  ...editingInventory,
+                  ...(fields.title ? { title: fields.title } : {}),
+                  attrs: {
+                    ...editingInventory.attrs,
+                    ...(fields.code ? { code: fields.code } : {}),
+                    ...(fields.serial ? { serial: fields.serial } : {}),
+                  },
+                })}
+              />
 
               {/* 품목코드 및 품목명 각각 독립된 세로 form-group 으로 배치하여 100% 화면에 핏(Fit)되도록 교정! */}
               <SearchSelect

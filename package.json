@@ -1,6 +1,6 @@
 {
   "name": "zero-scheduler",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3005",
@@ -30,6 +30,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-icons": "^5.6.0",
+    "tesseract.js": "^5.1.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
