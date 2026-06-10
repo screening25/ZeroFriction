@@ -997,6 +997,31 @@ export default function Home() {
     showToast(merged > 0 ? `중복 재고 ${merged}건을 합쳤습니다.` : '합칠 중복 재고가 없습니다.');
   };
 
+  // 카메라 스캔 결과로 어떤 품목인지 식별: 시리얼 → 코드+품목명 → 코드 → 품목명 순으로 매칭.
+  // 일치하면 그 품목의 수정 모달을 열어 보여주고, 없으면 스캔 값이 채워진 신규 등록을 연다.
+  const openScannedInventory = (fields: { code?: string; title?: string; serial?: string }) => {
+    const assets = records.filter(r => r.type === 'asset');
+    const code = (fields.code || '').trim();
+    const title = (fields.title || '').trim();
+    const serial = (fields.serial || '').trim();
+    let found: any;
+    if (serial) found = assets.find(r => (r.attrs.serial || '').trim() === serial);
+    if (!found && code && title) found = assets.find(r => (r.attrs.code || '').trim() === code && r.title.trim() === title);
+    if (!found && code) found = assets.find(r => (r.attrs.code || '').trim() === code);
+    if (!found && title) found = assets.find(r => r.title.trim() === title);
+    if (found) {
+      setEditingInventory(found);
+      showToast(`기존 품목으로 인식: ${found.title}`);
+    } else {
+      setEditingInventory({
+        id: '', title, type: 'asset', category: '재고',
+        attrs: { code, qty: 1, flow: 'IN', loc: '', mgr: '', serial, memo: '' },
+        updatedAt: new Date().toISOString()
+      });
+      showToast('일치하는 품목이 없어 새 재고 등록으로 엽니다.');
+    }
+  };
+
   // 전체 재고의 입출고 트랜잭션을 시간 역순으로 모은 통합 로그
   const allTxns = useMemo(() => {
     const rows: any[] = [];
@@ -2958,6 +2983,9 @@ export default function Home() {
           <div className="section-header" style={{ marginBottom: '0.8rem' }}>
             <div className="section-title">재고 현황</div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', position: 'relative' }}>
+              {/* 📷 라벨 스캔 — 아무 품목이나 찍어 어떤 재고인지 식별(시리얼/코드/품목명 매칭) */}
+              <CameraScan compact onApply={openScannedInventory} />
+
               {/* ➕ 재고 등록 (주요 동작) */}
               <button
                 className="btn-ghost"

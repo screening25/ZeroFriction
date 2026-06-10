@@ -19,8 +19,11 @@ const TARGETS: { key: Target; label: string }[] = [
  */
 export default function CameraScan({
   onApply,
+  compact = false,
 }: {
   onApply: (fields: { code?: string; title?: string; serial?: string }) => void;
+  /** true면 섹션 헤더에 맞는 작은 버튼으로 표시 */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +70,13 @@ export default function CameraScan({
       <button
         type="button"
         onClick={() => { reset(); setOpen(true); }}
-        style={{
+        title="라벨 스캔"
+        style={compact ? {
+          display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.35rem 0.7rem',
+          borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700,
+          border: '1px solid var(--accent-soft-border)', background: 'var(--accent-soft-bg)',
+          color: 'var(--accent)', cursor: 'pointer', flexShrink: 0,
+        } : {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
           width: '100%', padding: '0.6rem', marginBottom: '0.6rem',
           borderRadius: '10px', border: '1px solid var(--accent)',
@@ -75,7 +84,7 @@ export default function CameraScan({
           fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
         }}
       >
-        <Camera size={15} /> 카메라로 라벨 스캔
+        <Camera size={compact ? 14 : 15} /> {compact ? '스캔' : '카메라로 라벨 스캔'}
       </button>
 
       {open && (

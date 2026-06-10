@@ -3,7 +3,10 @@ export type VersionLog = { version: string; date: string; latest?: boolean; item
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 export const UPDATES_PER_PAGE = 2;
 export const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.14", date: "2026-06-10", latest: true, items: [
+  { version: "v0.9.15", date: "2026-06-10", latest: true, items: [
+    { b: "📷 카메라 스캔을 재고 화면 최상단으로 이동", t: ": 라벨 스캔이 재고 등록 모달 안이 아니라 재고 현황 헤더('스캔' 버튼)에 있습니다. 아무 품목이나 찍으면 시리얼 → 코드+품목명 → 코드 → 품목명 순으로 기존 재고와 대조해 어떤 품목인지 찾아 열어주고, 없으면 스캔 값이 채워진 신규 등록을 엽니다." },
+  ] },
+  { version: "v0.9.14", date: "2026-06-10", items: [
     { b: "'메모에서 재고 인식' 버튼 제거", t: ": 일정 메모의 자동 인식 기능을 빼고, '재고 직접 추가'로 행을 만들어 품목코드·품목명·수량·시리얼을 직접 입력하는 방식만 남겼습니다." },
   ] },
   { version: "v0.9.13", date: "2026-06-10", items: [

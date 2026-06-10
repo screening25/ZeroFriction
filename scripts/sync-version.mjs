@@ -1,6 +1,6 @@
 // 버전 단일 소스화(single source of truth)
 // ─────────────────────────────────────────────
-// 앱 버전의 "진짜 출처"는 SettingsSection.tsx의 VERSION_LOGS[0].version 하나다.
+// 앱 버전의 "진짜 출처"는 src/frontend/data/versionLogs.ts의 VERSION_LOGS[0].version 하나다.
 // (릴리스마다 거기 맨 위에 새 버전 항목을 추가한다 — 화면 '업데이트 정보'에 그대로 노출됨)
 // 이 스크립트는 그 값을 읽어 package.json의 version을 자동으로 맞춘다.
 // npm의 prebuild 라이프사이클로 build 직전에 실행되어, 두 곳이 어긋날 일이 없게 한다.
@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 try {
-  const logsUrl = new URL('../src/frontend/components/SettingsSection.tsx', import.meta.url);
+  const logsUrl = new URL('../src/frontend/data/versionLogs.ts', import.meta.url);
   const src = readFileSync(logsUrl, 'utf8');
   // VERSION_LOGS 배열에서 처음 등장하는 version: "vX.Y.Z" 를 단일 소스로 사용
   const m = src.match(/version:\s*["']v?(\d+\.\d+\.\d+)["']/);

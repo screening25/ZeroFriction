@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { ClipboardList, ChevronDown, AlertTriangle } from 'lucide-react';
-import CameraScan from './CameraScan';
 import SearchSelect from './SearchSelect';
 import CustomSelect from './CustomSelect';
 import ClientPicker from './ClientPicker';
@@ -11,7 +10,7 @@ import type { AppSettings } from '@/database';
 
 /**
  * 재고 등록/수정 모달 (page.tsx에서 추출 — 동작 동일).
- * 카메라 라벨 스캔, 품목코드/품목명 검색선택, 입출고 이력, 음수 재고 경고 포함.
+ * 품목코드/품목명 검색선택, 입출고 이력, 음수 재고 경고 포함.
  */
 export default function InventoryEditModal({
   editingInventory,
@@ -44,19 +43,6 @@ export default function InventoryEditModal({
                 <div className="ios-modal-title">재고 등록</div>
                 <button className="ios-text-btn bold" onClick={saveInventory}>저장</button>
               </div>
-
-              {/* 📷 카메라 라벨 스캔 — 모델명(코드)/사이즈(품목명)/시리얼을 찍어 자동 입력 */}
-              <CameraScan
-                onApply={fields => setEditingInventory({
-                  ...editingInventory,
-                  ...(fields.title ? { title: fields.title } : {}),
-                  attrs: {
-                    ...editingInventory.attrs,
-                    ...(fields.code ? { code: fields.code } : {}),
-                    ...(fields.serial ? { serial: fields.serial } : {}),
-                  },
-                })}
-              />
 
               {/* 품목코드 및 품목명 각각 독립된 세로 form-group 으로 배치하여 100% 화면에 핏(Fit)되도록 교정! */}
               <SearchSelect
