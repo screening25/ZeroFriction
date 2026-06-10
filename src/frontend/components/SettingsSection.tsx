@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.9", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.10", date: "2026-06-09", latest: true, items: [
+    { b: "OS 배너 알림이 안 뜨던 문제 수정(핵심)", t: ": 알림이 '배너' 설정일 때만 나가도록 막혀 있어, 기본값에선 인앱 카드만 뜨고 OS 배너가 아예 안 나왔습니다. 이제 설정과 무관하게 노트북·폰 모두 OS 배너가 발사됩니다(권한 미허용 시 자동 요청). 설정의 '알림 테스트'로 바로 확인하세요." },
+  ] },
+  { version: "v0.9.9", date: "2026-06-09", items: [
     { b: "웹 푸시(앱 꺼져도 알림) 2차", t: ": 브라우저/PWA용 Web Push를 추가했습니다. 기기가 푸시를 구독하고, 서버(Vercel Cron)가 예약 시각에 푸시를 보내 폰·노트북이 꺼져 있어도 알림이 옵니다. (작동하려면 Vercel에 VAPID 비밀키 환경변수 추가 + 분 단위 크론 가능한 플랜 필요)" },
   ] },
   { version: "v0.9.8", date: "2026-06-09", items: [
@@ -888,38 +891,28 @@ export default function SettingsSection() {
 
                 try {
                   const now = new Date();
-                  const isBrowser = localSettings.notificationType === 'browser';
+                  const title = 'Zero-Friction 알림 테스트';
+                  const body = 'OS 배너 알림이 정상 작동합니다!';
 
-                  if (isBrowser) {
-                    // OS 배너 알림 테스트 (기존 경로 유지)
-                    const title = 'Zero-Friction 알림 테스트';
-                    const body = 'OS 표준 슬라이드 배너 알림이 정상 작동 중입니다!';
-                    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-                      (window as any).electronAPI.sendNotification({ title, body });
+                  // 인앱 카드는 항상 표시
+                  setActiveNotification({ id: '__test__', title, body, time: format(now, 'HH:mm'), date: format(now, 'yyyy-MM-dd') });
+
+                  // OS 배너 — 항상 시도. Electron 네이티브 / 웹 Notification(권한 요청 포함).
+                  const electronAPI = (typeof window !== 'undefined') ? (window as any).electronAPI : undefined;
+                  if (electronAPI?.sendNotification) {
+                    electronAPI.sendNotification({ title, body });
+                    showToast('테스트 배너 알림을 발송했습니다.');
+                  } else if (typeof window !== 'undefined' && 'Notification' in window) {
+                    let perm = Notification.permission;
+                    if (perm === 'default') perm = await Notification.requestPermission();
+                    if (perm === 'granted') {
+                      new Notification(title, { body, icon: '/icon-192x192.png' });
                       showToast('테스트 배너 알림을 발송했습니다.');
-                    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                      new Notification(title, { body });
-                      showToast('테스트 배너 알림을 발송했습니다.');
-                    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
-                      showToast('시스템 알림 권한이 거부되어 알림을 발송할 수 없습니다.');
                     } else {
-                      const res = await fetch('/api/notify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title, body, type: 'browser' })
-                      });
-                      showToast(res.ok ? '테스트 배너 알림이 발송되었습니다.' : '알림 발송에 실패했습니다.');
+                      showToast('OS 알림 권한이 꺼져 있습니다. 시스템 설정에서 이 앱의 알림을 허용해 주세요.');
                     }
                   } else {
-                    // 'system'(데스크톱 알림창) = 새 인앱 글래스모피즘 알림 카드를 즉시 미리보기
-                    setActiveNotification({
-                      id: '__test__',
-                      title: 'Zero-Friction 알림 테스트',
-                      body: '인앱 알림 카드가 정상적으로 표시됩니다!',
-                      time: format(now, 'HH:mm'),
-                      date: format(now, 'yyyy-MM-dd')
-                    });
-                    showToast('테스트 알림 카드를 표시했습니다.');
+                    showToast('이 환경은 OS 알림을 지원하지 않습니다(인앱 카드만 표시).');
                   }
                 } catch (e) {
                   showToast('테스트 알림 오류 발생');

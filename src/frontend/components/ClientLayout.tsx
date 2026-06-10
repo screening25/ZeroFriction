@@ -151,22 +151,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     });
   }, [mounted, executeNlpCommand]);
 
-  // activeNotification 발생 시 OS 배너 알림 발사
-  useEffect(() => {
-    if (!activeNotification) return;
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    const n = new Notification(activeNotification.title || '일정 알림', {
-      body: `${activeNotification.body}  ${activeNotification.date} ${activeNotification.time}`,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
-    });
-    // 배너 클릭 시 앱 포커스
-    n.onclick = () => {
-      window.focus();
-      n.close();
-    };
-  }, [activeNotification]);
+  // OS 배너 발사는 AppContext 스케줄러(③)가 단일 처리한다(여기서 중복 발사하던 것을 제거).
 
   // 앱 업데이트 — 서비스 워커 캐시 완전 삭제 후 강제 새로고침
   const [isUpdating, setIsUpdating] = useState(false);

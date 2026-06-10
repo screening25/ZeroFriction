@@ -518,18 +518,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 electronAPI.focusWindow();
               }
 
-              // ③ 'browser'(OS 배너) 설정이면 OS 레벨 배너도 함께 발송 (앱이 백그라운드일 때 대비)
-              if (appSettings.notificationType === 'browser' && typeof window !== 'undefined') {
-                if (isElectron) {
+              // ③ OS 배너 알림 — 설정과 무관하게 항상 발사한다(인앱 카드만 뜨고 배너가 안 나오던 문제 수정).
+              //    Electron은 네이티브 알림, 웹/PWA는 Notification API(권한 허용 시).
+              if (typeof window !== 'undefined') {
+                if (isElectron && electronAPI?.sendNotification) {
                   electronAPI.sendNotification({ title, body: fullBody });
-                } else if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification(title, { body: fullBody });
-                } else {
-                  fetch('/api/notify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, body: fullBody, type: 'browser' })
-                  }).catch(() => {});
+                } else if ('Notification' in window) {
+                  if (Notification.permission === 'granted') {
+                    try { new Notification(title, { body: fullBody, icon: '/icon-192x192.png' }); } catch {}
+                  } else if (Notification.permission === 'default') {
+                    // 권한이 아직이면 요청 후, 허용되면 즉시 발사
+                    Notification.requestPermission().then(p => {
+                      if (p === 'granted') { try { new Notification(title, { body: fullBody, icon: '/icon-192x192.png' }); } catch {} }
+                    });
+                  }
                 }
               }
             }
