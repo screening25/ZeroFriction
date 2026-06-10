@@ -29,7 +29,9 @@ export async function subscribeWebPush(): Promise<void> {
       if (p !== 'granted') return;
     }
 
-    const reg = await navigator.serviceWorker.ready;
+    // 푸시 전용 SW를 직접 등록(next-pwa는 비활성 상태). 캐싱 없는 워커라 업데이트 막힘 없음.
+    const reg = await navigator.serviceWorker.register('/sw-push.js');
+    await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     if (!sub) {
       sub = await reg.pushManager.subscribe({
