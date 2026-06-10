@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.13", date: "2026-06-10", latest: true, items: [
+  { version: "v0.9.14", date: "2026-06-10", latest: true, items: [
+    { b: "'메모에서 재고 인식' 버튼 제거", t: ": 일정 메모의 자동 인식 기능을 빼고, '재고 직접 추가'로 행을 만들어 품목코드·품목명·수량·시리얼을 직접 입력하는 방식만 남겼습니다." },
+  ] },
+  { version: "v0.9.13", date: "2026-06-10", items: [
     { b: "📝 일정 메모에서 재고 바로 기록", t: ": 일정 메모에 'FTG13-0005 CLBX5 (Cell X5) 48' 같은 줄을 적고 '메모에서 재고 인식'을 누르면 품목코드·품목명·수량을 자동 인식해 입·출고로 즉시 기록합니다. '재고 직접 추가'로 행을 만들어 시리얼 번호까지 손으로 입력할 수도 있고, 기록된 품목은 일정에 자동 연결됩니다. (기존 별도 품목선택 패널은 메모 통합형으로 대체)" },
   ] },
   { version: "v0.9.12", date: "2026-06-10", items: [

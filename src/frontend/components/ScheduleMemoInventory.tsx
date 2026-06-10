@@ -14,50 +14,22 @@ interface Row {
 }
 
 /**
- * 일정 메모 안의 재고 줄을 인식해 즉시 입·출고로 기록하는 패널(메모 textarea 바로 아래에 결합).
- * - "FTG13-0005 CLBX5 (Cell X5) 48" 같은 "코드 품목명 수량" 줄을 자동 인식
- * - "Hardcase 2" 같은 코드 없는 "품목명 수량" 줄도 인식(시리얼/세트 표기인 콜론 줄은 제외)
- * - 행을 직접 추가해 품목코드·품목명·수량·시리얼을 손으로 입력할 수도 있다
+ * 일정 안에서 재고를 직접 입력해 즉시 입·출고로 기록하는 패널(메모 textarea 바로 아래에 결합).
+ * 행을 추가해 품목코드·품목명·수량·시리얼을 입력하면 기존 재고에 합산 기록된다.
  * 기록된 품목 id는 onLink로 돌려줘 일정의 연관 데이터(linkedIds)에 자동 연결한다.
  */
 export default function ScheduleMemoInventory({
-  memo,
   scheduleTitle,
   client,
   onLink,
 }: {
-  memo: string;
+  memo?: string; // 사용처 호환을 위해 유지(현재 미사용 — 메모 자동 인식 기능 제거됨)
   scheduleTitle: string;
   client?: string;
   onLink: (assetIds: string[]) => void;
 }) {
   const { showToast, logActivity, reloadRecords } = useApp();
   const [rows, setRows] = useState<Row[]>([]);
-
-  const parseMemo = () => {
-    const out: Row[] = [];
-    memo.split('\n').forEach(raw => {
-      const line = raw.trim();
-      if (!line) return;
-      // ① "품목코드 품목명 수량" — 예: FTG13-0005 CLBX5 (Cell X5) 48
-      let m = line.match(/^([A-Za-z]{2,6}\d{1,3}-\d{3,6})\s+(.+?)\s+(\d{1,4})$/);
-      if (m) {
-        out.push({ code: m[1], title: m[2].trim(), qty: Number(m[3]), flow: 'IN', serial: '' });
-        return;
-      }
-      // ② 코드 없는 "품목명 수량" — 예: Hardcase 2 (Hub:LHP1-… 같은 시리얼 줄 오인 방지를 위해 콜론 줄 제외)
-      if (!line.includes(':')) {
-        m = line.match(/^([A-Za-z][\w\s\-_+()./]{1,40}?)\s+(\d{1,3})$/);
-        if (m) out.push({ code: '', title: m[1].trim(), qty: Number(m[2]), flow: 'IN', serial: '' });
-      }
-    });
-    if (out.length === 0) {
-      showToast('메모에서 재고 형식 줄을 찾지 못했습니다. (예: FTG13-0005 CLBX5 48)');
-      return;
-    }
-    setRows(out);
-    showToast(`${out.length}개 품목을 인식했습니다. 확인 후 기록하세요.`);
-  };
 
   const update = (i: number, patch: Partial<Row>) =>
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -95,7 +67,6 @@ export default function ScheduleMemoInventory({
   return (
     <div style={{ marginTop: '0.45rem' }}>
       <div style={{ display: 'flex', gap: '0.4rem' }}>
-        <button type="button" className="ghost-btn" onClick={parseMemo}>메모에서 재고 인식</button>
         <button
           type="button"
           className="ghost-btn"
