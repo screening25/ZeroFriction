@@ -513,23 +513,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 date: s.attrs.date || ''
               });
 
-              // ② 데스크톱(Electron) 앱이면 창을 앞으로 가져와 카드가 확실히 보이도록 한다
-              if (isElectron) {
-                electronAPI.focusWindow();
-              }
-
-              // ③ OS 배너 알림 — 설정과 무관하게 항상 발사한다(인앱 카드만 뜨고 배너가 안 나오던 문제 수정).
+              // ② OS 배너 알림 — 설정과 무관하게 항상 발사한다(인앱 카드만 뜨고 배너가 안 나오던 문제 수정).
+              //    배너만 뜨게 하고 앱 창은 끌어오지 않는다(focusWindow 제거).
               //    Electron은 네이티브 알림, 웹/PWA는 Notification API(권한 허용 시).
               if (typeof window !== 'undefined') {
                 if (isElectron && electronAPI?.sendNotification) {
                   electronAPI.sendNotification({ title, body: fullBody });
                 } else if ('Notification' in window) {
                   if (Notification.permission === 'granted') {
-                    try { new Notification(title, { body: fullBody, icon: '/icon-192x192.png' }); } catch {}
+                    try { new Notification(title, { body: fullBody, icon: '/icon.png' }); } catch {}
                   } else if (Notification.permission === 'default') {
                     // 권한이 아직이면 요청 후, 허용되면 즉시 발사
                     Notification.requestPermission().then(p => {
-                      if (p === 'granted') { try { new Notification(title, { body: fullBody, icon: '/icon-192x192.png' }); } catch {} }
+                      if (p === 'granted') { try { new Notification(title, { body: fullBody, icon: '/icon.png' }); } catch {} }
                     });
                   }
                 }

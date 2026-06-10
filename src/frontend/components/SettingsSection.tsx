@@ -197,7 +197,10 @@ type VersionLog = { version: string; date: string; latest?: boolean; items: { b:
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 const UPDATES_PER_PAGE = 2;
 const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.10", date: "2026-06-09", latest: true, items: [
+  { version: "v0.9.11", date: "2026-06-10", latest: true, items: [
+    { b: "알림 뜰 때 앱 창이 같이 튀어나오던 문제 수정", t: ": 데스크톱 앱에서 알림 발사 시 창을 강제로 앞으로 가져오던(focusWindow) 동작을 제거했습니다. 이제 최소화 상태에서 OS 배너만 뜨고 앱은 그대로 있습니다. 푸시 전용 서비스워커 등록으로 웹 푸시 구독도 정상화." },
+  ] },
+  { version: "v0.9.10", date: "2026-06-09", items: [
     { b: "OS 배너 알림이 안 뜨던 문제 수정(핵심)", t: ": 알림이 '배너' 설정일 때만 나가도록 막혀 있어, 기본값에선 인앱 카드만 뜨고 OS 배너가 아예 안 나왔습니다. 이제 설정과 무관하게 노트북·폰 모두 OS 배너가 발사됩니다(권한 미허용 시 자동 요청). 설정의 '알림 테스트'로 바로 확인하세요." },
   ] },
   { version: "v0.9.9", date: "2026-06-09", items: [
