@@ -25,6 +25,41 @@ export const isSerialPattern = (val: string): boolean => {
   return false;
 };
 
+// 모델명(품목코드) 패턴 — 예: FTG13-0005, ELC17-0014, ASS11-0003 (영문 2~5 + 숫자 + '-' + 숫자)
+const MODEL_CODE_RE = /^[A-Za-z]{2,5}\d{1,3}-\d{2,6}$/;
+// 사이즈 토큰 — 의류/장비 규격
+const SIZE_RE = /^(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|FREE)$/i;
+
+/**
+ * 카메라 OCR로 얻은 단어 한 개가 무엇인지 패턴으로 자동 판별한다.
+ * - 'code'   : 모델명(품목코드) 형태   (FTG13-0005)
+ * - 'serial' : 시리얼/바코드 형태      (CLBX-5E-34107, LHP1-1A-00696)
+ * - 'title'  : 사이즈 규격            (S, M, XL …)
+ * - null     : 판별 불가(사용자가 직접 선택)
+ * 모델코드가 시리얼 패턴도 만족하므로 모델코드를 먼저 검사한다.
+ */
+export const classifyToken = (raw: string): 'code' | 'title' | 'serial' | null => {
+  const v = raw.trim();
+  if (!v) return null;
+  if (MODEL_CODE_RE.test(v)) return 'code';
+  if (isSerialPattern(v)) return 'serial';
+  if (SIZE_RE.test(v)) return 'title';
+  return null;
+};
+
+/**
+ * 인식된 단어 목록을 모델명/품목명/시리얼로 자동 배치한다(각 항목당 가장 먼저 매칭된 토큰).
+ * 자신 있게 분류되는 코드·시리얼·사이즈만 채우고, 나머지는 사용자가 태그를 탭해 보완한다.
+ */
+export const autoClassifyTokens = (tokens: string[]): { code?: string; title?: string; serial?: string } => {
+  const out: { code?: string; title?: string; serial?: string } = {};
+  for (const t of tokens) {
+    const kind = classifyToken(t);
+    if (kind && !out[kind]) out[kind] = t.trim();
+  }
+  return out;
+};
+
 /** 재고 일괄 등록(붙여넣기 파싱) 행 데이터 */
 export interface BulkRow {
   code: string;

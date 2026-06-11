@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, X, Loader2, RotateCcw } from 'lucide-react';
+import { autoClassifyTokens } from '@/frontend/utils/inventory';
 
 type Target = 'code' | 'title' | 'serial';
 
@@ -100,6 +101,9 @@ export default function CameraScan({
         });
       });
       setChips(next);
+      // 알고리즘 자동 분류 — 코드/시리얼/사이즈를 패턴으로 미리 담아둔다(사용자가 탭해 수정 가능)
+      const auto = autoClassifyTokens(next.map(c => c.text));
+      if (Object.keys(auto).length > 0) setAssigned(prev => ({ ...auto, ...prev }));
     } catch {
       setChips([]);
     }
