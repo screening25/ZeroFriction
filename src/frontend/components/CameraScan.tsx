@@ -29,6 +29,7 @@ export default function CameraScan({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [started, setStarted] = useState(false); // 카메라 시작 여부(사용자 탭으로만 시작 → iOS 권한창 보장)
   const [camError, setCamError] = useState<string | null>(null);
   const [engineMsg, setEngineMsg] = useState('인식 엔진 준비 중…');
   const [engineReady, setEngineReady] = useState(false);
@@ -134,11 +135,23 @@ export default function CameraScan({
     setEngineReady(false);
   };
 
+  // ⚠️ 반드시 사용자 탭(제스처) 안에서 호출 — iOS Safari는 제스처 밖 getUserMedia 권한창을 막는다.
   const startLive = async () => {
     setCamError(null);
+    // 보안 컨텍스트/지원 여부를 먼저 분기해 '왜 안 되는지'를 정확히 알린다.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStarted(false);
+      setCamError(
+        !window.isSecureContext
+          ? '보안 연결(HTTPS)이 아니어서 카메라를 쓸 수 없습니다.'
+          : '이 브라우저에서는 카메라를 쓸 수 없습니다. 카카오톡·인스타그램 등 앱 안의 브라우저이거나 홈화면 앱일 수 있어요. Safari나 Chrome으로 직접 열어 주세요.'
+      );
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       streamRef.current = stream;
+      setStarted(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
@@ -146,12 +159,18 @@ export default function CameraScan({
       loopRef.current = true;
       getWorker().then(() => scanLoop()).catch(() => {});
     } catch (e: any) {
-      setCamError(e?.name === 'NotAllowedError' ? '카메라 권한이 거부되었습니다. 브라우저 설정에서 허용해 주세요.' : '카메라를 열 수 없습니다.');
+      setStarted(false);
+      const n = e?.name;
+      if (n === 'NotAllowedError' || n === 'SecurityError')
+        setCamError('카메라 권한이 거부돼 있습니다. 주소창의 자물쇠(또는 브라우저 설정) → 카메라 → 허용으로 바꾼 뒤 다시 시도하세요.');
+      else if (n === 'NotFoundError' || n === 'OverconstrainedError')
+        setCamError('사용할 수 있는 카메라를 찾지 못했습니다.');
+      else
+        setCamError('카메라를 열 수 없습니다' + (n ? ` (${n})` : '') + '. 다시 시도하거나 사진에서 선택해 주세요.');
     }
   };
 
   useEffect(() => {
-    if (open) startLive();
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -177,8 +196,8 @@ export default function CameraScan({
     setDetected(prev => { const n = { ...prev }; delete n[k]; return n; });
   };
 
-  const openModal = () => { setDetected({}); setAssigned({}); setCamError(null); setEngineReady(false); setEngineMsg('인식 엔진 준비 중…'); setOpen(true); };
-  const closeModal = () => { stopAll(); setOpen(false); };
+  const openModal = () => { setDetected({}); setAssigned({}); setCamError(null); setStarted(false); setEngineReady(false); setEngineMsg('인식 엔진 준비 중…'); setOpen(true); };
+  const closeModal = () => { stopAll(); setStarted(false); setOpen(false); };
   const apply = () => { if (Object.keys(assigned).length === 0) return; onApply(assigned); closeModal(); };
 
   const resultChips = (dark: boolean) => TARGETS.filter(t => detected[t.key]).map(t => (
@@ -250,10 +269,21 @@ export default function CameraScan({
             {!camError ? (
               <>
                 <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
-                  <video ref={videoRef} playsInline muted autoPlay style={{ width: '100%', display: 'block', minHeight: '200px' }} />
+                  <video ref={videoRef} playsInline muted autoPlay style={{ width: '100%', display: 'block', minHeight: '220px' }} />
 
-                  {/* 엔진 로딩 상태 */}
-                  {!engineReady && (
+                  {/* 시작 전 — 탭(제스처)으로 카메라 시작해야 iOS 권한창이 뜬다 */}
+                  {!started && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.7rem', background: 'rgba(0,0,0,0.55)' }}>
+                      <button type="button" onClick={startLive}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.85rem 1.4rem', borderRadius: '999px', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
+                        <Camera size={20} /> 카메라 켜기
+                      </button>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#fff', opacity: 0.85 }}>탭하면 카메라 권한을 묻습니다</span>
+                    </div>
+                  )}
+
+                  {/* 엔진 로딩 상태(카메라 시작 후) */}
+                  {started && !engineReady && (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '0.78rem', fontWeight: 700 }}>
                       <Loader2 size={22} className="spin" /> {engineMsg}
                       <span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.8 }}>처음 한 번만 받아옵니다</span>
@@ -280,16 +310,18 @@ export default function CameraScan({
                   )}
                 </div>
 
-                {/* 지금 분석(고해상도 1회) + 사진 선택 */}
+                {/* 시작 후: 지금 분석 + 사진 / 시작 전: 사진에서 선택만 */}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
-                  <button type="button" onClick={analyzeNow} disabled={!engineReady || scanning}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.7rem', borderRadius: '10px', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: '0.84rem', fontWeight: 800, cursor: engineReady && !scanning ? 'pointer' : 'default', opacity: engineReady && !scanning ? 1 : 0.6 }}>
-                    <Camera size={16} /> 지금 분석
-                  </button>
+                  {started && (
+                    <button type="button" onClick={analyzeNow} disabled={!engineReady || scanning}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.7rem', borderRadius: '10px', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: '0.84rem', fontWeight: 800, cursor: engineReady && !scanning ? 'pointer' : 'default', opacity: engineReady && !scanning ? 1 : 0.6 }}>
+                      <Camera size={16} /> 지금 분석
+                    </button>
+                  )}
                   <button type="button" onClick={() => fileRef.current?.click()}
                     title="사진에서 선택"
-                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.7rem 0.85rem', borderRadius: '10px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-                    <ImageIcon size={15} /> 사진
+                    style={{ flex: started ? '0 0 auto' : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.7rem 0.85rem', borderRadius: '10px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                    <ImageIcon size={15} /> {started ? '사진' : '사진에서 선택'}
                   </button>
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}

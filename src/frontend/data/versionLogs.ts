@@ -3,7 +3,10 @@ export type VersionLog = { version: string; date: string; latest?: boolean; item
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 export const UPDATES_PER_PAGE = 2;
 export const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.20", date: "2026-06-11", latest: true, items: [
+  { version: "v0.9.21", date: "2026-06-11", latest: true, items: [
+    { b: "📷 카메라 권한창이 안 뜨던 문제 수정", t: ": 스캔을 열면 '카메라 켜기' 버튼을 탭해야 카메라가 켜지도록 바꿨습니다(iOS는 사용자가 직접 누른 동작에서만 권한창을 띄웁니다). 또 안 되는 이유를 화면에 정확히 안내합니다 — 인앱 브라우저(카카오톡·인스타)·홈화면 앱·비보안 연결이면 Safari/Chrome으로 직접 열라고 표시." },
+  ] },
+  { version: "v0.9.20", date: "2026-06-11", items: [
     { b: "📷 카메라 스캔 모바일 안정화", t: ": 카메라 켠 화면에서 그대로 분석·선택되도록 개선했습니다. 인식 엔진 로딩/분석 상태를 화면에 표시하고(처음 한 번만 받아옴), 연속 인식이 느린 기기를 위해 '지금 분석'(고해상도 1회) 버튼을 추가했습니다. 카메라 권한 거부 시 '다시 시도'와 '사진에서 선택'을 함께 제공합니다. 결과 칩을 탭하면 바로 입력됩니다." },
   ] },
   { version: "v0.9.19", date: "2026-06-11", items: [
