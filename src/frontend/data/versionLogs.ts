@@ -3,7 +3,10 @@ export type VersionLog = { version: string; date: string; latest?: boolean; item
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 export const UPDATES_PER_PAGE = 2;
 export const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.19", date: "2026-06-11", latest: true, items: [
+  { version: "v0.9.20", date: "2026-06-11", latest: true, items: [
+    { b: "📷 카메라 스캔 모바일 안정화", t: ": 카메라 켠 화면에서 그대로 분석·선택되도록 개선했습니다. 인식 엔진 로딩/분석 상태를 화면에 표시하고(처음 한 번만 받아옴), 연속 인식이 느린 기기를 위해 '지금 분석'(고해상도 1회) 버튼을 추가했습니다. 카메라 권한 거부 시 '다시 시도'와 '사진에서 선택'을 함께 제공합니다. 결과 칩을 탭하면 바로 입력됩니다." },
+  ] },
+  { version: "v0.9.19", date: "2026-06-11", items: [
     { b: "📷 카메라 실시간 분석 → 탭하여 입력", t: ": 촬영·적용 단계 없이, 카메라를 비추면 모델명·시리얼·사이즈가 화면에 결과 칩으로 바로 뜹니다. 칩을 탭하면 그 값이 즉시 입력란에 담기고 '적용'으로 반영합니다. 패턴 알고리즘으로 유효한 것만 표시해 실시간이어도 오인식이 잘 안 섞입니다." },
   ] },
   { version: "v0.9.18", date: "2026-06-11", items: [
