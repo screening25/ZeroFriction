@@ -3,7 +3,10 @@ export type VersionLog = { version: string; date: string; latest?: boolean; item
 /** 설정 > 업데이트 정보에 표시할 버전별 변경 로그 (최신순). UPDATES_PER_PAGE개씩 페이지네이션한다. */
 export const UPDATES_PER_PAGE = 2;
 export const VERSION_LOGS: VersionLog[] = [
-  { version: "v0.9.18", date: "2026-06-11", latest: true, items: [
+  { version: "v0.9.19", date: "2026-06-11", latest: true, items: [
+    { b: "📷 카메라 실시간 분석 → 탭하여 입력", t: ": 촬영·적용 단계 없이, 카메라를 비추면 모델명·시리얼·사이즈가 화면에 결과 칩으로 바로 뜹니다. 칩을 탭하면 그 값이 즉시 입력란에 담기고 '적용'으로 반영합니다. 패턴 알고리즘으로 유효한 것만 표시해 실시간이어도 오인식이 잘 안 섞입니다." },
+  ] },
+  { version: "v0.9.18", date: "2026-06-11", items: [
     { b: "일정 안 '재고 직접 추가' 기능 제거", t: ": 일정 등록창의 재고 입력 기능을 없앴습니다. 재고는 재고 화면에서 관리합니다(일정은 제목·날짜·메모·첨부·알림에 집중)." },
     { b: "🧠 카메라 스캔 자동 분류", t: ": 촬영해서 인식하면 패턴 알고리즘이 모델명(FTG13-0005)·시리얼(CLBX-5E-34107)·사이즈(S·M·XL)를 자동으로 항목에 담아줍니다. 애매한 글자만 #태그를 탭해 직접 지정하면 됩니다." },
   ] },

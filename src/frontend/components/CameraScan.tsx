@@ -2,54 +2,98 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, X, Loader2, RotateCcw } from 'lucide-react';
+import { Camera, X, Loader2, Check } from 'lucide-react';
 import { autoClassifyTokens } from '@/frontend/utils/inventory';
 
 type Target = 'code' | 'title' | 'serial';
+type Fields = { code?: string; title?: string; serial?: string };
 
-const TARGETS: { key: Target; label: string }[] = [
-  { key: 'code', label: '모델명(코드)' },
-  { key: 'title', label: '품목명(사이즈)' },
-  { key: 'serial', label: '시리얼' },
+const TARGETS: { key: Target; label: string; icon: string }[] = [
+  { key: 'code', label: '모델명', icon: '📦' },
+  { key: 'title', label: '품목명', icon: '🏷' },
+  { key: 'serial', label: '시리얼', icon: '#️⃣' },
 ];
 
-/** 캡처한 이미지에서 인식된 단어 하나 — 이미지 위 해시태그 칩으로 띄운다. */
-interface Chip {
-  text: string;
-  // 캡처 이미지 대비 비율(%) — 반응형 배치
-  left: number; top: number; w: number; h: number;
-}
-
 /**
- * 카메라 라벨 스캔(촬영→정밀 인식).
- * 라이브 미리보기에서 객체를 비추고 '촬영'을 누르면 고해상도 한 장을 잡아 한 번만 정밀 OCR한다
- * (저해상도 프레임을 계속 인식하던 방식보다 정확). 인식된 단어가 캡처 이미지 위에 #태그로 떠서,
- * 탭하면 모델명(코드)/품목명/시리얼 중 무엇인지 골라 담고 '적용'한다.
- * 카메라를 못 쓰는 환경은 사진 파일 선택으로 자동 폴백. OCR은 Tesseract.js(기기 내장·무료).
+ * 카메라 라벨 스캔(실시간 분석·탭 입력).
+ * 카메라를 비추면 프레임을 주기적으로 인식하고, 패턴 알고리즘으로 모델명/시리얼/사이즈로
+ * 분류된 것"만" 화면에 결과 칩으로 띄운다(오인식 잡토큰은 패턴에서 걸러져 표시 안 됨 → 실시간이어도 정확).
+ * 결과 칩을 탭하면 그 값이 즉시 입력란에 담기고, '적용'으로 폼에 반영한다.
+ * 카메라를 못 쓰는 환경은 사진 파일 선택으로 자동 폴백.
  */
 export default function CameraScan({
   onApply,
   compact = false,
 }: {
-  onApply: (fields: { code?: string; title?: string; serial?: string }) => void;
+  onApply: (fields: Fields) => void;
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [liveError, setLiveError] = useState(false);
-  const [captured, setCaptured] = useState<string | null>(null); // 캡처 이미지 dataURL
-  const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [chips, setChips] = useState<Chip[]>([]);
-  const [picker, setPicker] = useState<Chip | null>(null);
-  const [assigned, setAssigned] = useState<{ code?: string; title?: string; serial?: string }>({});
+  const [busy, setBusy] = useState(false);          // 폴백 OCR 진행 표시
+  const [scanning, setScanning] = useState(false);   // 실시간 인식 중 표시
+  const [detected, setDetected] = useState<Fields>({}); // 인식·분류된 후보(미입력)
+  const [assigned, setAssigned] = useState<Fields>({}); // 탭해서 담은 값
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const workerRef = useRef<any>(null);
+  const loopRef = useRef(false);
+  const assignedRef = useRef<Fields>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  assignedRef.current = assigned;
 
-  const stopStream = () => {
+  const getWorker = async () => {
+    if (!workerRef.current) {
+      const { createWorker } = await import('tesseract.js');
+      const w = await createWorker('eng');
+      await w.setParameters({ tessedit_pageseg_mode: '11' as any }); // sparse — 흩어진 라벨에 강함
+      workerRef.current = w;
+    }
+    return workerRef.current;
+  };
+
+  const stopAll = () => {
+    loopRef.current = false;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+    workerRef.current?.terminate?.();
+    workerRef.current = null;
+  };
+
+  // 실시간 분석 루프 — 프레임을 인식해 '패턴 분류된 것만' detected에 채운다(이미 담은 항목은 건드리지 않음)
+  const scanLoop = async () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    while (loopRef.current) {
+      const v = videoRef.current;
+      if (v && v.videoWidth > 0 && ctx) {
+        const scale = Math.min(1, 1280 / v.videoWidth);
+        canvas.width = Math.round(v.videoWidth * scale);
+        canvas.height = Math.round(v.videoHeight * scale);
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        try {
+          setScanning(true);
+          const worker = await getWorker();
+          const { data } = await worker.recognize(canvas);
+          if (!loopRef.current) break;
+          const words = (data.words || [])
+            .filter((w: any) => (w.confidence ?? 0) >= 45)
+            .map((w: any) => (w.text || '').trim())
+            .filter((t: string) => t.length >= 2);
+          const auto = autoClassifyTokens(words);
+          setDetected(prev => {
+            const next = { ...prev };
+            (['code', 'title', 'serial'] as Target[]).forEach(k => {
+              if (auto[k] && !assignedRef.current[k]) next[k] = auto[k];
+            });
+            return next;
+          });
+        } catch { /* 다음 프레임 재시도 */ }
+        setScanning(false);
+      }
+      await new Promise(r => setTimeout(r, 700));
+    }
   };
 
   const startLive = async () => {
@@ -58,95 +102,46 @@ export default function CameraScan({
         video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      loopRef.current = true;
+      scanLoop();
     } catch {
       setLiveError(true);
     }
   };
 
   useEffect(() => {
-    if (open && !captured) startLive();
-    return () => stopStream();
+    if (open && !liveError) startLive();
+    return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, captured]);
+  }, [open]);
 
-  // OCR 공통 — 이미지/캔버스를 받아 단어 칩으로 변환
-  const recognize = async (source: HTMLCanvasElement | HTMLImageElement, dispW: number, dispH: number) => {
-    setBusy(true); setProgress(0); setChips([]);
+  // 사진 파일 폴백 — 1장 인식 후 동일하게 detected에 분류 결과를 채운다
+  const runFileOcr = async (file: File) => {
+    setBusy(true);
     try {
       const { createWorker } = await import('tesseract.js');
-      const worker = await createWorker('eng', 1, {
-        logger: (m: any) => { if (m.status === 'recognizing text') setProgress(Math.round((m.progress || 0) * 100)); },
-      });
-      // 흩어진 라벨 텍스트에 강한 sparse 모드
+      const worker = await createWorker('eng');
       await worker.setParameters({ tessedit_pageseg_mode: '11' as any });
-      const { data } = await worker.recognize(source);
+      const { data } = await worker.recognize(file);
       await worker.terminate();
-      const seen = new Set<string>();
-      const next: Chip[] = [];
-      (data.words || []).forEach((w: any) => {
-        const t = (w.text || '').trim();
-        if (t.length < 2 || (w.confidence ?? 0) < 40 || seen.has(t)) return;
-        seen.add(t);
-        const b = w.bbox || {};
-        next.push({
-          text: t,
-          left: (b.x0 / dispW) * 100,
-          top: (b.y0 / dispH) * 100,
-          w: ((b.x1 - b.x0) / dispW) * 100,
-          h: ((b.y1 - b.y0) / dispH) * 100,
-        });
-      });
-      setChips(next);
-      // 알고리즘 자동 분류 — 코드/시리얼/사이즈를 패턴으로 미리 담아둔다(사용자가 탭해 수정 가능)
-      const auto = autoClassifyTokens(next.map(c => c.text));
-      if (Object.keys(auto).length > 0) setAssigned(prev => ({ ...auto, ...prev }));
-    } catch {
-      setChips([]);
-    }
+      const words = (data.text || '').split(/\s+/).map(s => s.trim()).filter(s => s.length >= 2);
+      const auto = autoClassifyTokens(words);
+      setDetected(prev => ({ ...prev, ...auto }));
+    } catch { /* noop */ }
     setBusy(false);
   };
 
-  // 라이브 프레임을 고해상도로 캡처 → 정밀 OCR
-  const capture = async () => {
-    const v = videoRef.current;
-    if (!v || v.videoWidth === 0) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = v.videoWidth;
-    canvas.height = v.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    setCaptured(canvas.toDataURL('image/jpeg', 0.92));
-    stopStream();
-    await recognize(canvas, canvas.width, canvas.height);
+  // 결과 칩 탭 → 입력란에 담고 후보에서 제거
+  const take = (k: Target) => {
+    const val = detected[k];
+    if (!val) return;
+    setAssigned(prev => ({ ...prev, [k]: val }));
+    setDetected(prev => { const n = { ...prev }; delete n[k]; return n; });
   };
 
-  // 사진 파일 폴백 OCR
-  const runFileOcr = (file: File) => {
-    const img = new Image();
-    img.onload = async () => {
-      setCaptured(img.src);
-      await recognize(img, img.naturalWidth, img.naturalHeight);
-    };
-    img.src = URL.createObjectURL(file);
-  };
-
-  const retake = () => { setCaptured(null); setChips([]); setPicker(null); };
-
-  const assign = (key: Target, value: string) => {
-    setAssigned(prev => ({ ...prev, [key]: value }));
-    setPicker(null);
-  };
-
-  const openModal = () => {
-    setCaptured(null); setChips([]); setAssigned({}); setPicker(null); setLiveError(false); setBusy(false);
-    setOpen(true);
-  };
-  const closeModal = () => { stopStream(); setOpen(false); };
+  const openModal = () => { setDetected({}); setAssigned({}); setLiveError(false); setBusy(false); setOpen(true); };
+  const closeModal = () => { stopAll(); setOpen(false); };
   const apply = () => {
     if (Object.keys(assigned).length === 0) return;
     onApply(assigned);
@@ -187,16 +182,17 @@ export default function CameraScan({
               <button className="ios-text-btn bold" onClick={apply} disabled={Object.keys(assigned).length === 0}>적용</button>
             </div>
 
-            {/* 담은 항목 요약 */}
+            {/* 담긴 항목 — 탭해서 입력된 값 */}
             {Object.keys(assigned).length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.55rem' }}>
                 {TARGETS.map(t => assigned[t.key] ? (
-                  <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem' }}>
-                    <span style={{ flexShrink: 0, fontWeight: 700, color: 'var(--accent)', minWidth: '92px' }}>{t.label}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-all', flex: 1 }}>{assigned[t.key]}</span>
+                  <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', background: 'var(--accent-soft-bg)', borderRadius: '8px', padding: '0.3rem 0.5rem' }}>
+                    <Check size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                    <span style={{ flexShrink: 0, fontWeight: 700, color: 'var(--accent)', minWidth: '54px' }}>{t.label}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-all', flex: 1 }}>{assigned[t.key]}</span>
                     <button type="button" onClick={() => setAssigned(prev => { const n = { ...prev }; delete n[t.key]; return n; })}
                       style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '0.1rem' }}>
-                      <X size={12} />
+                      <X size={13} />
                     </button>
                   </div>
                 ) : null)}
@@ -204,120 +200,56 @@ export default function CameraScan({
             )}
 
             {!liveError ? (
-              <>
-                <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000' }}
-                     onClick={() => setPicker(null)}>
-                  {/* 라이브 미리보기(촬영 전) / 캡처 이미지(촬영 후) */}
-                  {!captured ? (
-                    <video ref={videoRef} playsInline muted style={{ width: '100%', display: 'block' }} />
-                  ) : (
-                    <img src={captured} alt="" style={{ width: '100%', display: 'block' }} />
-                  )}
+              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+                <video ref={videoRef} playsInline muted style={{ width: '100%', display: 'block' }} />
 
-                  {/* 캡처 이미지 위 해시태그 칩 */}
-                  {captured && chips.map((c, i) => (
-                    <button
-                      key={`${c.text}_${i}`}
-                      type="button"
-                      onClick={e => { e.stopPropagation(); setPicker(c); }}
-                      style={{
-                        position: 'absolute',
-                        left: `${Math.max(1, Math.min(88, c.left))}%`,
-                        top: `${Math.max(1, Math.min(92, c.top))}%`,
-                        fontSize: '0.74rem', fontWeight: 800, padding: '0.16rem 0.5rem', borderRadius: '999px',
-                        border: assigned.code === c.text || assigned.title === c.text || assigned.serial === c.text
-                          ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.5)',
-                        background: assigned.code === c.text || assigned.title === c.text || assigned.serial === c.text
-                          ? 'var(--accent)' : 'rgba(0,0,0,0.6)',
-                        color: '#fff', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
-                        cursor: 'pointer', maxWidth: '72%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      #{c.text}
-                    </button>
-                  ))}
-
-                  {busy && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: '0.78rem', fontWeight: 700 }}>
-                      <Loader2 size={22} className="spin" /> 정밀 인식 중… {progress}%
-                    </div>
-                  )}
-
-                  {/* 칩 분류 선택 바 */}
-                  {picker && (
-                    <div onClick={e => e.stopPropagation()}
-                         style={{ position: 'absolute', left: '0.5rem', right: '0.5rem', bottom: '0.5rem', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: '12px', padding: '0.55rem 0.6rem' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff', marginBottom: '0.45rem', wordBreak: 'break-all' }}>
-                        “{picker.text}” 항목 선택
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                        {TARGETS.map(t => (
-                          <button key={t.key} type="button" onClick={() => assign(t.key, picker.text)}
-                            style={{ flex: 1, minWidth: '90px', fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.3rem', borderRadius: '8px', border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
-                            {t.label}
-                          </button>
-                        ))}
-                        <button type="button" onClick={() => setPicker(null)}
-                          style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.4)', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
-                          취소
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 액션 버튼 */}
-                {!captured ? (
-                  <button type="button" onClick={capture}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', marginTop: '0.6rem', padding: '0.85rem', borderRadius: '12px', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
-                    <Camera size={18} /> 촬영해서 인식
-                  </button>
-                ) : (
-                  <button type="button" onClick={retake} disabled={busy}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', marginTop: '0.6rem', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
-                    <RotateCcw size={15} /> 다시 촬영
-                  </button>
-                )}
-
-                <p style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: 1.5 }}>
-                  {!captured
-                    ? '라벨이 또렷하게 보이게 맞춘 뒤 ‘촬영해서 인식’을 누르세요.'
-                    : (busy ? '인식이 끝나면 #태그를 탭해 항목으로 담으세요.'
-                            : (chips.length > 0 ? '#태그를 탭해 모델명·품목명·시리얼로 담고 ‘적용’.' : '인식된 글자가 없어요. 더 가까이서 다시 촬영해 보세요.'))}
-                </p>
-              </>
-            ) : (
-              <>
-                {/* 카메라 불가 → 사진 파일 OCR 폴백 */}
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) runFileOcr(f); e.target.value = ''; }} />
-
-                {captured && (
-                  <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '0.6rem' }} onClick={() => setPicker(null)}>
-                    <img src={captured} alt="" style={{ width: '100%', display: 'block' }} />
-                    {chips.map((c, i) => (
-                      <button key={`${c.text}_${i}`} type="button" onClick={e => { e.stopPropagation(); setPicker(c); }}
-                        style={{ position: 'absolute', left: `${Math.max(1, Math.min(88, c.left))}%`, top: `${Math.max(1, Math.min(92, c.top))}%`, fontSize: '0.74rem', fontWeight: 800, padding: '0.16rem 0.5rem', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', maxWidth: '72%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        #{c.text}
-                      </button>
-                    ))}
-                    {picker && (
-                      <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', left: '0.5rem', right: '0.5rem', bottom: '0.5rem', background: 'rgba(0,0,0,0.8)', borderRadius: '12px', padding: '0.55rem 0.6rem' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff', marginBottom: '0.45rem', wordBreak: 'break-all' }}>“{picker.text}” 항목 선택</div>
-                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                          {TARGETS.map(t => (
-                            <button key={t.key} type="button" onClick={() => assign(t.key, picker.text)} style={{ flex: 1, minWidth: '90px', fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.3rem', borderRadius: '8px', border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>{t.label}</button>
-                          ))}
-                          <button type="button" onClick={() => setPicker(null)} style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.55rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.4)', background: 'transparent', color: '#fff', cursor: 'pointer' }}>취소</button>
-                        </div>
-                      </div>
-                    )}
+                {/* 실시간 인식 표시 */}
+                {scanning && (
+                  <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '0.18rem 0.5rem', borderRadius: '999px' }}>
+                    <Loader2 size={11} className="spin" /> 분석 중
                   </div>
                 )}
 
+                {/* 분석 결과 — 탭하면 바로 입력 */}
+                <div style={{ position: 'absolute', left: '0.5rem', right: '0.5rem', bottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {TARGETS.filter(t => detected[t.key]).map(t => (
+                    <button key={t.key} type="button" onClick={() => take(t.key)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', width: '100%', padding: '0.5rem 0.65rem', borderRadius: '10px', border: 'none', background: 'rgba(10,132,255,0.92)', color: '#fff', cursor: 'pointer', textAlign: 'left', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
+                      <span style={{ flexShrink: 0 }}>{t.icon}</span>
+                      <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, opacity: 0.85 }}>{t.label}</span>
+                      <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 800, wordBreak: 'break-all' }}>{detected[t.key]}</span>
+                      <span style={{ flexShrink: 0, fontSize: '0.66rem', fontWeight: 700, opacity: 0.9 }}>탭하여 입력 ›</span>
+                    </button>
+                  ))}
+                  {Object.keys(detected).length === 0 && (
+                    <div style={{ textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.45)', borderRadius: '10px', padding: '0.45rem' }}>
+                      라벨을 비추면 모델명·시리얼·사이즈가 여기에 떠요
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* 카메라 불가 → 사진 파일 폴백 (분석 결과는 동일하게 위 영역에서 탭 입력) */}
+                <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) runFileOcr(f); e.target.value = ''; }} />
+
+                {/* 폴백에서의 결과 칩 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.6rem' }}>
+                  {TARGETS.filter(t => detected[t.key]).map(t => (
+                    <button key={t.key} type="button" onClick={() => take(t.key)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', width: '100%', padding: '0.5rem 0.65rem', borderRadius: '10px', border: '1px solid var(--accent)', background: 'var(--accent-soft-bg)', color: 'var(--accent)', cursor: 'pointer', textAlign: 'left' }}>
+                      <span style={{ flexShrink: 0 }}>{t.icon}</span>
+                      <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700 }}>{t.label}</span>
+                      <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', wordBreak: 'break-all' }}>{detected[t.key]}</span>
+                      <span style={{ flexShrink: 0, fontSize: '0.66rem', fontWeight: 700 }}>탭하여 입력 ›</span>
+                    </button>
+                  ))}
+                </div>
+
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={busy}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', padding: '0.85rem', borderRadius: '12px', border: '1px dashed var(--panel-border)', background: 'var(--surface-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
-                  {busy ? <><Loader2 size={16} className="spin" /> 인식 중… {progress}%</> : <><Camera size={16} /> {captured ? '다른 사진으로 다시' : '사진 촬영 / 선택'}</>}
+                  {busy ? <><Loader2 size={16} className="spin" /> 분석 중…</> : <><Camera size={16} /> 사진 촬영 / 선택</>}
                 </button>
                 <p style={{ marginTop: '0.6rem', fontSize: '0.72rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
                   카메라를 쓸 수 없어 사진 인식으로 동작합니다.
