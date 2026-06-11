@@ -98,8 +98,25 @@ export default function AttachmentField({
         <input ref={inputRef} type="file" multiple style={{ display: 'none' }} onChange={e => handleSelect(e.target.files)} />
       )}
       {files.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.4rem' }}>
-          {files.map(f => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: '0.4rem' }}>
+          {files.map(f => (f.mime || '').startsWith('image/') ? (
+            // 이미지 첨부 — 썸네일 미리보기(클릭 시 원본 새 탭)
+            <div key={f.id} style={{ position: 'relative', width: '84px', height: '84px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--panel-border)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+              <a href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" title={`${f.name} (${formatSize(f.size)})`} style={{ display: 'block', width: '100%', height: '100%' }}>
+                <img src={`/api/files/${f.id}`} alt={f.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </a>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeFile(f.id)}
+                  title="첨부 제거"
+                  style={{ position: 'absolute', top: '3px', right: '3px', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%', color: '#fff', cursor: 'pointer', padding: 0 }}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          ) : (
             <span
               key={f.id}
               style={{
