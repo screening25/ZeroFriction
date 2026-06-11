@@ -5,10 +5,12 @@ import { motion } from 'framer-motion';
 import { Pin, FileSpreadsheet, Printer } from 'lucide-react';
 import ClientPicker from './ClientPicker';
 import Markdown from './Markdown';
+import AttachmentField from './AttachmentField';
+import { useApp } from '@/frontend/context/AppContext';
 import { getMemoModalStyle } from '@/frontend/utils/styles';
-import type { UniversalRecord } from '@/database';
+import type { UniversalRecord, AttachmentMeta } from '@/database';
 
-type MemoForm = { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string };
+type MemoForm = { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string; files?: AttachmentMeta[] };
 
 /**
  * 메모 보기/편집 모달 (page.tsx에서 추출 — 동작 동일).
@@ -43,9 +45,14 @@ export default function MemoEditModal({
   schedules: UniversalRecord[];
   inventory: UniversalRecord[];
 }) {
+  const { records } = useApp();
+
   // States for @mention suggestion autocomplete popup
   const [mentionTriggerInfo, setMentionTriggerInfo] = useState<{ query: string; triggerIndex: number } | null>(null);
   const [hoveredMentionId, setHoveredMentionId] = useState<string | null>(null);
+
+  // 첨부파일 목록 — 호출부가 memoForm.files를 채우지 않아도 기존 첨부가 보존되도록 레코드에서 보충한다.
+  const memoFiles = memoForm.files ?? (memoForm.id ? records.find(r => r.id === memoForm.id)?.attrs.files || [] : []);
 
   // Autocomplete / suggestion helpers for @mentions in textarea
   const getMentionQuery = (text: string, cursorIndex: number) => {
@@ -390,6 +397,12 @@ export default function MemoEditModal({
                 onChange={v => setMemoForm({ ...memoForm, client: v })}
               />
 
+              {/* 첨부 파일 — 본문은 /api/files, 메모에는 메타데이터만 저장 */}
+              <AttachmentField
+                files={memoFiles}
+                onChange={files => setMemoForm({ ...memoForm, files })}
+              />
+
               {/* Bottom Settings Control Bar */}
               <div style={{
                 display: 'flex',
@@ -475,6 +488,8 @@ export default function MemoEditModal({
                     ? <Markdown content={memoForm.content} />
                     : <span style={{ color: 'var(--text-tertiary)' }}>(내용 없음)</span>}
                 </div>
+                {/* 첨부 파일 (보기 전용 — 칩 클릭으로 열기/다운로드) */}
+                <AttachmentField files={memoFiles} readOnly />
               </div>
               )}
 

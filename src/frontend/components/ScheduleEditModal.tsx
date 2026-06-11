@@ -7,6 +7,7 @@ import CustomSelect from './CustomSelect';
 import CustomDatePicker from './CustomDatePicker';
 import ClientPicker from './ClientPicker';
 import ScheduleMemoInventory, { type ScheduleMemoInventoryHandle } from './ScheduleMemoInventory';
+import AttachmentField from './AttachmentField';
 import { getCategoryColorStyles } from '@/frontend/utils/styles';
 import type { AppSettings, UniversalRecord } from '@/database';
 
@@ -165,7 +166,13 @@ export default function ScheduleEditModal({
                   client={editingSchedule.attrs.client}
                 />
               </div>
-              
+
+              {/* 첨부 파일 — 본문은 /api/files, 일정에는 메타데이터만 저장 */}
+              <AttachmentField
+                files={editingSchedule.attrs.files || []}
+                onChange={files => setEditingSchedule({ ...editingSchedule, attrs: { ...editingSchedule.attrs, files } })}
+              />
+
               <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <span className="form-label">알림 설정</span>

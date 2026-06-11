@@ -18,6 +18,17 @@ export interface InventoryTxn {
   memo?: string;
 }
 
+/**
+ * 첨부파일 메타데이터 — 본문은 서버(Attachment 테이블, /api/files)에 따로 저장하고
+ * 레코드에는 이 메타데이터만 남긴다(공유 상태 JSON 비대화 방지).
+ */
+export interface AttachmentMeta {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+}
+
 export interface UniversalRecord {
   id: string;
   title: string;
@@ -27,6 +38,7 @@ export interface UniversalRecord {
     recurrence?: Recurrence;
     linkedIds?: string[];
     txns?: InventoryTxn[]; // 재고(asset) 전용 — 입출고 이력
+    files?: AttachmentMeta[]; // 일정·메모 첨부파일
   };
   updatedAt: string;
 }

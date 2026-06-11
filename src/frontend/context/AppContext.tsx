@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { parseISO, differenceInSeconds } from 'date-fns';
 import {
-  UniversalRecord, getRecords, addRecord, updateRecord, deleteRecord,
+  UniversalRecord, AttachmentMeta, getRecords, addRecord, updateRecord, deleteRecord,
   ActivityLog, ActivityType, AppSettings, loadSettings, persistSettings,
   loadActivities, persistActivities, DEFAULT_SETTINGS,
   ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive,
@@ -45,8 +45,8 @@ interface AppContextProps {
   setIsMemoModalOpen: (o: boolean) => void;
   memoPage: number;
   setMemoPage: (p: number) => void;
-  memoForm: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string };
-  setMemoForm: (f: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string }) => void;
+  memoForm: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string; files?: AttachmentMeta[] };
+  setMemoForm: (f: { id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string; files?: AttachmentMeta[] }) => void;
   activeTab: 'all' | 'calendar' | 'inventory' | 'category' | 'settings';
   setActiveTab: (t: 'all' | 'calendar' | 'inventory' | 'category' | 'settings') => void;
   activeCategory: string | null;
@@ -288,7 +288,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [editingInventory, setEditingInventory] = useState<UniversalRecord | null>(null);
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
   const [memoPage, setMemoPage] = useState(0);
-  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string}>({ title: '', content: '', pinned: false, color: '' });
+  const [memoForm, setMemoForm] = useState<{id?: string; title: string; content: string; pinned?: boolean; color?: string; client?: string; files?: AttachmentMeta[]}>({ title: '', content: '', pinned: false, color: '' });
   const [notified, setNotified] = useState<Set<string>>(new Set());
   const [activeNotification, setActiveNotification] = useState<{
     id: string;
@@ -841,7 +841,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           content: memoForm.content,
           pinned: memoForm.pinned || false,
           color: memoForm.color || '',
-          client: memoForm.client || ''
+          client: memoForm.client || '',
+          // files 미지정(undefined)이면 기존 첨부를 보존한다 — 빈 배열은 '모두 제거'로 저장
+          files: memoForm.files ?? records.find(r => r.id === memoForm.id)?.attrs.files ?? []
         }
       });
       logActivity('UPDATE_MEMO', '변동 사항 수정', memoForm.title);
@@ -855,6 +857,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           pinned: memoForm.pinned || false,
           color: memoForm.color || '',
           client: memoForm.client || '',
+          files: memoForm.files || [],
           effectiveDate: new Date().toISOString().split('T')[0]
         }
       });

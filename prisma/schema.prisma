@@ -37,3 +37,15 @@ model AppState {
   updatedAt DateTime @updatedAt
 }
 
+
+// 일정·메모 첨부파일 — 공유 상태(AppState JSON)와 분리해 저장한다.
+// 레코드 attrs.files 에는 메타데이터({id, name, mime, size})만 남겨
+// 매 동기화 때 파일 본문이 오가지 않도록 한다.
+model Attachment {
+  id        String   @id
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+}
