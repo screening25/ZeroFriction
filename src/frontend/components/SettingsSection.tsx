@@ -681,7 +681,7 @@ export default function SettingsSection() {
 
                 try {
                   const now = new Date();
-                  const title = 'Zero-Friction 알림 테스트';
+                  const title = 'FitoDesk 알림 테스트';
                   const body = 'OS 배너 알림이 정상 작동합니다!';
 
                   // 인앱 카드는 항상 표시

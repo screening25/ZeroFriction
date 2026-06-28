@@ -1307,10 +1307,10 @@ input.ss-input {
   background: var(--hover-bg);
 }
 .nav-link.active {
-  color: var(--text-primary);
-  background: var(--hover-bg);
+  color: var(--accent);
+  background: var(--accent-soft-bg);
   font-weight: 700;
-  box-shadow: 0 1px 3px var(--shadow-color);
+  box-shadow: none;
 }
 
 /* ===== KPI STRIP ===== */
@@ -1340,22 +1340,22 @@ input.ss-input {
   box-shadow: 0 4px 12px var(--shadow-color);
 }
 .kpi-tile .kpi-label {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--text-tertiary);
-  letter-spacing: 0.05em; /* Metadata premium tracking */
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: left;
 }
 .kpi-tile .kpi-value {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: 0.015em; /* Large value tracking alignment */
+  letter-spacing: 0.01em;
   line-height: 1;
 }
 .kpi-tile .kpi-sub {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--text-secondary);
 }

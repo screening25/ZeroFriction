@@ -16,7 +16,7 @@ export async function GET() {
   if (!priv) {
     return NextResponse.json({ error: 'VAPID_PRIVATE_KEY 미설정' }, { status: 500 });
   }
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@zero-friction.app', VAPID_PUBLIC_KEY, priv);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:sangyoung.yun@fitogether.com', VAPID_PUBLIC_KEY, priv);
 
   try {
     const row = await prisma.appState.findUnique({ where: { key: 'push_subscriptions' } });
@@ -25,7 +25,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: '등록된 구독 기기가 없습니다. 앱에서 알림 권한을 허용해 구독하세요.', subs: 0 });
     }
 
-    const payload = JSON.stringify({ title: 'Zero-Friction 푸시 테스트', body: '앱이 닫혀 있어도 이 알림이 보이면 성공입니다! ✅', url: '/' });
+    const payload = JSON.stringify({ title: 'FitoDesk 푸시 테스트', body: '앱이 닫혀 있어도 이 알림이 보이면 성공입니다! ✅', url: '/' });
     let sent = 0;
     const dead = new Set<string>();
     await Promise.all(subs.map(async (s) => {

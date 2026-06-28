@@ -7,8 +7,9 @@ import {
   ActivityLog, ActivityType, AppSettings, loadSettings, persistSettings,
   loadActivities, persistActivities, DEFAULT_SETTINGS,
   ArchivedRecord, getArchive, restoreFromArchive, permanentDeleteArchived, purgeArchive,
-  initData
+  initData, getERPCache
 } from '@/database';
+import type { ERPCache } from '@/backend/services/erp';
 import { syncLocalNotifications } from '@/frontend/utils/nativeNotify';
 
 interface AppContextProps {
@@ -97,6 +98,9 @@ interface AppContextProps {
   handleDismissNotification: () => void;
   handleSnoozeNotification: (scheduleId: string) => void;
   handleCompleteNotificationSchedule: (scheduleId: string) => void;
+  erpCache: ERPCache | null;
+  erpSyncing: boolean;
+  refreshERP: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -350,6 +354,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     reloadRecords();
     reloadArchive();
     setActivities(loadActivities());
+    setErpCache(getERPCache());
     if (applySettings) {
       const s = loadSettings();
       setAppSettings(s);
@@ -357,6 +362,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       applyAccentColor(s.accentColor);
       document.documentElement.setAttribute('data-density', s.density);
       document.documentElement.setAttribute('data-font-size', s.fontSize || 'medium');
+    }
+  };
+
+  // ERP 캐시 상태
+  const [erpCache, setErpCache] = useState<ERPCache | null>(null);
+  const [erpSyncing, setErpSyncing] = useState(false);
+
+  const refreshERP = async () => {
+    if (erpSyncing) return;
+    setErpSyncing(true);
+    try {
+      const res = await fetch('/api/erp/sync', { cache: 'no-store' });
+      if (res.ok) setErpCache(await res.json());
+    } catch {
+      // ERP 연동 실패는 앱 동작에 영향 없음
+    } finally {
+      setErpSyncing(false);
     }
   };
 
@@ -383,6 +405,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute('data-theme', initTheme);
 
     syncFromServer();
+    refreshERP();
+
+    // ERP 5분 자동 갱신
+    const erpTimer = setInterval(() => refreshERP(), 5 * 60 * 1000);
 
     // 다른 기기에서 바뀐 데이터를 가져오기 위해 창이 다시 활성화될 때마다 재동기화
     const onFocus = () => { syncFromServer(false); };
@@ -390,6 +416,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
+      clearInterval(erpTimer);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
@@ -1237,7 +1264,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       archive, reloadArchive, restoreArchived, permanentDelete, emptyArchive, clearActivities,
       searchQuery, searchType, setSearchResult,
       showCompleted, setShowCompleted, exportToCsv, printToPdf,
-      activeNotification, setActiveNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule
+      activeNotification, setActiveNotification, handleDismissNotification, handleSnoozeNotification, handleCompleteNotificationSchedule,
+      erpCache, erpSyncing, refreshERP
     }}>
       {children}
     </AppContext.Provider>

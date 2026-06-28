@@ -6,7 +6,7 @@ self.addEventListener("push", (event) => {
 
   try {
     const data = event.data.json();
-    const title = data.title || "Zero-Friction";
+    const title = data.title || "FitoDesk";
     const options = {
       body: data.body || "새로운 알림이 도착했습니다.",
       icon: data.icon || "/icon-192.png",
@@ -19,7 +19,7 @@ self.addEventListener("push", (event) => {
   } catch (err) {
     const text = event.data.text();
     event.waitUntil(
-      self.registration.showNotification("Zero-Friction", {
+      self.registration.showNotification("FitoDesk", {
         body: text,
         icon: "/icon-192.png",
         badge: "/icon-192.png",

@@ -10,14 +10,14 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *    예) https://zero-friction.vercel.app
  */
 const config: CapacitorConfig = {
-  appId: 'com.zero.friction',
-  appName: 'Zero-Friction',
+  appId: 'com.fitogether.fitodesk',
+  appName: 'FitoDesk',
 
   // server.url 사용 시 로컬 webDir 은 오프라인 폴백용으로만 쓰인다(필수 필드).
   webDir: 'public',
 
   server: {
-    url: 'https://zero-friction-roan.vercel.app',
+    url: 'https://fitodesk.vercel.app',
     cleartext: false,
   },
 

@@ -1,7 +1,7 @@
 {
-  "name": "Zero-Friction",
-  "short_name": "ZF Widget",
-  "description": "Zero-Friction Scheduler & Inventory Manager",
+  "name": "FitoDesk",
+  "short_name": "FitoDesk",
+  "description": "Fitogether 운영 허브 — 일정·재고·ERP를 한 화면에서",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

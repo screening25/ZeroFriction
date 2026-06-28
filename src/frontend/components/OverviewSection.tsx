@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { CheckCircle2, Circle, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy } from 'lucide-react';
+import { CheckCircle2, Circle, AlertTriangle, Calendar as CalIcon, Layers, ClipboardList, ChevronDown, Sliders, Pin, Coffee, AlertCircle, Calendar, Trophy, RefreshCw, ExternalLink, Building2 } from 'lucide-react';
 import { useApp } from '@/frontend/context/AppContext';
 import { getCategoryColorStyles, getMemoCardStyle } from '@/frontend/utils/styles';
 import { stripMarkdown } from '@/frontend/utils/markdown';
@@ -29,6 +29,7 @@ export default function OverviewSection({
     setEditingSchedule, setEditingInventory,
     setMemoForm, setIsMemoModalOpen,
     toggleComplete,
+    erpCache, erpSyncing, refreshERP,
   } = useApp();
 
   const getCategoryColor = (cat: string) => getCategoryColorStyles(cat, appSettings.categoryColors).solid;
@@ -88,6 +89,8 @@ export default function OverviewSection({
             const remainingTodaySchedules = todayIncompleteSchedules.length;
             const overdueSchedulesCount = overdueSchedules.length;
             const lowStockItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0).length; // 위험 재고 = 수량 음수
+            const erpPendingCount = (erpCache?.dashboard.pendingApprovals ?? 0) + (erpCache?.dashboard.pendingShipments ?? 0);
+            const erpLowStockCount = erpCache?.lowStock.length ?? 0;
 
             let greeting = "오늘도 좋은 하루 보내시길 바랍니다!";
             const hour = new Date().getHours();
@@ -106,12 +109,16 @@ export default function OverviewSection({
               actionTip: string;
             };
             
-            if (lowStockItemsCount > 0 || overdueSchedulesCount > 0) {
-              const schedMsg = overdueSchedulesCount > 0 
+            if (lowStockItemsCount > 0 || overdueSchedulesCount > 0 || erpPendingCount > 0 || erpLowStockCount > 0) {
+              const schedMsg = overdueSchedulesCount > 0
                 ? `미완료된 지난 일정이 ${overdueSchedulesCount}건 있습니다.`
+                : erpPendingCount > 0
+                ? `ERP 승인·출고 대기가 ${erpPendingCount}건 있습니다.`
                 : `오늘 대기 중인 일정이 ${remainingTodaySchedules}건 있습니다.`;
               const invMsg = lowStockItemsCount > 0
                 ? `수량이 부족한 품목이 ${lowStockItemsCount}건 감지되었습니다.`
+                : erpLowStockCount > 0
+                ? `ERP 저재고 품목이 ${erpLowStockCount}건 있습니다.`
                 : "재고 상태가 양호합니다.";
               
               briefing = {
@@ -200,8 +207,8 @@ export default function OverviewSection({
                 textAlign: 'left'
               }}>
                 <div style={{
-                  width: '38px',
-                  height: '38px',
+                  width: '36px',
+                  height: '36px',
                   borderRadius: '10px',
                   background: styles.iconBg,
                   display: 'flex',
@@ -210,27 +217,130 @@ export default function OverviewSection({
                   color: styles.iconColor,
                   flexShrink: 0
                 }}>
-                  <styles.IconComponent size={18} />
+                  <styles.IconComponent size={16} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800 }} className={styles.textClass}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800 }} className={styles.textClass}>
                     {briefing.greeting}
                   </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', paddingLeft: '0.1rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ color: styles.iconColor, fontSize: '0.8rem' }}>•</span> {briefing.scheduleMessage}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem', paddingLeft: '0.1rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: styles.iconColor }}>•</span> {briefing.scheduleMessage}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ color: styles.iconColor, fontSize: '0.8rem' }}>•</span> {briefing.inventoryMessage}
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: styles.iconColor }}>•</span> {briefing.inventoryMessage}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500 italic" style={{ marginTop: '0.1rem', fontSize: '0.68rem', opacity: 0.8 }}>
-                    💡 {briefing.actionTip}
+                  <span style={{ marginTop: '0.15rem', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                    {briefing.actionTip}
                   </span>
                 </div>
               </div>
             );
           })()}
+
+          {/* ERP Ops 상태 카드 */}
+          {erpCache && (
+            <div style={{
+              background: 'var(--panel-bg)',
+              backdropFilter: 'var(--panel-blur)',
+              WebkitBackdropFilter: 'var(--panel-blur)',
+              border: '1px solid var(--panel-border)',
+              borderRadius: '16px',
+              padding: '1rem 1.2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              boxShadow: 'var(--shadow-sm)',
+            }}>
+              {/* 헤더 — 다른 위젯 헤더 패턴과 통일 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Building2 size={15} style={{ color: 'var(--accent)' }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>ERP Ops</span>
+                  {!erpCache.ok && (
+                    <span style={{ fontSize: '0.65rem', color: 'var(--danger)', fontWeight: 700, background: 'var(--danger-soft-bg)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>세션 만료</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+                    {Math.floor((Date.now() - new Date(erpCache.fetchedAt).getTime()) / 60000)}분 전
+                  </span>
+                  <button
+                    onClick={refreshERP}
+                    disabled={erpSyncing}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '2px', display: 'flex', opacity: erpSyncing ? 0.5 : 1 }}
+                    title="ERP 데이터 새로고침"
+                  >
+                    <RefreshCw size={13} style={{ animation: erpSyncing ? 'spin 1s linear infinite' : 'none' }} />
+                  </button>
+                  <a
+                    href="https://erp.fitogether.com/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--text-tertiary)', display: 'flex' }}
+                    title="ERP 열기"
+                  >
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              </div>
+
+              {erpCache.ok && (
+                <>
+                  {/* Metric 타일 — KPI 스트립과 동일 스타일 */}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {[
+                      { label: '승인 대기', value: erpCache.dashboard.pendingApprovals, href: '/orders?status=REGISTERED' },
+                      { label: '출고 대기', value: erpCache.dashboard.pendingShipments, href: '/shipments?status=PENDING' },
+                      { label: '출고 진행', value: erpCache.dashboard.inProgressShipments, href: '/shipments?status=APPROVED' },
+                    ].map(({ label, value, href }) => (
+                      <a
+                        key={label}
+                        href={`https://erp.fitogether.com${href}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          flex: 1,
+                          background: value > 0 ? 'var(--warning-soft-bg)' : 'var(--insight-tile-bg)',
+                          border: `1px solid ${value > 0 ? 'rgba(217,119,6,0.25)' : 'var(--insight-tile-border)'}`,
+                          borderRadius: '12px',
+                          padding: '0.55rem 0.5rem',
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          transition: 'transform 0.15s ease',
+                        }}
+                      >
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: value > 0 ? '#d97706' : 'var(--text-primary)', lineHeight: 1 }}>
+                          {value}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-tertiary)', marginTop: '0.2rem', letterSpacing: '0.02em' }}>{label}</div>
+                      </a>
+                    ))}
+                  </div>
+
+                  {/* 저재고 목록 */}
+                  {erpCache.lowStock.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: '1px solid var(--panel-border)', paddingTop: '0.5rem' }}>
+                      {erpCache.lowStock.slice(0, 3).map(item => (
+                        <div key={item.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', padding: '0.1rem 0' }}>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{item.name}</span>
+                          <span style={{ color: item.qty <= 0 ? 'var(--danger)' : '#d97706', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                            {item.qty} / {item.safeStock}
+                          </span>
+                        </div>
+                      ))}
+                      {erpCache.lowStock.length > 3 && (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: '0.1rem' }}>
+                          +{erpCache.lowStock.length - 3}개 더
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* KPI Strip — 4 핵심 지표 한눈에 */}
           <div className="kpi-strip">
@@ -296,7 +406,7 @@ export default function OverviewSection({
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>업무 진행 및 달성</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>업무 진행 및 달성</div>
                 {(() => {
                   const todoCount = schedules.filter(s => !s.attrs.completed && s.attrs.status !== 'doing').length;
                   const doingCount = schedules.filter(s => !s.attrs.completed && s.attrs.status === 'doing').length;
@@ -324,7 +434,7 @@ export default function OverviewSection({
                         {doneCount > 0 && <div style={{ width: `${donePct}%`, background: 'var(--success)', height: '100%' }} title={`완료: ${doneCount}건`} />}
                       </div>
                       
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
                         <span>대기 {todoCount}</span>
                         <span>진행 {doingCount}</span>
                         <span>완료 {doneCount}</span>
@@ -344,7 +454,7 @@ export default function OverviewSection({
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>재고 건전성</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>재고 건전성</div>
                 {(() => {
                   // 위험 재고 = 수량이 음수(0개 밑)로 떨어진 품목
                   const dangerItemsCount = inventory.filter(i => (Number(i.attrs.qty) || 0) < 0).length;

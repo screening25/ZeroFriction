@@ -4,14 +4,14 @@ import { AppProvider } from '@/frontend/context/AppContext';
 import ClientLayout from '@/frontend/components/ClientLayout';
 
 export const metadata: Metadata = {
-  title: 'Zero-Friction',
-  description: '자연어 한 줄로 일정·재고·변동사항을 동시에 다루는 데일리 오퍼레이션 위젯',
+  title: 'FitoDesk',
+  description: 'Fitogether 운영 허브 — 일정·재고·ERP를 한 화면에서 관리하는 데스크 위젯',
   manifest: '/manifest.json',
-  applicationName: 'Zero-Friction',
+  applicationName: 'FitoDesk',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Zero-Friction'
+    title: 'FitoDesk'
   },
   icons: {
     icon: '/favicon.png',

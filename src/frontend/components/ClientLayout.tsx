@@ -319,9 +319,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </main>
 
       <footer className="app-footer">
-        <span className="footer-text">© 2026 screening25. All rights reserved.</span>
+        <span className="footer-text">© 2026 Fitogether. All rights reserved.</span>
         <span className="footer-sep">·</span>
-        <span className="footer-text">Zero-Friction Overview</span>
+        <span className="footer-text">FitoDesk</span>
       </footer>
 
       {/* Shared Activity Drawer -> Compact Popover Card Overhaul! */}

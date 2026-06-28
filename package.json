@@ -1,5 +1,5 @@
 {
-  "name": "zero-scheduler",
+  "name": "fitodesk",
   "version": "0.9.21",
   "private": true,
   "scripts": {
@@ -50,8 +50,8 @@
     "wait-on": "^9.0.10"
   },
   "build": {
-    "appId": "com.zero.friction",
-    "productName": "Zero-Friction",
+    "appId": "com.fitogether.fitodesk",
+    "productName": "FitoDesk",
     "mac": {
       "icon": "public/icon.png"
     },

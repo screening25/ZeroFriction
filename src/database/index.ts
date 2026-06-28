@@ -1,5 +1,7 @@
 // ===== Data Layer: Abstracted handlers for future DB migration =====
 
+import type { ERPCache } from '@/backend/services/erp';
+
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
 
 /**
@@ -169,6 +171,7 @@ const REC_KEY = 'universal_records';
 const ARCHIVE_KEY = 'archived_records';
 const SETTINGS_KEY = 'zero_settings';
 const ACT_KEY = 'zero_activities';
+const ERP_KEY = 'erp_cache';
 
 type SyncKey = typeof REC_KEY | typeof ARCHIVE_KEY | typeof SETTINGS_KEY | typeof ACT_KEY;
 
@@ -201,6 +204,7 @@ export async function initData(): Promise<void> {
     _cache[ARCHIVE_KEY] = Array.isArray(data[ARCHIVE_KEY]) ? data[ARCHIVE_KEY] : [];
     _cache[SETTINGS_KEY] = data[SETTINGS_KEY] && typeof data[SETTINGS_KEY] === 'object' ? data[SETTINGS_KEY] : {};
     _cache[ACT_KEY] = Array.isArray(data[ACT_KEY]) ? data[ACT_KEY] : [];
+    _cache[ERP_KEY] = data[ERP_KEY] && typeof data[ERP_KEY] === 'object' ? data[ERP_KEY] : null;
     _initialized = true;
     // 🔒 일회성 자동 마이그레이션: 서버에 기록 키가 아직 없고(=한 번도 안 올라감)
     // 이 기기 localStorage에 기존 데이터가 있으면 서버로 올려 보존한다.
@@ -251,6 +255,11 @@ function migrateFromLocalStorage(): void {
 
 /** initData가 한 번이라도 완료되었는지 여부 */
 export function isDataReady(): boolean { return _initialized; }
+
+/** 마지막으로 동기화된 ERP 캐시를 반환한다. 미설정/만료 시 null. */
+export function getERPCache(): ERPCache | null {
+  return _cache[ERP_KEY] ?? null;
+}
 
 // --- Universal Records Handlers ---
 export function getRecords(): UniversalRecord[] {
