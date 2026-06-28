@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
 
   server: {
-    url: 'https://fitodesk.vercel.app',
+    url: 'https://zero-friction-roan.vercel.app',
     cleartext: false,
   },
 
