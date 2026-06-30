@@ -23,8 +23,9 @@ HTML = """
   body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #222; }
   h1 { font-size: 1.2rem; font-weight: 600; padding: 20px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; }
   .upload-area { display: flex; gap: 16px; padding: 24px; }
-  .upload-box { flex: 1; background: #fff; border: 2px dashed #ccc; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: border-color .2s; }
+  .upload-box { flex: 1; background: #fff; border: 2px dashed #ccc; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
   .upload-box:hover { border-color: #555; }
+  .upload-box.drag-over { border-color: #1565c0; background: #e3f2fd; }
   .upload-box label { display: block; cursor: pointer; }
   .upload-box input { display: none; }
   .upload-box .filename { margin-top: 8px; font-size: 0.85rem; color: #666; }
@@ -50,27 +51,55 @@ HTML = """
 <h1>수출서류 비교 — 견본 vs 인보이스/패킹리스트</h1>
 <form method="post" enctype="multipart/form-data">
   <div class="upload-area">
-    <div class="upload-box">
+    <div class="upload-box" id="box-gyeonbon">
       <label>
         <div class="icon">📋</div>
         <strong>견본 (수출신고서)</strong><br>
-        <small>클릭하여 PDF 선택</small>
-        <input type="file" name="gyeonbon" accept=".pdf" onchange="this.nextElementSibling.textContent=this.files[0]?.name||''">
-        <div class="filename">{{ gyeonbon_name or '' }}</div>
+        <small>클릭하거나 파일을 여기에 드래그</small>
+        <input type="file" name="gyeonbon" id="input-gyeonbon" accept=".pdf" onchange="setName('gyeonbon', this.files[0])">
+        <div class="filename" id="name-gyeonbon">{{ gyeonbon_name or '' }}</div>
       </label>
     </div>
-    <div class="upload-box">
+    <div class="upload-box" id="box-invoice">
       <label>
         <div class="icon">📦</div>
         <strong>인보이스 / 패킹리스트</strong><br>
-        <small>클릭하여 PDF 선택</small>
-        <input type="file" name="invoice" accept=".pdf" onchange="this.nextElementSibling.textContent=this.files[0]?.name||''">
-        <div class="filename">{{ invoice_name or '' }}</div>
+        <small>클릭하거나 파일을 여기에 드래그</small>
+        <input type="file" name="invoice" id="input-invoice" accept=".pdf" onchange="setName('invoice', this.files[0])">
+        <div class="filename" id="name-invoice">{{ invoice_name or '' }}</div>
       </label>
     </div>
   </div>
   <button class="btn" type="submit">비교하기</button>
 </form>
+<script>
+function setName(key, file) {
+  if (file) document.getElementById('name-' + key).textContent = file.name;
+}
+
+['gyeonbon', 'invoice'].forEach(function(key) {
+  var box = document.getElementById('box-' + key);
+  var input = document.getElementById('input-' + key);
+
+  box.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    box.classList.add('drag-over');
+  });
+  box.addEventListener('dragleave', function() {
+    box.classList.remove('drag-over');
+  });
+  box.addEventListener('drop', function(e) {
+    e.preventDefault();
+    box.classList.remove('drag-over');
+    var file = e.dataTransfer.files[0];
+    if (!file) return;
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    setName(key, file);
+  });
+});
+</script>
 
 {% if error %}
 <div class="result"><div class="error">{{ error }}</div></div>
